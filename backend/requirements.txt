@@ -1,0 +1,32 @@
+# TalentIQ — Agentic RAG Pipeline
+
+# Core Web & Auth
+sentence-transformers
+fastapi
+uvicorn[standard]
+python-multipart
+passlib[bcrypt]
+bcrypt==4.0.1
+python-jose[cryptography]
+pydantic[email]
+email-validator
+python-dotenv
+jose
+jwt
+
+# Database
+sqlalchemy
+sqlalchemy-utils
+SQLAlchemy
+psycopg2-binary
+
+# AI & RAG (Optimized for CPU)
+torch>=2.4.0 #--index-url https://download.pytorch.org/whl/cpu
+transformers>=4.44.0
+langchain
+langchain-community
+langchain-groq
+groq
+pypdf
+pymupdf
+chromadb

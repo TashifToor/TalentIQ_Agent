@@ -1,0 +1,16 @@
+# Global node_modules aur next folders (Sab se zaroori)
+**/node_modules/
+**/.next/
+node_modules/
+.next/
+
+# TalentIQ specific sub-folder patterns
+talentiq/node_modules/
+talentiq/.next/
+
+# Backend patterns
+**/__pycache__/
+backend/.data/
+data/
+node_modules
+.env
