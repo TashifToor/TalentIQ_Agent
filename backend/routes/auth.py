@@ -1,41 +1,114 @@
-from fastapi import APIRouter,Depends,HTTPException,status
+from fastapi import APIRouter, Depends, HTTPException, status
 from passlib.context import CryptContext
+from passlib.exc import UnknownHashError, MissingBackendError
 from models.database import get_db
-from  schemas.auth import LoginRequest,RegisterRequest,UserResponse,TokenResponse
-from middleware.auth import create_access_token,get_current_user
+from schemas.auth import LoginRequest, RegisterRequest, UserResponse, TokenResponse
+from middleware.auth import create_access_token, get_current_user
 from models.user import User
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 
-router=APIRouter(prefix="/auth",tags=["Authentication"])
-bcrypt=CryptContext(schemes=['argon2'],deprecated="auto")
-@router.post("/signup",response_model=UserResponse,status_code=status.HTTP_201_CREATED)
-async def signup(body:RegisterRequest,db:Session=Depends(get_db)):
+FREE_SCANS = 3
+TRIAL_DAYS = 7
+
+
+async def build_user_response(user: User)-> dict:
+    """Compute drives field for userResponse"""
+    now=datetime.now(timezone.utc)
     
-    existing_email=db.query(User).filter(User.email==body.email).first()
-    if existing_email:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,detail="Email already registered")
-    
-    user=User(
+    if user.role=="candidate":
+        scans_remaining=max(0,FREE_SCANS-(user.scans_used or 0))
+        can_screen=(
+            user.subscription_status=="active"
+            or (user.scans_used or 0) < FREE_SCANS
+        )
+        
+        trial_days_left=None
+    else:
+        scans_remaining=999
+        trial_days_left=None
+        if user.subscription_status=="trial" and user.trial_started_at:
+            trial_start=user.trial_started_at
+            if trial_start.tzinfo is None:
+                trial_start=trial_start.replace(tzinfo=timezone.utc)
+            days_elapsed=(now-trial_start).days
+            trial_days_left=max(0,TRIAL_DAYS-days_elapsed)
+            if trial_days_left==0:
+                can_screen=False
+            else:
+                can_screen=True
+        elif user.subscription_status=="active":
+            can_screen=True
+            trial_days_left=None
+        else:
+            can_screen=False
+            trial_days_left=0
+    return{       
+        "id":                  user.id,
+        "name":                user.name,
+        "email":               user.email,
+        "is_active":           user.is_active,
+        "role":                user.role,
+        "subscription_status": user.subscription_status,
+        "scans_used":          user.scans_used or 0,
+        "scans_remaining":     scans_remaining,
+        "trial_days_left":     trial_days_left,
+        "can_screen":          can_screen,
+    }
+
+router = APIRouter(prefix="/auth", tags=["Authentication"])
+pwd_context = CryptContext(
+    # Keep bcrypt first for compatibility with existing installs.
+    schemes=["bcrypt", "argon2"],
+    deprecated="auto",
+)
+
+
+@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def signup(body: RegisterRequest, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.email == body.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    # Validate role
+    if body.role not in ["candidate", "hr"]:
+        raise HTTPException(status_code=400, detail="Role must be 'candidate' or 'hr'")
+
+    user = User(
         name=body.name,
         email=body.email,
-        password_hash=bcrypt.hash(body.password)
+        password_hash=pwd_context.hash(body.password),
+        role=body.role,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
 
-@router.post("/login",response_model=TokenResponse)
-async def login(body:LoginRequest,db:Session=Depends(get_db)):
-    """existing user login karne ke liye endpoint"""
-    
-    user=db.query(User).filter(User.email==body.email).first()
-    if not user or not bcrypt.verify(body.password,user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid email and password")
-    token = await create_access_token(user.id)
-    return TokenResponse(access_token=token, token_type="bearer")
 
-@router.get("/me",response_model=UserResponse)
-async def me(current_user:User=Depends(get_current_user)):
+@router.post("/login", response_model=TokenResponse)
+async def login(body: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == body.email).first()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    try:
+        is_valid = pwd_context.verify(body.password, user.password_hash)
+    except (UnknownHashError, MissingBackendError):
+        # Do not leak hashing internals to client.
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not is_valid:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    token = await create_access_token(user.id)
+
+    # Return role so frontend knows where to redirect
+    return TokenResponse(access_token=token, token_type="bearer", role=user.role)
+
+
+
+@router.get("/me", response_model=UserResponse)
+async def me(current_user: User = Depends(get_current_user)):
     return current_user
-    

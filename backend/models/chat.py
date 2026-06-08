@@ -11,6 +11,6 @@ class Chat(Base):
     answer = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    # 🌟 Yeh bilkul sahi hai: point karega User ki 'chats' par
+    # Yeh bilkul sahi hai: point karega User ki 'chats' par
     user = relationship("User", back_populates="chats")
     

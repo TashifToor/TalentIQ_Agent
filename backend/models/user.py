@@ -1,5 +1,4 @@
-# This class defines a User model with attributes such as id, name, email, password_hash, is_active,
-# created_at, and a relationship with Chat_History.
+
 from sqlalchemy.orm import relationship
 from sqlalchemy import Integer,String,Column,Boolean,DateTime
 from models.database import Base
@@ -14,7 +13,28 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    # 🌟 FIX: Isko plural karo 'chats' aur back_populates ko 'user' par point karo
+    # Role — "candidate" | "hr"
+    role=       Column(String,default="candidate")
+
+    # Subscription
+    # Keep the mapped DB column name singular to match the schema.
+    subscription_status = Column("subscription_status", String, default="free")
+
+    # Backward-compatible alias for old code paths.
+    @property
+    def subscriptions_status(self):
+        return self.subscription_status
+
+    @subscriptions_status.setter
+    def subscriptions_status(self, value):
+        self.subscription_status = value
+    
+    # Candidate — free scan tracking
+    scans_used    = Column(Integer, default=0)
+    
+    # HR — trial tracking
+    trial_started_at = Column(DateTime(timezone=True), nullable=True)
+
     chats = relationship("Chat", back_populates="user")
     
     

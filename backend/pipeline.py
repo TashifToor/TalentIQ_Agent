@@ -49,13 +49,13 @@ class LangChainEmbeddingWrapper:
 
 # ── Vector Store ─────────────────────────────────────────────────────
 class VectorStore:
-    def __init__(self, embedding_manager, persist_directory: str = "../data/hr_faiss_index"):
+    def __init__(self, embedding_manager, persist_directory: str = "./data/hr_faiss_index"):
         self.persist_directory = persist_directory
         self.embedding_wrapper = LangChainEmbeddingWrapper(embedding_manager)
         self.faiss_index = None
 
     def create_and_save_store(self, chunks):
-        print("[HR Pipeline] Creating FAISS index...")
+        print(f"[HR Pipeline] Creating FAISS index from {len(chunks)} chunks...")
         os.makedirs(self.persist_directory, exist_ok=True)
         self.faiss_index = FAISS.from_documents(chunks, self.embedding_wrapper)
         self.faiss_index.save_local(self.persist_directory)
@@ -70,7 +70,7 @@ class VectorStore:
                 self.embedding_wrapper,
                 allow_dangerous_deserialization=True
             )
-            print("[HR Pipeline] FAISS loaded successfully")
+            print("[HR Pipeline] FAISS index loaded successfully")
             return self.faiss_index
         return None
 
@@ -80,26 +80,42 @@ def _build_retriever():
     embedding_manager = Embedding()
     db_manager = VectorStore(
         embedding_manager=embedding_manager,
-        persist_directory="./data/hr_faiss_index"  # alag path — CV FAISS se conflict nahi hoga
+        persist_directory="./data/hr_faiss_index"
     )
 
-    # Pehle load karne ki koshish karo
+    # Try loading existing index first
     faiss_db = db_manager.load_store()
 
-    # Agar pehli baar hai toh PDFs se banao
     if faiss_db is None:
         print("[HR Pipeline] No existing index — building from HR policy PDFs...")
+
+        # Exact folder name from disk: "hr_poilices" (typo intentional — matches actual folder)
+        hr_policies_path = "./data/hr_poilices"
+
+        if not os.path.exists(hr_policies_path):
+            print(f"[HR Pipeline] WARNING: Folder not found: {hr_policies_path}")
+            return None
+
+        pdf_files = [f for f in os.listdir(hr_policies_path) if f.endswith(".pdf")]
+        if not pdf_files:
+            print(f"[HR Pipeline] WARNING: No PDFs in {hr_policies_path}")
+            return None
+
+        print(f"[HR Pipeline] Found {len(pdf_files)} PDF(s)")
+
         loader = DirectoryLoader(
-            "./data/pdf",
-            glob="*/*.pdf",
+            hr_policies_path,
+            glob="**/*.pdf",
             loader_cls=PyPDFLoader,
             show_progress=True
         )
         documents = loader.load()
 
         if not documents:
-            print("[HR Pipeline] WARNING: No PDFs found in ./data/pdf")
+            print("[HR Pipeline] WARNING: Could not extract text from PDFs")
             return None
+
+        print(f"[HR Pipeline] Loaded {len(documents)} document pages")
 
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=800,
@@ -110,14 +126,20 @@ def _build_retriever():
         for i, chunk in enumerate(chunks):
             chunk.metadata["chunk_id"] = i
 
+        print(f"[HR Pipeline] Created {len(chunks)} chunks")
         faiss_db = db_manager.create_and_save_store(chunks)
 
-    return faiss_db.as_retriever(search_kwargs={"k": 3})
+    return faiss_db.as_retriever(search_kwargs={"k": 4})
 
 
-# Module load hone par ek baar retriever banao
+# ── Initialize ────────────────────────────────────────────────────────
 print("[HR Pipeline] Initializing HR Policy RAG pipeline...")
 _retriever = _build_retriever()
+
+if _retriever:
+    print("[HR Pipeline] Retriever ready")
+else:
+    print("[HR Pipeline] Retriever not available — LLM only mode")
 
 
 # ── LangGraph Agent ───────────────────────────────────────────────────
@@ -129,37 +151,48 @@ class AgentState(TypedDict):
 
 
 def decide_retrieval(state: AgentState) -> AgentState:
-    question = state["question"]
-    keywords = ["what", "how", "explain", "describe", "tell me", "why", "when", "who", "policy", "leave", "salary", "benefit", "hire", "onboard"]
-    needs = any(k in question.lower() for k in keywords)
+    question = state["question"].lower()
+    keywords = [
+        "what", "how", "explain", "describe", "tell me", "why", "when", "who",
+        "policy", "leave", "salary", "benefit", "hire", "onboard", "performance",
+        "training", "discipline", "grievance", "diversity", "compensation",
+        "probation", "notice", "resignation", "termination", "offboard",
+        "interview", "background", "check", "review", "appraisal"
+    ]
+    needs = any(k in question for k in keywords)
     return {**state, "needs_retrieval": needs}
 
 
 def retrieve_document(state: AgentState) -> AgentState:
     if _retriever is None:
         return {**state, "documents": []}
-    docs = _retriever.invoke(state["question"])
-    return {**state, "documents": docs}
+    try:
+        docs = _retriever.invoke(state["question"])
+        return {**state, "documents": docs}
+    except Exception as e:
+        print(f"[HR Pipeline] Retrieval error: {e}")
+        return {**state, "documents": []}
 
 
 def generate_answer(state: AgentState) -> AgentState:
-    question = state["question"]
+    question  = state["question"]
     documents = state.get("documents", [])
 
     if documents:
         context = "\n\n".join([doc.page_content for doc in documents])
-        prompt = f"""You are a helpful HR Policy Assistant for TalentIQ.
-Answer the employee's question based strictly on the company policy documents provided.
-Be clear, professional, and concise.
+        prompt = f"""You are a professional HR Policy Assistant for TalentIQ.
+Answer the employee's question based on the company policy documents provided below.
+Be clear, professional, and concise. Use bullet points where helpful.
+If the answer is not in the documents, say so honestly.
 
-Company Policy Context:
+Company Policy Documents:
 {context}
 
 Employee Question: {question}
 
 Answer:"""
     else:
-        prompt = f"""You are a helpful HR Policy Assistant.
+        prompt = f"""You are a professional HR Policy Assistant for TalentIQ.
 Answer this HR-related question professionally: {question}"""
 
     response = llm.invoke(prompt)
@@ -170,9 +203,9 @@ def should_retrieve(state: AgentState) -> str:
     return "retrieve" if state["needs_retrieval"] else "generate"
 
 
-# Build graph
+# ── Build graph ───────────────────────────────────────────────────────
 _workflow = StateGraph(AgentState)
-_workflow.add_node("decide", decide_retrieval)
+_workflow.add_node("decide",   decide_retrieval)
 _workflow.add_node("retrieve", retrieve_document)
 _workflow.add_node("generate", generate_answer)
 _workflow.set_entry_point("decide")
@@ -184,28 +217,24 @@ _workflow.add_edge("retrieve", "generate")
 _workflow.add_edge("generate", END)
 
 _app = _workflow.compile()
-print("[HR Pipeline] ✓ Agentic RAG Graph ready\n")
+print("[HR Pipeline] LangGraph compiled successfully\n")
 
 
-# ── Public function — route se call hoga ─────────────────────────────
+# ── Public function ───────────────────────────────────────────────────
 def ask_question(question: str) -> dict:
-    """
-    HR policy question ka jawab deta hai.
-    Returns: { question, documents, answer, needs_retrieval }
-    """
     initial_state: AgentState = {
-        "question": question,
-        "documents": [],
-        "answer": "",
+        "question":        question,
+        "documents":       [],
+        "answer":          "",
         "needs_retrieval": False,
     }
     return _app.invoke(initial_state)
 
 
-# ── Direct script test ────────────────────────────────────────────────
+# ── Direct test ───────────────────────────────────────────────────────
 if __name__ == "__main__":
-    test_q = "What is the employee leave policy?"
-    print(f"\nTest Question: {test_q}")
-    result = ask_question(test_q)
-    print(f"Retrieved docs: {len(result['documents'])}")
-    print(f"\nAnswer:\n{result['answer']}")
+    q = "What is the employee leave policy?"
+    print(f"\nTest Q: {q}")
+    result = ask_question(q)
+    print(f"Docs retrieved: {len(result['documents'])}")
+    print(f"Answer:\n{result['answer']}")

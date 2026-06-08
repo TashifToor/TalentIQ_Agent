@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Brain, Zap, Shield, BarChart3, Users, ChevronRight,
-  CheckCircle, ArrowRight, Star, Menu, X, Sparkles,
-  FileText, Target, TrendingUp, Clock, Award, Play,
+  CheckCircle, ArrowRight, Sparkles, FileText, Target,
+  Award, Play, Menu, X, Cpu
 } from "lucide-react";
 
 /* ── Animated counter ── */
@@ -45,7 +45,7 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
     <div ref={ref} className={`transition-all duration-700 ${className}`}
       style={{
         opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(24px)",
+        transform: visible ? "translateY(24px)" : "translateY(0)",
         transitionDelay: `${delay}ms`,
       }}>
       {children}
@@ -57,145 +57,137 @@ const NAV_LINKS = ["Features", "How It Works", "Pricing", "FAQ"];
 
 const FEATURES = [
   {
-    icon: Brain,
-    title: "LLaMA 3.3 70B Reasoning",
-    desc: "Not keyword matching — deep chain-of-thought analysis of every candidate's actual skill depth and project complexity.",
-    color: "text-g-400 bg-g-500/10 border-g-500/20",
+    icon: Cpu,
+    title: "Next-Gen ATS Scanner",
+    desc: "Test your resume against modern corporate ATS screening filters. See exactly how automated corporate parsers read and score your technical background.",
+    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
   },
   {
-    icon: Zap,
-    title: "Agentic RAG Pipeline",
-    desc: "LangGraph-powered multi-node pipeline automatically screens, ranks, and shortlists candidates without human intervention.",
-    color: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    icon: Brain,
+    title: "Context-Aware Match",
+    desc: "No strict or dumb keyword limitations. The system recognizes that 'building backend pipelines' deeply qualifies you for senior software engineering roles.",
+    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
   },
   {
     icon: Target,
-    title: "Candidate Eligibility Engine",
-    desc: "Tell candidates exactly what to fix: 'Add Docker deployment experience to pass this role's screening.'",
-    color: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+    title: "Skill Gap & Missing Matrix",
+    desc: "For job seekers: know exactly what crucial technical or functional skills are missing from your profile compared to target job descriptions.",
+    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
   },
   {
-    icon: Shield,
-    title: "HR Policy Assistant",
-    desc: "RAG-powered chatbot that answers HR policy questions instantly from your company's own documents.",
-    color: "text-green-400 bg-green-500/10 border-green-500/20",
+    icon: Zap,
+    title: "Instant Batch Screening",
+    desc: "For recruiters: drop dozens of incoming applicant CVs simultaneously and generate a pristine, multi-variable sorted leaderboard in seconds.",
+    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
   },
   {
     icon: BarChart3,
-    title: "Auto-Ranked Shortlists",
-    desc: "HR gets candidates ranked 0–100 with full reasoning. No more manual CV reading — just review the top 5.",
-    color: "text-orange-400 bg-orange-500/10 border-orange-500/20",
+    title: "Fair Core Eligibility Scores",
+    desc: "Get an objective 0–100 ranking index complete with structured feedback on capability depth, role alignment, and experience level.",
+    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
   },
   {
-    icon: TrendingUp,
-    title: "FAISS Semantic Search",
-    desc: "Vector embeddings ensure semantic skill matching — 'built APIs' matches 'REST backend development'.",
-    color: "text-pink-400 bg-pink-500/10 border-pink-500/20",
+    icon: Shield,
+    title: "Company Document Guide",
+    desc: "A secure playground to upload operational guidelines or internal company manuals and query them instantly using contextual text search.",
+    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
   },
 ];
 
 const STEPS = [
   {
     num: "01",
-    title: "HR posts a job",
-    desc: "Paste your job description. TalentIQ parses requirements and builds a semantic skill matrix.",
+    title: "Set Target Criteria",
+    desc: "Recruiters paste their core job descriptions. Candidates paste their dream role details to align targeting parameters.",
     icon: FileText,
   },
   {
     num: "02",
-    title: "Candidates apply",
-    desc: "Candidates upload their CV. Our RAG pipeline extracts real skills, not just keywords.",
+    title: "Upload Resumes",
+    desc: "Drop individual or bulk candidate profiles. Our deep extractor securely processes full text layouts without breaking formats.",
     icon: Users,
   },
   {
     num: "03",
-    title: "AI screens & ranks",
-    desc: "LLaMA 3.3 70B reasons through each CV. LangGraph executes a 4-step analysis pipeline.",
+    title: "AI & ATS Simulation",
+    desc: "The screening layer reads applicant experience data, parsing structure, and project context just like real human screeners.",
     icon: Brain,
   },
   {
     num: "04",
-    title: "HR gets ranked results",
-    desc: "A prioritized shortlist with scores, matched skills, gaps, and deep analysis. Ready to interview.",
+    title: "Analyze Score Report",
+    desc: "Access leaderboard rankings if hiring, or review personal missing-skill feedback loops if optimizing your own career profile.",
     icon: Award,
   },
 ];
 
 const PRICING = [
   {
-    name: "Free",
+    name: "Free Trial",
     price: "$0",
     period: "forever",
-    desc: "Try TalentIQ risk-free",
-    features: ["3 CV screening checks", "Basic skill matching", "PDF CV upload", "Dashboard access"],
+    desc: "Test individual match performance",
+    features: ["3 Full ATS screening checks", "Basic skill gap overview", "Standard file formatting support", "Personal user dashboard access"],
     cta: "Get Started Free",
     href: "/signup",
     highlighted: false,
   },
   {
-    name: "Candidate Pro",
+    name: "Job Seeker Pro",
     price: "$9",
     period: "/month",
-    desc: "For job seekers",
+    desc: "Built for active candidates & developers",
     features: [
-      "Unlimited CV screenings",
-      "Deep eligibility analysis",
-      "Actionable skill gap feedback",
-      "Job match optimization tips",
-      "Priority AI processing",
+      "Unlimited ATS matching simulation",
+      "Deep job eligibility analysis",
+      "Precise missing-skill alerts",
+      "Format structural audit feedback",
+      "Priority processing speed queue",
     ],
-    cta: "Start Pro",
+    cta: "Optimize My Resume",
     href: "/signup",
     highlighted: false,
-    badge: "Most Popular",
+    badge: "For Job Seekers",
   },
   {
-    name: "HR Suite",
+    name: "Hiring Suite",
     price: "$49",
     period: "/month",
-    desc: "For hiring teams",
+    desc: "Tailored for business founders & HR leaders",
     features: [
-      "Unlimited job postings",
-      "Auto-rank all applicants",
-      "Bulk CV screening",
-      "HR Policy RAG chatbot",
-      "Team collaboration",
-      "Priority support",
+      "Unlimited core job vacancy creation",
+      "Automated bulk applicant ranking",
+      "Multi-candidate leaderboard view",
+      "Company guidelines assistant chatbot",
+      "Shared pipeline collaboration layout",
+      "Dedicated account management support",
     ],
-    cta: "Start HR Suite",
+    cta: "Deploy Hiring Suite",
     href: "/signup",
     highlighted: true,
-    badge: "Best Value",
+    badge: "Recruitment Teams", // Text ko short aur clean kar diya taake break na ho
   },
 ];
 
 const STATS = [
-  { value: 94, suffix: "%", label: "AI Screening Accuracy" },
-  { value: 90, suffix: "%", label: "Time Saved vs Manual" },
-  { value: 50, suffix: "K+", label: "CVs Processed" },
-  { value: 12, suffix: "hrs", label: "Avg Time Saved / Hire" },
+  { value: 98, suffix: "%", label: "ATS Optimization Rate" },
+  { value: 90, suffix: "%", label: "Manual Screening Saved" },
+  { value: 50, suffix: "K+", label: "Profiles Scanned" },
+  { value: 10, suffix: "x", label: "Faster Pipeline Delivery" },
 ];
 
 const FAQS = [
   {
-    q: "How is TalentIQ different from keyword-based ATS systems?",
-    a: "Most ATS tools just match words. TalentIQ uses LLaMA 3.3 70B to reason about actual skill depth, project complexity, and candidate fit — the same way a senior engineer would review a CV.",
+    q: "Can I use TalentIQ as an individual job seeker?",
+    a: "Absolutely! You can paste any external target job description and upload your resume to see exactly how recruiter algorithms score your profile, what key requirements you are missing, and how to fix them.",
   },
   {
-    q: "Is my CV data secure?",
-    a: "Yes. CVs are processed in-memory and stored only temporarily for screening. We use Argon2 password hashing, JWT auth, and never share your data with third parties.",
+    q: "Does this replace traditional corporate ATS?",
+    a: "Think of it as an intelligence layer. For recruiters, it saves hours of filtering text keywords by acting as a smart screener. For applicants, it serves as a testing sandbox to survive automated enterprise filtering layers.",
   },
   {
-    q: "Can I use TalentIQ for any job role?",
-    a: "Absolutely. Paste any job description — tech, marketing, finance, operations — and our AI adapts its screening criteria accordingly.",
-  },
-  {
-    q: "How does the HR Policy chatbot work?",
-    a: "Upload your company's HR policy PDFs. Our RAG system indexes them and lets employees ask natural language questions — answered instantly from your actual documents.",
-  },
-  {
-    q: "What happens after my free 3 checks?",
-    a: "Upgrade to Candidate Pro ($9/mo) for unlimited screenings, or HR Suite ($49/mo) for team features. Cancel anytime.",
+    q: "Is my technical data and source files protected?",
+    a: "Completely. Security and confidentiality are core features. All data processes happen over secure end-to-end transport tunnels, and your individual uploads are never shared or leaked outside.",
   },
 ];
 
@@ -211,179 +203,111 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-bg text-slate-200 overflow-x-hidden">
-
-      {/* ── Fixed background effects ── */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="orb orb-1 w-[700px] h-[600px] -top-40 -left-40 animate-float" style={{ animationDuration: "10s" }} />
-        <div className="orb orb-2 w-[600px] h-[500px] top-1/3 -right-40 animate-float-delay" />
-        <div className="orb orb-3 w-[400px] h-[400px] bottom-0 left-1/3" />
+    <div className="min-h-screen bg-[#0b0f19] text-slate-200 overflow-x-hidden antialiased">
+      {/* ── Background decoration ── */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-30">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-[120px]" />
+        <div className="absolute top-[30%] right-[-10%] w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[140px]" />
       </div>
-      <div className="fixed inset-0 bg-grid pointer-events-none z-0 opacity-50" />
 
       {/* ── Navbar ── */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "glass border-b border-border" : "bg-transparent"}`}>
-        <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl glass-gold flex items-center justify-center">
-              <Brain size={15} className="text-g-400" />
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "backdrop-blur-md bg-[#0b0f19]/80 border-b border-slate-800" : "bg-transparent"}`}>
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+              <Brain size={16} className="text-teal-400" />
             </div>
-            <span className="text-sm font-bold text-white">TalentIQ</span>
-            <span className="text-[10px] font-mono text-g-500/50 border border-g-500/20 px-1.5 py-0.5 rounded bg-g-500/5">v2.0</span>
+            <span className="text-md font-bold text-white tracking-wide">TalentIQ</span>
           </div>
 
-          {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-6">
             {NAV_LINKS.map(link => (
               <a key={link} href={`#${link.toLowerCase().replace(/ /g, "-")}`}
-                className="text-xs text-slate-500 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5">
+                className="text-xs text-slate-400 hover:text-white transition-colors">
                 {link}
               </a>
             ))}
           </div>
 
-          {/* CTA buttons */}
-          <div className="hidden md:flex items-center gap-2">
-            <Link href="/login" className="text-xs text-slate-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5">
+          <div className="hidden md:flex items-center gap-4">
+            <Link href="/login" className="text-xs text-slate-400 hover:text-white transition-colors">
               Sign In
             </Link>
-            <Link href="/signup" className="btn-gold flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs">
-              Get Started Free <ArrowRight size={12} />
+            <Link href="/signup" className="bg-teal-500 hover:bg-teal-600 text-black font-semibold flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs transition-all shadow-lg shadow-teal-500/10">
+              Get Started <ArrowRight size={12} />
             </Link>
           </div>
 
-          {/* Mobile menu button */}
           <button className="md:hidden text-slate-400 p-2" onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="md:hidden glass border-t border-border px-5 py-4 space-y-2">
+          <div className="md:hidden bg-[#0c1220] border-t border-slate-800 px-5 py-4 space-y-3">
             {NAV_LINKS.map(link => (
               <a key={link} href={`#${link.toLowerCase().replace(/ /g, "-")}`}
-                className="block text-sm text-slate-400 hover:text-white py-2 transition-colors"
+                className="block text-sm text-slate-400 hover:text-white py-1.5"
                 onClick={() => setMenuOpen(false)}>
                 {link}
               </a>
             ))}
-            <div className="flex gap-2 pt-2">
-              <Link href="/login" className="flex-1 text-center py-2 rounded-xl btn-ghost text-sm border border-border">Sign In</Link>
-              <Link href="/signup" className="flex-1 text-center py-2 rounded-xl btn-gold text-sm">Sign Up</Link>
+            <div className="flex gap-3 pt-2 border-t border-slate-800/60">
+              <Link href="/login" className="flex-1 text-center py-2 rounded-xl text-slate-400 border border-slate-800 text-sm">Sign In</Link>
+              <Link href="/signup" className="flex-1 text-center py-2 rounded-xl bg-teal-500 text-black font-medium text-sm">Sign Up</Link>
             </div>
           </div>
         )}
       </nav>
 
       {/* ── Hero Section ── */}
-      <section className="relative z-10 min-h-screen flex flex-col items-center justify-center text-center px-5 pt-20">
+      <section className="relative z-10 min-h-screen flex flex-col items-center justify-center text-center px-4 pt-24 max-w-4xl mx-auto">
         <FadeIn>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-gold border border-g-500/20 mb-8">
-            <Sparkles size={12} className="text-g-400" />
-            <span className="text-xs font-mono text-g-400">Powered by LLaMA 3.3 70B · LangGraph · FAISS</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-500/5 border border-teal-500/20 mb-6">
+            <Sparkles size={12} className="text-teal-400" />
+            <span className="text-xs font-medium text-teal-400">Next-Gen Intelligent ATS Matching Sandbox</span>
           </div>
         </FadeIn>
 
         <FadeIn delay={100}>
-          <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight max-w-4xl mb-6">
-            AI Recruitment
+          <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-6 tracking-tight">
+            Smart ATS Hiring Assistant
             <br />
-            <span className="text-gold-gradient">That Actually Thinks</span>
+            <span className="bg-gradient-to-r from-teal-400 via-white to-slate-200 bg-clip-text text-transparent">That Understands People</span>
           </h1>
         </FadeIn>
 
         <FadeIn delay={200}>
-          <p className="text-lg text-slate-400 max-w-2xl mb-10 leading-relaxed">
-            Stop wasting hours on manual CV screening. TalentIQ&apos;s agentic AI
-            reads between the lines — ranking candidates by real skill depth,
-            not just keyword matches.
+          <p className="text-md md:text-lg text-slate-400 max-w-2xl mb-10 leading-relaxed">
+            Stop wasting endless hours manually reading resumes or worrying about automated bots rejecting your CV. TalentIQ analyzes profiles instantly—ranking and benchmarking true experience, capacity, and matching performance.
           </p>
         </FadeIn>
 
         <FadeIn delay={300}>
-          <div className="flex flex-col sm:flex-row items-center gap-3 mb-16">
-            <Link href="/signup"
-              className="btn-gold flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm font-semibold">
-              Start Free — 3 Checks Included
-              <ArrowRight size={15} />
+          <div className="flex flex-col sm:flex-row items-center gap-4 mb-12">
+            <Link href="/signup" className="bg-teal-500 hover:bg-teal-600 text-black font-bold flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm transition-all shadow-lg shadow-teal-500/15 group">
+              Scan Your CV Free — 3 Checks Included
+              <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
             </Link>
-            <Link href="/login"
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl btn-ghost border border-border text-sm">
-              <Play size={13} />
-              Sign In to Dashboard
+            <Link href="/login" className="flex items-center gap-2 px-6 py-3.5 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-900/40 text-sm font-medium text-white transition-colors">
+              <Play size={12} fill="currentColor" /> View Dashboard
             </Link>
-          </div>
-        </FadeIn>
-
-        {/* Hero visual — fake dashboard preview */}
-        <FadeIn delay={400} className="w-full max-w-4xl">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-bg z-10 pointer-events-none" />
-            <div className="card rounded-2xl overflow-hidden border border-border">
-              {/* Fake topbar */}
-              <div className="glass border-b border-border flex items-center px-4 py-3 gap-3">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500/60" />
-                  <div className="w-3 h-3 rounded-full bg-g-500/60" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/60" />
-                </div>
-                <div className="flex-1 h-5 rounded-md bg-border/50 max-w-xs" />
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full glass-gold">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-[10px] font-mono text-green-400">LLaMA Active</span>
-                </div>
-              </div>
-              {/* Fake content */}
-              <div className="p-4 grid grid-cols-3 gap-3">
-                <div className="col-span-1 space-y-2">
-                  <div className="h-24 rounded-xl skeleton" />
-                  <div className="h-32 rounded-xl skeleton" />
-                  <div className="h-10 rounded-xl bg-g-500/20 border border-g-500/20 flex items-center justify-center">
-                    <span className="text-[10px] font-mono text-g-400">Run Deep Screening</span>
-                  </div>
-                </div>
-                <div className="col-span-2 space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { label: "Score", value: "90/100", color: "text-green-400" },
-                      { label: "Matched", value: "10/12", color: "text-g-400" },
-                      { label: "Verdict", value: "Shortlisted ", color: "text-green-400" },
-                      { label: "Interview", value: "Triggered", color: "text-blue-400" },
-                    ].map(s => (
-                      <div key={s.label} className="card rounded-xl p-3 flex items-center gap-2">
-                        <div>
-                          <p className="text-[9px] text-slate-600 font-mono">{s.label}</p>
-                          <p className={`text-sm font-bold ${s.color}`}>{s.value}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="card rounded-xl p-3 space-y-1.5">
-                    <p className="text-[10px] text-g-400 font-semibold font-mono">DEEP AI ANALYSIS</p>
-                    <div className="h-2 rounded-full skeleton w-full" />
-                    <div className="h-2 rounded-full skeleton w-4/5" />
-                    <div className="h-2 rounded-full skeleton w-3/4" />
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </FadeIn>
       </section>
 
       {/* ── Stats ── */}
-      <section className="relative z-10 py-16 border-y border-border">
-        <div className="max-w-4xl mx-auto px-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+      <section className="relative z-10 py-12 border-y border-slate-900 bg-slate-950/20">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {STATS.map((s, i) => (
               <FadeIn key={s.label} delay={i * 100}>
                 <div>
-                  <p className="text-4xl font-bold glow-gold mb-1">
+                  <p className="text-3xl md:text-4xl font-extrabold text-teal-400 mb-1">
                     <Counter end={s.value} suffix={s.suffix} />
                   </p>
-                  <p className="text-xs text-slate-500">{s.label}</p>
+                  <p className="text-xs text-slate-400 font-semibold tracking-wide uppercase">{s.label}</p>
                 </div>
               </FadeIn>
             ))}
@@ -392,276 +316,169 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ── */}
-      <section id="features" className="relative z-10 py-24 px-5">
-        <div className="max-w-6xl mx-auto">
-          <FadeIn className="text-center mb-16">
-            <span className="text-xs font-mono text-g-400 uppercase tracking-widest">Features</span>
-            <h2 className="text-4xl font-bold text-white mt-3 mb-4">
-              Not just a resume parser.
-              <br />
-              <span className="text-gold-gradient">An AI that reasons.</span>
-            </h2>
-            <p className="text-slate-500 max-w-xl mx-auto text-sm leading-relaxed">
-              Every feature is built around one idea: understand candidates the way
-              an experienced engineer would — not a keyword scanner.
-            </p>
-          </FadeIn>
+      <section id="features" className="relative z-10 py-24 px-4 max-w-6xl mx-auto">
+        <FadeIn className="text-center mb-16">
+          <span className="text-xs font-bold text-teal-400 uppercase tracking-widest">Platform Core Architecture</span>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mt-3 mb-4">
+            Built to cross-verify role-fit layout alignments
+          </h2>
+          <p className="text-slate-400 max-w-lg mx-auto text-sm leading-relaxed">
+            Engineered both to help teams streamline recruitment processing and allow talented applicants to beat automated corporate screening bias.
+          </p>
+        </FadeIn>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {FEATURES.map((f, i) => {
-              const Icon = f.icon;
-              return (
-                <FadeIn key={f.title} delay={i * 80}>
-                  <div className="card card-hover rounded-2xl p-5 h-full cursor-default">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center border mb-4 ${f.color}`}>
-                      <Icon size={18} />
-                    </div>
-                    <h3 className="text-sm font-semibold text-white mb-2">{f.title}</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed">{f.desc}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {FEATURES.map((f, i) => {
+            const Icon = f.icon;
+            return (
+              <FadeIn key={f.title} delay={i * 80}>
+                <div className="border border-slate-800/80 bg-slate-900/20 rounded-2xl p-6 h-full transition-all duration-300 hover:border-teal-500/30 hover:bg-slate-900/40">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center border mb-4 ${f.color}`}>
+                    <Icon size={18} />
                   </div>
-                </FadeIn>
-              );
-            })}
-          </div>
+                  <h3 className="text-sm font-bold text-white mb-2">{f.title}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">{f.desc}</p>
+                </div>
+              </FadeIn>
+            );
+          })}
         </div>
       </section>
 
       {/* ── How It Works ── */}
-      <section id="how-it-works" className="relative z-10 py-24 px-5 border-t border-border">
-        <div className="max-w-5xl mx-auto">
-          <FadeIn className="text-center mb-16">
-            <span className="text-xs font-mono text-g-400 uppercase tracking-widest">How It Works</span>
-            <h2 className="text-4xl font-bold text-white mt-3 mb-4">
-              From job post to
-              <span className="text-gold-gradient"> shortlist in minutes</span>
-            </h2>
-          </FadeIn>
+      <section id="how-it-works" className="relative z-10 py-24 px-4 border-t border-slate-900 max-w-6xl mx-auto">
+        <FadeIn className="text-center mb-16">
+          <span className="text-xs font-bold text-teal-400 uppercase tracking-widest">Process Flow</span>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mt-3">
+            Two Sides. One Unified Evaluation Model.
+          </h2>
+        </FadeIn>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {STEPS.map((step, i) => {
-              const Icon = step.icon;
-              return (
-                <FadeIn key={step.num} delay={i * 120}>
-                  <div className="relative card rounded-2xl p-5">
-                    {/* Connector line */}
-                    {i < STEPS.length - 1 && (
-                      <div className="hidden lg:block absolute top-8 -right-2 w-4 h-px bg-border z-10" />
-                    )}
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="text-2xl font-bold text-gold-gradient font-mono">{step.num}</span>
-                      <div className="w-8 h-8 rounded-lg glass-gold flex items-center justify-center">
-                        <Icon size={14} className="text-g-400" />
-                      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {STEPS.map((step, i) => {
+            const Icon = step.icon;
+            return (
+              <FadeIn key={step.num} delay={i * 120}>
+                <div className="relative border border-slate-900 bg-slate-950/40 rounded-2xl p-5 h-full">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xl font-extrabold text-teal-400 font-mono">{step.num}</span>
+                    <div className="w-8 h-8 rounded-lg bg-teal-500/5 border border-teal-500/10 flex items-center justify-center">
+                      <Icon size={14} className="text-teal-400" />
                     </div>
-                    <h3 className="text-sm font-semibold text-white mb-2">{step.title}</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed">{step.desc}</p>
                   </div>
-                </FadeIn>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Two-sided platform callout ── */}
-      <section className="relative z-10 py-20 px-5 border-t border-border">
-        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-5">
-          {/* Candidate side */}
-          <FadeIn>
-            <div className="card rounded-2xl p-6 border border-g-500/15 relative overflow-hidden h-full">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-g-500/5 rounded-full blur-2xl" />
-              <div className="relative z-10">
-                <div className="w-10 h-10 rounded-xl glass-gold flex items-center justify-center mb-4">
-                  <Users size={18} className="text-g-400" />
-                </div>
-                <span className="text-xs font-mono text-g-400 uppercase tracking-widest">For Candidates</span>
-                <h3 className="text-xl font-bold text-white mt-2 mb-3">The Eligibility Engine</h3>
-                <p className="text-sm text-slate-400 leading-relaxed mb-4">
-                  Upload your CV + paste a job description. Get a precise score
-                  and actionable steps: <em className="text-g-300">"Add Docker deployment experience
-                  and one scalable system project to pass this role."</em>
-                </p>
-                <ul className="space-y-2">
-                  {["Real eligibility score", "Exact skill gaps identified", "Specific improvement steps", "Interview readiness check"].map(f => (
-                    <li key={f} className="flex items-center gap-2 text-xs text-slate-400">
-                      <CheckCircle size={12} className="text-g-400 flex-shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </FadeIn>
-
-          {/* HR side */}
-          <FadeIn delay={150}>
-            <div className="card rounded-2xl p-6 border border-blue-500/15 relative overflow-hidden h-full">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl" />
-              <div className="relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
-                  <Shield size={18} className="text-blue-400" />
-                </div>
-                <span className="text-xs font-mono text-blue-400 uppercase tracking-widest">For HR Teams</span>
-                <h3 className="text-xl font-bold text-white mt-2 mb-3">The Autopilot Screener</h3>
-                <p className="text-sm text-slate-400 leading-relaxed mb-4">
-                  Post a job, let candidates apply. TalentIQ automatically screens
-                  every CV and delivers a ranked shortlist with AI reasoning.
-                  Your team just reviews the top candidates.
-                </p>
-                <ul className="space-y-2">
-                  {["Auto-rank all applicants", "90% less manual screening", "Deep analysis per candidate", "HR Policy RAG chatbot"].map(f => (
-                    <li key={f} className="flex items-center gap-2 text-xs text-slate-400">
-                      <CheckCircle size={12} className="text-blue-400 flex-shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      {/* ── Pricing ── */}
-      <section id="pricing" className="relative z-10 py-24 px-5 border-t border-border">
-        <div className="max-w-5xl mx-auto">
-          <FadeIn className="text-center mb-16">
-            <span className="text-xs font-mono text-g-400 uppercase tracking-widest">Pricing</span>
-            <h2 className="text-4xl font-bold text-white mt-3 mb-4">
-              Simple, transparent pricing
-            </h2>
-            <p className="text-slate-500 text-sm">Start free. Upgrade when you need more.</p>
-          </FadeIn>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {PRICING.map((plan, i) => (
-              <FadeIn key={plan.name} delay={i * 100}>
-                <div className={`relative card rounded-2xl p-6 h-full flex flex-col ${
-                  plan.highlighted
-                    ? "border-g-500/30 ring-1 ring-g-500/20"
-                    : "border-border"
-                }`}>
-                  {plan.badge && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className={`text-[10px] font-mono font-bold px-3 py-1 rounded-full ${
-                        plan.highlighted ? "bg-g-500 text-black" : "bg-border text-slate-400"
-                      }`}>
-                        {plan.badge}
-                      </span>
-                    </div>
-                  )}
-                  <div className="mb-4">
-                    <h3 className="text-sm font-semibold text-white">{plan.name}</h3>
-                    <p className="text-xs text-slate-600 mt-0.5">{plan.desc}</p>
-                  </div>
-                  <div className="flex items-baseline gap-1 mb-5">
-                    <span className="text-4xl font-bold text-white">{plan.price}</span>
-                    <span className="text-xs text-slate-500">{plan.period}</span>
-                  </div>
-                  <ul className="space-y-2.5 mb-6 flex-1">
-                    {plan.features.map(f => (
-                      <li key={f} className="flex items-start gap-2">
-                        <CheckCircle size={12} className="text-g-400 flex-shrink-0 mt-0.5" />
-                        <span className="text-xs text-slate-400">{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href={plan.href}
-                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      plan.highlighted
-                        ? "btn-gold"
-                        : "btn-ghost border border-border hover:border-g-500/25"
-                    }`}>
-                    {plan.cta}
-                    <ChevronRight size={14} />
-                  </Link>
+                  <h3 className="text-sm font-bold text-white mb-2">{step.title}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">{step.desc}</p>
                 </div>
               </FadeIn>
-            ))}
-          </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── Pricing Block with custom Hover Effects ── */}
+      <section id="pricing" className="relative z-10 py-24 px-4 border-t border-slate-900 max-w-5xl mx-auto">
+        <FadeIn className="text-center mb-16">
+          <span className="text-xs font-bold text-teal-400 uppercase tracking-widest">Plans</span>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mt-3 mb-2">
+            Simple, Transparent Pricing
+          </h2>
+          <p className="text-slate-400 text-sm">Start with our free trial. Choose a plan that suits your needs.</p>
+        </FadeIn>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+          {PRICING.map((plan, i) => (
+            <FadeIn key={plan.name} delay={i * 100}>
+              <div 
+                className={`relative rounded-2xl p-6 h-full flex flex-col transition-all duration-300 ease-out 
+                  hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-2xl hover:shadow-teal-500/5
+                  ${plan.highlighted 
+                    ? "bg-gradient-to-b from-slate-900 to-slate-950 border-teal-500/40 shadow-xl border-2" 
+                    : "bg-slate-950/60 border border-slate-800/80 hover:border-teal-500/30"
+                  }`}
+              >
+                {plan.badge && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full shadow-md ${
+                      plan.highlighted ? "bg-teal-500 text-black" : "bg-slate-800 text-slate-200 border border-slate-700"
+                    }`}>
+                      {plan.badge}
+                    </span>
+                  </div>
+                )}
+                
+                <div className="mb-4 mt-2">
+                  <h3 className="text-md font-bold text-white">{plan.name}</h3>
+                  <p className="text-xs text-slate-400 mt-1">{plan.desc}</p>
+                </div>
+
+                <div className="flex items-baseline gap-1 mb-5">
+                  <span className="text-4xl font-extrabold text-white tracking-tight">{plan.price}</span>
+                  <span className="text-xs text-slate-500 font-medium">{plan.period}</span>
+                </div>
+
+                <ul className="space-y-3 mb-8 flex-1">
+                  {plan.features.map(f => (
+                    <li key={f} className="flex items-start gap-2.5">
+                      <CheckCircle size={13} className="text-teal-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs text-slate-200 leading-tight">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Link href={plan.href}
+                  className={`w-full flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-semibold transition-all ${
+                    plan.highlighted
+                      ? "bg-teal-500 hover:bg-teal-600 text-black shadow-lg shadow-teal-500/10"
+                      : "bg-slate-900 hover:bg-slate-850 text-white border border-slate-800 hover:border-slate-700"
+                  }`}
+                >
+                  {plan.cta}
+                  <ChevronRight size={14} />
+                </Link>
+              </div>
+            </FadeIn>
+          ))}
         </div>
       </section>
 
       {/* ── FAQ ── */}
-      <section id="faq" className="relative z-10 py-24 px-5 border-t border-border">
-        <div className="max-w-3xl mx-auto">
-          <FadeIn className="text-center mb-12">
-            <span className="text-xs font-mono text-g-400 uppercase tracking-widest">FAQ</span>
-            <h2 className="text-4xl font-bold text-white mt-3">Frequently Asked Questions</h2>
-          </FadeIn>
-          <div className="space-y-2">
-            {FAQS.map((faq, i) => (
-              <FadeIn key={i} delay={i * 60}>
-                <div className={`card rounded-xl overflow-hidden border transition-all ${
-                  openFaq === i ? "border-g-500/25" : "border-border"
-                }`}>
-                  <button
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="w-full flex items-center justify-between px-5 py-4 text-left">
-                    <span className="text-sm font-medium text-white pr-4">{faq.q}</span>
-                    <ChevronRight size={14} className={`text-slate-600 flex-shrink-0 transition-transform ${openFaq === i ? "rotate-90" : ""}`} />
-                  </button>
-                  {openFaq === i && (
-                    <div className="px-5 pb-4 border-t border-border/50">
-                      <p className="text-sm text-slate-400 leading-relaxed pt-3">{faq.a}</p>
-                    </div>
-                  )}
+      <section id="faq" className="relative z-10 py-24 px-4 border-t border-slate-900 max-w-3xl mx-auto">
+        <FadeIn className="text-center mb-12">
+          <span className="text-xs font-bold text-teal-400 uppercase tracking-widest">Support</span>
+          <h2 className="text-3xl font-bold text-white mt-3">Common Questions</h2>
+        </FadeIn>
+        <div className="space-y-3">
+          {FAQS.map((faq, i) => (
+            <div key={i} className={`bg-slate-950/40 rounded-xl border transition-colors ${openFaq === i ? "border-teal-500/20" : "border-slate-900"}`}>
+              <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full flex items-center justify-between px-5 py-4 text-left">
+                <span className="text-xs md:text-sm font-semibold text-white pr-4">{faq.q}</span>
+                <ChevronRight size={14} className={`text-slate-500 transition-transform ${openFaq === i ? "rotate-90" : ""}`} />
+              </button>
+              {openFaq === i && (
+                <div className="px-5 pb-4 border-t border-slate-900/50 pt-3">
+                  <p className="text-xs md:text-sm text-slate-400 leading-relaxed">{faq.a}</p>
                 </div>
-              </FadeIn>
-            ))}
-          </div>
+              )}
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ── CTA Banner ── */}
-      <section className="relative z-10 py-24 px-5 border-t border-border">
-        <FadeIn>
-          <div className="max-w-3xl mx-auto text-center">
-            <div className="w-14 h-14 rounded-2xl glass-gold flex items-center justify-center mx-auto mb-6 animate-glow">
-              <Brain size={24} className="text-g-400" />
-            </div>
-            <h2 className="text-4xl font-bold text-white mb-4">
-              Ready to hire smarter?
-            </h2>
-            <p className="text-slate-500 text-sm mb-8 max-w-md mx-auto leading-relaxed">
-              Join teams using TalentIQ to cut screening time by 90% and find
-              the right candidates faster with AI reasoning.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link href="/signup"
-                className="btn-gold flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-semibold">
-                Get Started Free
-                <ArrowRight size={15} />
-              </Link>
-              <Link href="/login"
-                className="flex items-center gap-2 px-6 py-3.5 rounded-xl btn-ghost border border-border text-sm text-slate-400">
-                Sign In
-              </Link>
-            </div>
-            <p className="text-xs text-slate-700 mt-5">
-              3 free checks · No credit card required · Cancel anytime
-            </p>
-          </div>
-        </FadeIn>
-      </section>
-
       {/* ── Footer ── */}
-      <footer className="relative z-10 border-t border-border px-5 py-8">
+      <footer className="relative z-10 border-t border-slate-900 bg-slate-950/40 px-4 py-8">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-lg glass-gold flex items-center justify-center">
-              <Brain size={11} className="text-g-400" />
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-md bg-teal-500/10 flex items-center justify-center">
+              <Brain size={12} className="text-teal-400" />
             </div>
-            <span className="text-sm font-bold text-white">TalentIQ</span>
-            <span className="text-xs text-slate-700">v2.0</span>
+            <span className="text-xs font-bold text-white tracking-wide">TalentIQ</span>
           </div>
-          <p className="text-xs text-slate-700 text-center">
-            Built with Next.js · FastAPI · LLaMA 3.3 70B · LangGraph · FAISS
+          <p className="text-[11px] text-slate-500 text-center">
+            &copy; {new Date().getFullYear()} TalentIQ. Secure automated recruitment workflows.
           </p>
-          <div className="flex items-center gap-4 text-xs text-slate-700">
-            <span className="hover:text-slate-400 cursor-pointer transition-colors">Privacy</span>
-            <span className="hover:text-slate-400 cursor-pointer transition-colors">Terms</span>
-            <Link href="/login" className="hover:text-g-400 transition-colors">Sign In</Link>
+          <div className="flex items-center gap-4 text-[11px] text-slate-500">
+            <span className="hover:text-slate-400 cursor-pointer">Privacy Policy</span>
+            <span className="hover:text-slate-400 cursor-pointer">Terms of Service</span>
           </div>
         </div>
       </footer>

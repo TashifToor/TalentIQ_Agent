@@ -5,24 +5,27 @@ from routes.auth import router as auth_router
 from routes.screen import router as screen_router
 from routes.upload import router as upload_router
 from routes.hr import router as hr_router
+# from routes.jobs import router as jobs_router
+# from routes.apply import router as apply_router
 
-from models import user, chat  # noqa — tables ko Base register karwana zaroori hai
+
+from models.user import User  
+from models.chat import Chat
 from models.database import Base, engine
 
-app = FastAPI(title="TalentIQ Master Backend", version="2.0.0")
+app = FastAPI(title="TalentIQ Backend", version="2.0.0")
 
-# ── Tables auto-create ──────────────────────────────────────────────
+
 @app.on_event("startup")
 def create_tables():
     Base.metadata.create_all(bind=engine)
-    print("[DB] Tables created/verified ✓")
+    print("[DB] All tables created/verified ✓")
 
-# ── CORS ────────────────────────────────────────────────────────────
-# allow_origins=["*"] during development — tum baad mein restrict kar sakte ho
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,   # credentials=True ke saath "*" kaam nahi karta
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -32,6 +35,10 @@ app.include_router(chat_router)
 app.include_router(screen_router)
 app.include_router(upload_router)
 app.include_router(hr_router)
+# app.include_router(jobs_router)
+# app.include_router(apply_router)
+
+
 @app.get("/")
-def read_root():
-    return {"message": "TalentIQ Backend is live ✓", "version": "2.0.0"}
+def root():
+    return {"message": "TalentIQ API v2.0 ✓"}
