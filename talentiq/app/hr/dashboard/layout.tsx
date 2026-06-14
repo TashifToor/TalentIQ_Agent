@@ -1,53 +1,81 @@
 "use client";
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { 
+  LayoutDashboard, ShieldCheck, UserCheck, 
+  CreditCard, LogOut, Terminal 
+} from "lucide-react";
 
-export default function HRDashboardLayout({ children }: { children: React.ReactNode }) {
+export default function HRSystemLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  const navigation = [
+    { name: "Dashboard Console", href: "/hr/dashboard", icon: LayoutDashboard },
+    { name: "Knowledge Vault (RAG)", href: "/hr/dashboard", icon: ShieldCheck }, // Map to respective sub-tabs or pages
+    { name: "Billing & Credits", href: "/hr/billing-gate", icon: CreditCard },
+  ];
+
   return (
-    <div className="flex h-screen bg-[#060814] text-slate-100 font-sans">
-      {/* Recruiter Sidebar */}
-      <aside className="w-64 bg-[#0b0f19] border-r border-slate-800 flex flex-col justify-between p-5">
-        <div>
-          <div className="flex items-center gap-2 mb-8 px-2">
-            <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-xs text-white">IQ</div>
-            <span className="font-bold text-sm tracking-wide bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">TalentIQ Enterprise</span>
+    <div className="flex min-h-screen bg-[#060814]">
+      
+      {/* LEFT STATIC DOCK NAVIGATION */}
+      <aside className="w-64 border-r border-slate-900 bg-[#0b0f19]/60 backdrop-blur-md hidden md:flex flex-col justify-between p-4 sticky top-0 h-screen z-20">
+        <div className="space-y-8">
+          {/* LOGO INDEX */}
+          <div className="flex items-center gap-2.5 px-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center border border-blue-400/20 text-white shadow-lg shadow-blue-600/10">
+              <Terminal size={16} />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-white tracking-wide uppercase">TalentIQ</h2>
+              <span className="text-[9px] font-mono font-bold text-blue-400 block tracking-wider uppercase">Enterprise Core</span>
+            </div>
           </div>
-          
+
+          {/* DOCK NAV ITERATION */}
           <nav className="space-y-1">
-            <Link href="/hr/dashboard" className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-blue-600/10 text-blue-400 border border-blue-500/20 text-xs font-medium transition-all">
-              <span>📊</span> Overview Dashboard
-            </Link>
-            <a href="#" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900 text-xs font-medium transition-all">
-              <span>🤖</span> Agentic Screening
-            </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900 text-xs font-medium transition-all">
-              <span>📁</span> Bulk CV Batches
-            </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-900 text-xs font-medium transition-all">
-              <span>⚙️</span> Workspace Settings
-            </a>
+            {navigation.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium font-sans tracking-wide transition-all group ${
+                    isActive
+                      ? "bg-blue-600 text-white border border-blue-400/20 shadow-lg shadow-blue-600/10"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent"
+                  }`}
+                >
+                  <Icon size={16} className={isActive ? "text-white" : "text-slate-400 group-hover:text-blue-400 transition-colors"} />
+                  {item.name}
+                </Link>
+              );
+            })}
           </nav>
         </div>
-        
-        <div className="p-3 bg-slate-950 border border-slate-800/60 rounded-xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-slate-800 rounded-full flex items-center justify-center text-xs font-semibold text-slate-300">HR</div>
-            <div>
-              <p className="text-[10px] font-medium text-slate-300">M1 Recruiter</p>
-              <span className="text-[9px] text-emerald-400 font-mono">Enterprise</span>
-            </div>
+
+        {/* TERMINATE ACTIONS / FOOTER */}
+        <div className="border-t border-slate-900 pt-4 space-y-3">
+          <Link 
+            href="/auth/login" 
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-red-400 hover:bg-red-500/5 transition-all group"
+          >
+            <LogOut size={16} className="text-slate-500 group-hover:text-red-400 transition-colors" />
+            Exit Console
+          </Link>
+          <div className="px-3 text-[9px] font-mono text-slate-600 tracking-wider">
+            Node NodeCluster // Active-01
           </div>
         </div>
       </aside>
 
-      {/* Main Container */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 border-b border-slate-800 bg-[#0b0f19]/40 backdrop-blur-md flex items-center justify-between px-8">
-          <h2 className="text-sm font-semibold text-slate-200">Workspace Control</h2>
-          <div className="text-xs text-slate-400 font-mono bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800">API Status: Online</div>
-        </header>
-        <div className="flex-1 overflow-y-auto p-8">{children}</div>
+      {/* RENDER VIEW STREAM */}
+      <main className="flex-1 min-w-0 overflow-y-auto">
+        {children}
       </main>
+
     </div>
   );
 }

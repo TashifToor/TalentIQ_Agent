@@ -3,7 +3,7 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Brain, ArrowRight, Mail, Lock, Sparkles, Zap, CheckCircle } from "lucide-react";
+import { Brain, ArrowRight, Mail, Lock, Zap, CheckCircle } from "lucide-react";
 
 export default function CandidateSignupPage() {
   const router = useRouter();
@@ -22,6 +22,38 @@ export default function CandidateSignupPage() {
     } catch (err: any) {
       setError("Verification token missing or subscription inactive.");
     } finally { setLoading(false); }
+  };
+
+  // Real OAuth Native Pop-up Logic
+  const handleGoogleSignIn = async () => {
+    setError("");
+    const result = await signIn("google", { 
+      redirect: false, 
+      callbackUrl: "/candidate/billing-gate" 
+    });
+
+    if (result?.url) {
+      const width = 500;
+      const height = 600;
+      const left = window.screen.width / 2 - width / 2;
+      const top = window.screen.height / 2 - height / 2;
+      
+      const popup = window.open(
+        result.url,
+        "Google Sign In",
+        `width=${width},height=${height},top=${top},left=${left},toolbar=no,menubar=no,scrollbars=yes`
+      );
+
+      const checkPopup = setInterval(() => {
+        if (!popup || popup.closed) {
+          clearInterval(checkPopup);
+          // Pop-up close hote hi user seedha billing gate/dashboard par land karega
+          router.push("/candidate/billing-gate");
+        }
+      }, 1000);
+    } else {
+      setError("Failed to initiate Google sign in container.");
+    }
   };
 
   return (
@@ -96,26 +128,27 @@ export default function CandidateSignupPage() {
               {loading ? "Allocating Workspace..." : <><span className="font-bold">Claim Pro Sandbox Access</span><ArrowRight size={14} /></>}
             </button>
           </form>
+          
           <div className="relative my-6">
-  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-800"></div></div>
-  <div className="relative flex justify-center text-[10px] uppercase font-mono"><span className="bg-white dark:bg-[#0b0f19] px-3 text-slate-400 dark:text-slate-500">Or Access Instantly With</span></div>
-</div>
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
+            <div className="relative flex justify-center text-[10px] uppercase font-mono"><span className="bg-[#0b0f19] px-3 text-slate-500">Or Access Instantly With</span></div>
+          </div>
 
-{/* Real Google Colored Button */}
-<button 
-  type="button"
-  onClick={() => signIn("google", { callbackUrl: "/candidate/billing-gate" })}
-  className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-xs font-medium bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-[0.98]"
->
-  {/* Official Google Vector Icon */}
-  <svg className="w-4 h-4" viewBox="0 0 24 24">
-    <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0112 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.742 1.055 15.014 0 12 0 7.345 0 3.31 2.682 1.341 6.6l3.925 3.165z" />
-    <path fill="#4285F4" d="M23.736 12.25c0-.85-.077-1.664-.218-2.455H12v4.643h6.582a5.626 5.626 0 01-2.441 3.689v3.064h3.945c2.309-2.127 3.65-5.259 3.65-8.94z" />
-    <path fill="#FBBC05" d="M5.266 14.235L1.341 17.4C3.31 21.318 7.345 24 12 24c3.055 0 5.623-1.014 7.495-2.755l-3.945-3.064c-1.096.736-2.5 1.173-3.55 1.173-2.836 0-5.245-1.914-6.104-4.486l-3.925 3.165z" />
-    <path fill="#34A853" d="M5.895 14.235A7.036 7.036 0 015.523 12c0-.79.132-1.55.373-2.265L1.341 6.573A11.944 11.944 0 000 12c0 1.93.459 3.755 1.341 5.427l4.554-3.192z" />
-  </svg>
-  <span>Sign up with Google</span>
-</button>
+          {/* Fixed Pop-up Google Button */}
+          <button 
+            type="button"
+            onClick={handleGoogleSignIn}
+            className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-xs font-medium bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-[0.98]"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0112 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.742 1.055 15.014 0 12 0 7.345 0 3.31 2.682 1.341 6.6l3.925 3.165z" />
+              <path fill="#4285F4" d="M23.736 12.25c0-.85-.077-1.664-.218-2.455H12v4.643h6.582a5.626 5.626 0 01-2.441 3.689v3.064h3.945c2.309-2.127 3.65-5.259 3.65-8.94z" />
+              <path fill="#FBBC05" d="M5.266 14.235L1.341 17.4C3.31 21.318 7.345 24 12 24c3.055 0 5.623-1.014 7.495-2.755l-3.945-3.064c-1.096.736-2.5 1.173-3.55 1.173-2.836 0-5.245-1.914-6.104-4.486l-3.925 3.165z" />
+              <path fill="#34A853" d="M5.895 14.235A7.036 7.036 0 015.523 12c0-.79.132-1.55.373-2.265L1.341 6.573A11.944 11.944 0 000 12c0 1.93.459 3.755 1.341 5.427l4.554-3.192z" />
+            </svg>
+            <span>Sign up with Google</span>
+          </button>
+
           <p className="text-center text-xs text-slate-500 mt-6">
             Already have your pass?{" "}
             <Link href="/auth/login/candidate" className="text-teal-400 hover:text-teal-300 font-semibold transition-colors">Sign In Here</Link>
