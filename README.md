@@ -1,4 +1,4 @@
-# 🤖 TalentIQ v2.0 — Agentic CV Screening Platform
+# 🤖 TalentIQ v2 — Agentic CV Screening Platform
 
 TalentIQ is a next-generation, asynchronous AI recruiting platform designed to automate deep technical candidate screening. Moving away from legacy keyword-matching ATS, TalentIQ uses an advanced multi-modal agentic graph workflow powered by **LLaMA 3.3 (70B)** and **FAISS Vector Storage** to read, analyze, and grade candidate CVs against complex Job Descriptions with absolute chain-of-thought reasoning.
 
@@ -106,6 +106,7 @@ To build and deploy the entire multi-tenant stack onto production seamlessly via
 Bash
 # Build containers
 docker-compose up --build -d
+## This Project is Under Construction
 📄 License
 Distributed under the MIT License. See LICENSE for more information.
 
