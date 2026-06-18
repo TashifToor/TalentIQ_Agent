@@ -34,7 +34,7 @@ TalentIQ is a next-generation, asynchronous AI recruiting platform designed to a
        ▼
 [Frontend Dashboard UI] ──▶ Renders Score, Matched Skills, Gaps, and Deep Markdown Analysis
 🛠️ The Tech Stack
-Backend: FastAPI (Python 3.11+), Uvicorn
+Backend: FastAPI (Python 3.12+), Uvicorn
 
 Orchestration & AI: LangChain, LangGraph (StateGraph Workflow)
 
