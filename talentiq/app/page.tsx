@@ -1,487 +1,335 @@
-"use client";
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import {
-  Brain, Zap, Shield, BarChart3, Users, ChevronRight,
-  CheckCircle, ArrowRight, Sparkles, FileText, Target,
-  Award, Play, Menu, X, Cpu
-} from "lucide-react";
-
-/* ── Animated counter ── */
-function Counter({ end, suffix = "" }: { end: number; suffix?: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      let start = 0;
-      const duration = 1800;
-      const step = Math.ceil(end / (duration / 16));
-      const timer = setInterval(() => {
-        start = Math.min(start + step, end);
-        setCount(start);
-        if (start >= end) clearInterval(timer);
-      }, 16);
-      observer.disconnect();
-    }, { threshold: 0.5 });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [end]);
-  return <span ref={ref}>{count}{suffix}</span>;
-}
-
-/* ── Section fade-in on scroll ── */
-function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const [visible, setVisible] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const observer = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting) { setVisible(true); observer.disconnect(); }
-    }, { threshold: 0.1 });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-  return (
-    <div ref={ref} className={`transition-all duration-700 ${className}`}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(24px)" : "translateY(0)",
-        transitionDelay: `${delay}ms`,
-      }}>
-      {children}
-    </div>
-  );
-}
-
-const NAV_LINKS = ["Features", "How It Works", "Pricing", "FAQ"];
-
-const FEATURES = [
-  {
-    icon: Cpu,
-    title: "Next-Gen ATS Scanner",
-    desc: "Test your resume against modern corporate ATS screening filters. See exactly how automated corporate parsers read and score your technical background.",
-    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
-  },
-  {
-    icon: Brain,
-    title: "Context-Aware Match",
-    desc: "No strict or dumb keyword limitations. The system recognizes that 'building backend pipelines' deeply qualifies you for senior software engineering roles.",
-    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
-  },
-  {
-    icon: Target,
-    title: "Skill Gap & Missing Matrix",
-    desc: "For job seekers: know exactly what crucial technical or functional skills are missing from your profile compared to target job descriptions.",
-    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
-  },
-  {
-    icon: Zap,
-    title: "Instant Batch Screening",
-    desc: "For recruiters: drop dozens of incoming applicant CVs simultaneously and generate a pristine, multi-variable sorted leaderboard in seconds.",
-    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
-  },
-  {
-    icon: BarChart3,
-    title: "Fair Core Eligibility Scores",
-    desc: "Get an objective 0–100 ranking index complete with structured feedback on capability depth, role alignment, and experience level.",
-    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
-  },
-  {
-    icon: Shield,
-    title: "Company Document Guide",
-    desc: "A secure playground to upload operational guidelines or internal company manuals and query them instantly using contextual text search.",
-    color: "text-teal-400 bg-teal-500/10 border-teal-500/20",
-  },
-];
-
-const STEPS = [
-  {
-    num: "01",
-    title: "Set Target Criteria",
-    desc: "Recruiters paste their core job descriptions. Candidates paste their dream role details to align targeting parameters.",
-    icon: FileText,
-  },
-  {
-    num: "02",
-    title: "Upload Resumes",
-    desc: "Drop individual or bulk candidate profiles. Our deep extractor securely processes full text layouts without breaking formats.",
-    icon: Users,
-  },
-  {
-    num: "03",
-    title: "AI & ATS Simulation",
-    desc: "The screening layer reads applicant experience data, parsing structure, and project context just like real human screeners.",
-    icon: Brain,
-  },
-  {
-    num: "04",
-    title: "Analyze Score Report",
-    desc: "Access leaderboard rankings if hiring, or review personal missing-skill feedback loops if optimizing your own career profile.",
-    icon: Award,
-  },
-];
-
-const PRICING = [
-  {
-    name: "Free Trial",
-    price: "$0",
-    period: "forever",
-    desc: "Test individual match performance",
-    features: ["3 Full ATS screening checks", "Basic skill gap overview", "Standard file formatting support", "Personal user dashboard access"],
-    cta: "Get Started Free",
-    href: "/signup",
-    highlighted: false,
-  },
-  {
-    name: "Job Seeker Pro",
-    price: "$9",
-    period: "/month",
-    desc: "Built for active candidates & developers",
-    features: [
-      "Unlimited ATS matching simulation",
-      "Deep job eligibility analysis",
-      "Precise missing-skill alerts",
-      "Format structural audit feedback",
-      "Priority processing speed queue",
-    ],
-    cta: "Optimize My Resume",
-    href: "/signup",
-    highlighted: false,
-    badge: "For Job Seekers",
-  },
-  {
-    name: "Hiring Suite",
-    price: "$49",
-    period: "/month",
-    desc: "Tailored for business founders & HR leaders",
-    features: [
-      "Unlimited core job vacancy creation",
-      "Automated bulk applicant ranking",
-      "Multi-candidate leaderboard view",
-      "Company guidelines assistant chatbot",
-      "Shared pipeline collaboration layout",
-      "Dedicated account management support",
-    ],
-    cta: "Deploy Hiring Suite",
-    href: "/signup",
-    highlighted: true,
-    badge: "Recruitment Teams", // Text ko short aur clean kar diya taake break na ho
-  },
-];
-
-const STATS = [
-  { value: 98, suffix: "%", label: "ATS Optimization Rate" },
-  { value: 90, suffix: "%", label: "Manual Screening Saved" },
-  { value: 50, suffix: "K+", label: "Profiles Scanned" },
-  { value: 10, suffix: "x", label: "Faster Pipeline Delivery" },
-];
-
-const FAQS = [
-  {
-    q: "Can I use TalentIQ as an individual job seeker?",
-    a: "Absolutely! You can paste any external target job description and upload your resume to see exactly how recruiter algorithms score your profile, what key requirements you are missing, and how to fix them.",
-  },
-  {
-    q: "Does this replace traditional corporate ATS?",
-    a: "Think of it as an intelligence layer. For recruiters, it saves hours of filtering text keywords by acting as a smart screener. For applicants, it serves as a testing sandbox to survive automated enterprise filtering layers.",
-  },
-  {
-    q: "Is my technical data and source files protected?",
-    a: "Completely. Security and confidentiality are core features. All data processes happen over secure end-to-end transport tunnels, and your individual uploads are never shared or leaked outside.",
-  },
-];
+'use client'
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 
 export default function LandingPage() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [scrolled, setScrolled] = useState(false);
+  const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handler);
-    return () => window.removeEventListener("scroll", handler);
-  }, []);
+    const onScroll = () => setScrolled(window.scrollY > 50)
+    window.addEventListener('scroll', onScroll)
+    const obs = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible') }), { threshold: 0.12 })
+    document.querySelectorAll('.reveal').forEach(el => obs.observe(el))
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-200 overflow-x-hidden antialiased">
-      {/* ── Background decoration ── */}
-      <div className="fixed inset-0 pointer-events-none z-0 opacity-30">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-[120px]" />
-        <div className="absolute top-[30%] right-[-10%] w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[140px]" />
-      </div>
+    <div style={{ background: 'var(--paper)', color: 'var(--ink)', fontFamily: 'Syne, sans-serif' }}>
 
-      {/* ── Navbar ── */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? "backdrop-blur-md bg-[#0b0f19]/80 border-b border-slate-800" : "bg-transparent"}`}>
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
-              <Brain size={16} className="text-teal-400" />
-            </div>
-            <span className="text-md font-bold text-white tracking-wide">TalentIQ</span>
+      {/* NAV */}
+      <nav style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 68,
+        padding: '0 5%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        transition: 'all .4s', background: scrolled ? 'rgba(247,245,240,.96)' : 'transparent',
+        backdropFilter: scrolled ? 'blur(20px)' : 'none',
+        borderBottom: scrolled ? '1px solid var(--border)' : '1px solid transparent',
+      }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600, color: 'var(--ink)' }}>
+          <div style={{ width: 32, height: 32, background: 'var(--ink)', borderRadius: 9, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="#e2b04a"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg>
           </div>
-
-          <div className="hidden md:flex items-center gap-6">
-            {NAV_LINKS.map(link => (
-              <a key={link} href={`#${link.toLowerCase().replace(/ /g, "-")}`}
-                className="text-xs text-slate-400 hover:text-white transition-colors">
-                {link}
-              </a>
-            ))}
-          </div>
-
-          <div className="hidden md:flex items-center gap-4">
-            <Link href="/login" className="text-xs text-slate-400 hover:text-white transition-colors">
-              Sign In
-            </Link>
-            <Link href="/signup" className="bg-teal-500 hover:bg-teal-600 text-black font-semibold flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs transition-all shadow-lg shadow-teal-500/10">
-              Get Started <ArrowRight size={12} />
-            </Link>
-          </div>
-
-          <button className="md:hidden text-slate-400 p-2" onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          TalentIQ
+        </Link>
+        <div style={{ display: 'flex', gap: 36 }}>
+          {['Features', 'How it works', 'Pricing'].map(l => (
+            <a key={l} href={`#${l.toLowerCase().replace(/ /g, '-')}`} style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink2)', textDecoration: 'none' }}>{l}</a>
+          ))}
         </div>
-
-        {/* Mobile menu */}
-        {menuOpen && (
-          <div className="md:hidden bg-[#0c1220] border-t border-slate-800 px-5 py-4 space-y-3">
-            {NAV_LINKS.map(link => (
-              <a key={link} href={`#${link.toLowerCase().replace(/ /g, "-")}`}
-                className="block text-sm text-slate-400 hover:text-white py-1.5"
-                onClick={() => setMenuOpen(false)}>
-                {link}
-              </a>
-            ))}
-            <div className="flex gap-3 pt-2 border-t border-slate-800/60">
-              <Link href="/login" className="flex-1 text-center py-2 rounded-xl text-slate-400 border border-slate-800 text-sm">Sign In</Link>
-              <Link href="/signup" className="flex-1 text-center py-2 rounded-xl bg-teal-500 text-black font-medium text-sm">Sign Up</Link>
-            </div>
-          </div>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Link href="/auth/login" style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink2)', textDecoration: 'none', padding: '8px 16px', borderRadius: 8 }}>Log in</Link>
+          <Link href="/auth/login" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', background: 'var(--gold2)', padding: '9px 20px', borderRadius: 8, textDecoration: 'none', transition: 'all .25s' }}>Try free</Link>
+        </div>
       </nav>
 
-      {/* ── Hero Section ── */}
-      <section className="relative z-10 min-h-screen flex flex-col items-center justify-center text-center px-4 pt-24 max-w-4xl mx-auto">
-        <FadeIn>
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-500/5 border border-teal-500/20 mb-6">
-            <Sparkles size={12} className="text-teal-400" />
-            <span className="text-xs font-medium text-teal-400">Next-Gen Intelligent ATS Matching Sandbox</span>
-          </div>
-        </FadeIn>
+      {/* HERO */}
+      <section id="hero" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '120px 5% 80px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        {/* BG */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, var(--border) 1px, transparent 1px)', backgroundSize: '36px 36px', opacity: .6 }} />
+          <div className="drift" style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(197,147,31,.15) 0%, transparent 70%)', top: '-10%', left: '-10%', filter: 'blur(80px)', opacity: .5 }} />
+          <div className="drift drift-d1" style={{ position: 'absolute', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(11,107,87,.1) 0%, transparent 70%)', bottom: '-10%', right: '-5%', filter: 'blur(80px)', opacity: .5 }} />
+        </div>
 
-        <FadeIn delay={100}>
-          <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-6 tracking-tight">
-            Smart ATS Hiring Assistant
+        {/* Floating chips */}
+        {[
+          { text: '✓  Match score: 91%', style: { bottom: '26%', left: '7%' }, color: 'var(--teal)' },
+          { text: '⚡ Analyzed in 1.9s', style: { top: '30%', right: '6%' }, color: 'var(--gold)' },
+          { text: '📋 18 candidates ranked', style: { bottom: '33%', right: '8%' }, color: 'var(--ink2)' },
+          { text: '🎯 2 skill gaps found', style: { top: '36%', left: '6%' }, color: 'var(--ink3)' },
+        ].map((chip, i) => (
+          <div key={i} className={`animate-float float-d${i}`} style={{ position: 'absolute', background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px', fontSize: 12, fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,.07)', zIndex: 2, color: chip.color, ...chip.style }}>
+            {chip.text}
+          </div>
+        ))}
+
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 820 }}>
+          {/* Eyebrow */}
+          <div className="animate-fade-up" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid var(--border)', borderRadius: 100, padding: '6px 18px 6px 8px', fontSize: 12, fontWeight: 500, letterSpacing: '.06em', color: 'var(--ink2)', marginBottom: 36 }}>
+            <div style={{ width: 22, height: 22, background: 'var(--gold2)', borderRadius: '50%', display: 'grid', placeItems: 'center' }}>
+              <svg width="10" height="10" fill="none" viewBox="0 0 10 10" stroke="#fff" strokeWidth="2" strokeLinecap="round"><path d="M2 5l2.5 2.5L8 2.5" /></svg>
+            </div>
+            Intelligent Recruitment Platform
+          </div>
+
+          {/* Headline */}
+          <h1 className="animate-fade-up d2" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(52px,7vw,88px)', lineHeight: 1.04, letterSpacing: '-1.5px', marginBottom: 28 }}>
+            <span style={{ color: 'var(--ink2)', fontWeight: 400 }}>Hire the right people.</span>
             <br />
-            <span className="bg-gradient-to-r from-teal-400 via-white to-slate-200 bg-clip-text text-transparent">That Understands People</span>
+            <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Faster than <em style={{ fontStyle: 'italic', color: 'var(--gold)', fontWeight: 400 }}>ever before.</em></span>
           </h1>
-        </FadeIn>
 
-        <FadeIn delay={200}>
-          <p className="text-md md:text-lg text-slate-400 max-w-2xl mb-10 leading-relaxed">
-            Stop wasting endless hours manually reading resumes or worrying about automated bots rejecting your CV. TalentIQ analyzes profiles instantly—ranking and benchmarking true experience, capacity, and matching performance.
+          <p className="animate-fade-up d3" style={{ fontSize: 17, color: 'var(--ink2)', maxWidth: 520, margin: '0 auto 44px', lineHeight: 1.75, fontWeight: 400 }}>
+            Upload a CV, set your role criteria, and get a comprehensive match score with skill analysis in under 3 seconds. No guesswork. No bias. Just clarity.
           </p>
-        </FadeIn>
 
-        <FadeIn delay={300}>
-          <div className="flex flex-col sm:flex-row items-center gap-4 mb-12">
-            <Link href="/signup" className="bg-teal-500 hover:bg-teal-600 text-black font-bold flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm transition-all shadow-lg shadow-teal-500/15 group">
-              Scan Your CV Free — 3 Checks Included
-              <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
+          {/* CTAs */}
+          <div className="animate-fade-up d4" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 72 }}>
+            <Link href="/auth/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 600, color: 'var(--ink)', background: 'var(--gold2)', padding: '15px 32px', borderRadius: 10, textDecoration: 'none', transition: 'all .25s', letterSpacing: '.02em' }}>
+              Try 3 free scans — no signup →
             </Link>
-            <Link href="/login" className="flex items-center gap-2 px-6 py-3.5 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-900/40 text-sm font-medium text-white transition-colors">
-              <Play size={12} fill="currentColor" /> View Dashboard
-            </Link>
+            <button style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15, color: 'var(--ink)', border: '1.5px solid var(--border)', background: 'transparent', padding: '15px 28px', borderRadius: 10, cursor: 'pointer', transition: 'all .25s' }}>
+              <svg width="15" height="15" fill="none" viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" strokeWidth="1.3" /><path d="M6 5.5l3 2-3 2V5.5z" fill="currentColor" /></svg>
+              Watch demo
+            </button>
           </div>
-        </FadeIn>
+
+          {/* Hero scan widget */}
+          <div className="animate-fade-up d5" style={{ background: '#fff', border: '1.5px solid var(--border)', borderRadius: 20, maxWidth: 520, margin: '0 auto', overflow: 'hidden', boxShadow: '0 12px 56px rgba(0,0,0,.08)' }}>
+            <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--paper2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.08em', color: 'var(--ink)', textTransform: 'uppercase' }}>CV ANALYZER</span>
+              <span style={{ background: 'var(--gold-light)', color: 'var(--gold)', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 100, border: '1px solid rgba(197,147,31,.2)' }}>3 free scans</span>
+            </div>
+            <div style={{ padding: 24 }}>
+              <div style={{ border: '2px dashed var(--border)', borderRadius: 12, padding: 28, textAlign: 'center', cursor: 'pointer', background: 'var(--paper)', marginBottom: 14 }}>
+                <div style={{ fontSize: 28, marginBottom: 8 }}>📄</div>
+                <p style={{ fontSize: 13, color: 'var(--ink2)' }}><strong>Drop your CV here</strong> or click to upload</p>
+                <p style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 4 }}>PDF or DOCX · No account needed</p>
+              </div>
+              <div style={{ background: 'var(--paper2)', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div><strong style={{ fontSize: 13, color: 'var(--ink)' }}>Free scans remaining</strong><br /><span style={{ fontSize: 11, color: 'var(--ink3)' }}>3 scans before sign-up required</span></div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[1, 2, 3].map(i => (
+                    <div key={i} style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--gold2)', display: 'grid', placeItems: 'center' }}>
+                      <svg width="12" height="12" fill="none" viewBox="0 0 12 12" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round"><path d="M2 6l3 3 5-5" /></svg>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* ── Stats ── */}
-      <section className="relative z-10 py-12 border-y border-slate-900 bg-slate-950/20">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {STATS.map((s, i) => (
-              <FadeIn key={s.label} delay={i * 100}>
-                <div>
-                  <p className="text-3xl md:text-4xl font-extrabold text-teal-400 mb-1">
-                    <Counter end={s.value} suffix={s.suffix} />
-                  </p>
-                  <p className="text-xs text-slate-400 font-semibold tracking-wide uppercase">{s.label}</p>
-                </div>
-              </FadeIn>
+      {/* MARQUEE */}
+      <div style={{ background: 'var(--ink)', padding: '18px 0', overflow: 'hidden' }}>
+        <div className="animate-marquee" style={{ display: 'flex', whiteSpace: 'nowrap' }}>
+          {Array(2).fill(['CV Scoring', 'Skill Gap Detection', 'HR Policy Chatbot', 'Bulk Screening', 'Role Matching', 'Candidate Ranking', 'Bias-Free Hiring', 'Instant Insights']).flat().map((item, i) => (
+            <div key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 12, padding: '0 32px', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.3)', letterSpacing: '.1em', textTransform: 'uppercase', borderRight: '1px solid rgba(255,255,255,.06)' }}>
+              <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--gold2)' }} />
+              {item}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* FEATURES */}
+      <section id="features" style={{ padding: '110px 5%' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+          <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>What We Do</p>
+          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(36px,4vw,56px)', color: 'var(--ink)', lineHeight: 1.1, letterSpacing: '-.5px', marginBottom: 64 }}>
+            Smart screening.<br /><em style={{ fontStyle: 'italic', color: 'var(--ink2)', fontWeight: 400 }}>Real results.</em>
+          </h2>
+          <div className="reveal" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 2, background: 'var(--border)' }}>
+            {[
+              { n: '01', t: 'Instant CV Analysis', p: 'Upload any CV and get a detailed match score with reasoning, skill breakdown, and role fit assessment — within seconds.' },
+              { n: '02', t: 'Skill Gap Detection', p: 'Automatically surfaces missing skills from job description requirements. Helps candidates improve, helps HR shortlist faster.' },
+              { n: '03', t: 'Policy Chatbot', p: 'HR teams upload company documents and policies. Get instant, accurate answers to employee questions — 24/7.' },
+              { n: '04', t: 'Bulk Candidate Ranking', p: 'Screen 50+ CVs at once. Get a ranked shortlist with scores and reasoning so you never miss a great candidate.', dark: true },
+              { n: '05', t: 'Explainable Scores', p: 'Every score comes with a breakdown. Candidates understand exactly where they stand. Hiring managers can defend every decision.' },
+              { n: '06', t: 'Role-Based Portals', p: 'Separate dashboards for candidates and HR teams — each tailored to their workflow, data visibility, and goals.' },
+            ].map(f => (
+              <div key={f.n} style={{ background: f.dark ? 'var(--ink)' : 'var(--paper)', padding: 36, transition: 'background .25s', cursor: 'default' }}
+                onMouseOver={e => { if (!f.dark) (e.currentTarget as HTMLElement).style.background = '#fff' }}
+                onMouseOut={e => { if (!f.dark) (e.currentTarget as HTMLElement).style.background = 'var(--paper)' }}>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 48, color: f.dark ? 'rgba(255,255,255,.08)' : 'var(--paper3)', fontWeight: 600, lineHeight: 1, marginBottom: 20 }}>{f.n}</div>
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: f.dark ? '#fff' : 'var(--ink)', marginBottom: 10, letterSpacing: '-.2px' }}>{f.t}</h3>
+                <p style={{ fontSize: 14, color: f.dark ? 'rgba(255,255,255,.4)' : 'var(--ink3)', lineHeight: 1.75 }}>{f.p}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Features ── */}
-      <section id="features" className="relative z-10 py-24 px-4 max-w-6xl mx-auto">
-        <FadeIn className="text-center mb-16">
-          <span className="text-xs font-bold text-teal-400 uppercase tracking-widest">Platform Core Architecture</span>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mt-3 mb-4">
-            Built to cross-verify role-fit layout alignments
-          </h2>
-          <p className="text-slate-400 max-w-lg mx-auto text-sm leading-relaxed">
-            Engineered both to help teams streamline recruitment processing and allow talented applicants to beat automated corporate screening bias.
-          </p>
-        </FadeIn>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {FEATURES.map((f, i) => {
-            const Icon = f.icon;
-            return (
-              <FadeIn key={f.title} delay={i * 80}>
-                <div className="border border-slate-800/80 bg-slate-900/20 rounded-2xl p-6 h-full transition-all duration-300 hover:border-teal-500/30 hover:bg-slate-900/40">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center border mb-4 ${f.color}`}>
-                    <Icon size={18} />
-                  </div>
-                  <h3 className="text-sm font-bold text-white mb-2">{f.title}</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">{f.desc}</p>
+      {/* HOW IT WORKS */}
+      <section id="how-it-works" style={{ background: 'var(--dark)', padding: '110px 5%' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+          <div>
+            <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold2)', marginBottom: 14 }}>The Process</p>
+            <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,4vw,48px)', color: '#fff', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 40 }}>
+              From upload to insight<br /><em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.35)', fontWeight: 400 }}>in under 5 seconds.</em>
+            </h2>
+            <div className="reveal">
+              {[
+                { n: '1', t: 'Upload your CV or job description', p: 'Drop a PDF or paste text. Structure, content, and skills extracted automatically.' },
+                { n: '2', t: 'Set the role requirements', p: 'Paste a job description or choose from common role templates pre-built for you.' },
+                { n: '3', t: 'AI runs the full analysis', p: 'A multi-step pipeline grades relevance, gaps, and strengths — then generates human-readable reasoning.' },
+                { n: '4', t: 'Read your score and next steps', p: 'Get a 0–100 match score with detailed breakdown, missing skills, and actionable improvements.' },
+              ].map((s, i) => (
+                <div key={i} style={{ display: 'flex', gap: 20, padding: '22px 0', borderBottom: i < 3 ? '1px solid rgba(255,255,255,.06)' : 'none', cursor: 'default', transition: 'padding .2s' }}
+                  onMouseOver={e => (e.currentTarget as HTMLElement).style.paddingLeft = '8px'}
+                  onMouseOut={e => (e.currentTarget as HTMLElement).style.paddingLeft = '0'}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid rgba(255,255,255,.1)', display: 'grid', placeItems: 'center', fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: 'rgba(255,255,255,.4)', flexShrink: 0, transition: 'all .25s' }}>{s.n}</div>
+                  <div><h4 style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,.85)', marginBottom: 4 }}>{s.t}</h4><p style={{ fontSize: 13, color: 'rgba(255,255,255,.35)', lineHeight: 1.65 }}>{s.p}</p></div>
                 </div>
-              </FadeIn>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── How It Works ── */}
-      <section id="how-it-works" className="relative z-10 py-24 px-4 border-t border-slate-900 max-w-6xl mx-auto">
-        <FadeIn className="text-center mb-16">
-          <span className="text-xs font-bold text-teal-400 uppercase tracking-widest">Process Flow</span>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mt-3">
-            Two Sides. One Unified Evaluation Model.
-          </h2>
-        </FadeIn>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {STEPS.map((step, i) => {
-            const Icon = step.icon;
-            return (
-              <FadeIn key={step.num} delay={i * 120}>
-                <div className="relative border border-slate-900 bg-slate-950/40 rounded-2xl p-5 h-full">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xl font-extrabold text-teal-400 font-mono">{step.num}</span>
-                    <div className="w-8 h-8 rounded-lg bg-teal-500/5 border border-teal-500/10 flex items-center justify-center">
-                      <Icon size={14} className="text-teal-400" />
-                    </div>
-                  </div>
-                  <h3 className="text-sm font-bold text-white mb-2">{step.title}</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">{step.desc}</p>
-                </div>
-              </FadeIn>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── Pricing Block with custom Hover Effects ── */}
-      <section id="pricing" className="relative z-10 py-24 px-4 border-t border-slate-900 max-w-5xl mx-auto">
-        <FadeIn className="text-center mb-16">
-          <span className="text-xs font-bold text-teal-400 uppercase tracking-widest">Plans</span>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mt-3 mb-2">
-            Simple, Transparent Pricing
-          </h2>
-          <p className="text-slate-400 text-sm">Start with our free trial. Choose a plan that suits your needs.</p>
-        </FadeIn>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-          {PRICING.map((plan, i) => (
-            <FadeIn key={plan.name} delay={i * 100}>
-              <div 
-                className={`relative rounded-2xl p-6 h-full flex flex-col transition-all duration-300 ease-out 
-                  hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-2xl hover:shadow-teal-500/5
-                  ${plan.highlighted 
-                    ? "bg-gradient-to-b from-slate-900 to-slate-950 border-teal-500/40 shadow-xl border-2" 
-                    : "bg-slate-950/60 border border-slate-800/80 hover:border-teal-500/30"
-                  }`}
-              >
-                {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full shadow-md ${
-                      plan.highlighted ? "bg-teal-500 text-black" : "bg-slate-800 text-slate-200 border border-slate-700"
-                    }`}>
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
-                
-                <div className="mb-4 mt-2">
-                  <h3 className="text-md font-bold text-white">{plan.name}</h3>
-                  <p className="text-xs text-slate-400 mt-1">{plan.desc}</p>
-                </div>
-
-                <div className="flex items-baseline gap-1 mb-5">
-                  <span className="text-4xl font-extrabold text-white tracking-tight">{plan.price}</span>
-                  <span className="text-xs text-slate-500 font-medium">{plan.period}</span>
-                </div>
-
-                <ul className="space-y-3 mb-8 flex-1">
-                  {plan.features.map(f => (
-                    <li key={f} className="flex items-start gap-2.5">
-                      <CheckCircle size={13} className="text-teal-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-xs text-slate-200 leading-tight">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Link href={plan.href}
-                  className={`w-full flex items-center justify-center gap-1.5 py-3 rounded-xl text-xs font-semibold transition-all ${
-                    plan.highlighted
-                      ? "bg-teal-500 hover:bg-teal-600 text-black shadow-lg shadow-teal-500/10"
-                      : "bg-slate-900 hover:bg-slate-850 text-white border border-slate-800 hover:border-slate-700"
-                  }`}
-                >
-                  {plan.cta}
-                  <ChevronRight size={14} />
-                </Link>
-              </div>
-            </FadeIn>
-          ))}
-        </div>
-      </section>
-
-      {/* ── FAQ ── */}
-      <section id="faq" className="relative z-10 py-24 px-4 border-t border-slate-900 max-w-3xl mx-auto">
-        <FadeIn className="text-center mb-12">
-          <span className="text-xs font-bold text-teal-400 uppercase tracking-widest">Support</span>
-          <h2 className="text-3xl font-bold text-white mt-3">Common Questions</h2>
-        </FadeIn>
-        <div className="space-y-3">
-          {FAQS.map((faq, i) => (
-            <div key={i} className={`bg-slate-950/40 rounded-xl border transition-colors ${openFaq === i ? "border-teal-500/20" : "border-slate-900"}`}>
-              <button onClick={() => setOpenFaq(openFaq === i ? null : i)} className="w-full flex items-center justify-between px-5 py-4 text-left">
-                <span className="text-xs md:text-sm font-semibold text-white pr-4">{faq.q}</span>
-                <ChevronRight size={14} className={`text-slate-500 transition-transform ${openFaq === i ? "rotate-90" : ""}`} />
-              </button>
-              {openFaq === i && (
-                <div className="px-5 pb-4 border-t border-slate-900/50 pt-3">
-                  <p className="text-xs md:text-sm text-slate-400 leading-relaxed">{faq.a}</p>
-                </div>
-              )}
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Footer ── */}
-      <footer className="relative z-10 border-t border-slate-900 bg-slate-950/40 px-4 py-8">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-md bg-teal-500/10 flex items-center justify-center">
-              <Brain size={12} className="text-teal-400" />
-            </div>
-            <span className="text-xs font-bold text-white tracking-wide">TalentIQ</span>
           </div>
-          <p className="text-[11px] text-slate-500 text-center">
-            &copy; {new Date().getFullYear()} TalentIQ. Secure automated recruitment workflows.
-          </p>
-          <div className="flex items-center gap-4 text-[11px] text-slate-500">
-            <span className="hover:text-slate-400 cursor-pointer">Privacy Policy</span>
-            <span className="hover:text-slate-400 cursor-pointer">Terms of Service</span>
+
+          {/* Score Mock */}
+          <div className="reveal" style={{ background: '#161614', border: '1px solid rgba(255,255,255,.07)', borderRadius: 20, padding: 28, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, var(--gold) 0%, var(--teal2) 60%, transparent 100%)' }} />
+            <svg width="0" height="0"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#c5931f" /><stop offset="100%" stopColor="#13c28e" /></linearGradient></defs></svg>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.3)', letterSpacing: '.1em', textTransform: 'uppercase' }}>Match Analysis</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--teal2)', fontWeight: 500 }}>
+                <div className="live-pulse" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--teal2)' }} />Live
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
+              <div style={{ position: 'relative', width: 88, height: 88, flexShrink: 0 }}>
+                <svg width="88" height="88" viewBox="0 0 88 88" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="44" cy="44" r="35" fill="none" stroke="#1e1e1b" strokeWidth="8" />
+                  <circle className="ring-anim" cx="44" cy="44" r="35" fill="none" stroke="url(#rg)" strokeWidth="8" strokeLinecap="round" strokeDasharray="220" strokeDashoffset="33" style={{ '--ring-end': '33' } as React.CSSProperties} />
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 600, color: '#fff', lineHeight: 1 }}>85</span>
+                  <small style={{ fontSize: 10, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>/ 100</small>
+                </div>
+              </div>
+              <div>
+                <h4 style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 4 }}>Aisha Rao</h4>
+                <p style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', marginBottom: 10 }}>Senior Frontend Engineer</p>
+                <span style={{ background: 'rgba(11,107,87,.2)', color: 'var(--teal2)', fontSize: 11, padding: '3px 10px', borderRadius: 100, fontWeight: 600 }}>Strong Match</span>
+              </div>
+            </div>
+            {[
+              { l: 'Skills', w: '92%', d: '.2s', gold: true }, { l: 'Experience', w: '78%', d: '.4s', gold: false },
+              { l: 'Role Fit', w: '85%', d: '.6s', gold: true }, { l: 'Gaps', w: '24%', d: '.8s', gold: false },
+            ].map(b => (
+              <div key={b.l} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', width: 72, flexShrink: 0 }}>{b.l}</span>
+                <div style={{ flex: 1, height: 5, background: '#1e1e1b', borderRadius: 3, overflow: 'hidden' }}>
+                  <div className="bar-anim" style={{ height: '100%', borderRadius: 3, background: b.gold ? 'linear-gradient(90deg,var(--gold),var(--gold2))' : 'linear-gradient(90deg,var(--teal),var(--teal2))', '--bw': b.w, animationDelay: b.d } as React.CSSProperties} />
+                </div>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', width: 30, textAlign: 'right' }}>{b.w}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12 }}>
+              {[['React', true], ['TypeScript', true], ['Node.js', true], ['Docker', false], ['K8s', false]].map(([s, m]) => (
+                <span key={String(s)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 100, background: m ? 'rgba(11,107,87,.15)' : '#1e1e1b', color: m ? 'var(--teal2)' : 'rgba(255,255,255,.35)', border: `1px solid ${m ? 'rgba(19,148,118,.2)' : 'rgba(255,255,255,.06)'}` }}>{String(s)}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FREE SCANS BANNER */}
+      <section style={{ background: 'var(--dark)', padding: '80px 5%', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 600, height: 300, background: 'radial-gradient(ellipse, rgba(197,147,31,.1), transparent 70%)' }} />
+        <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(36px,4vw,54px)', color: '#fff', marginBottom: 16, position: 'relative', zIndex: 1, letterSpacing: '-.5px' }}>
+          Start for free.<br /><em style={{ fontStyle: 'italic', color: 'var(--gold2)' }}>No credit card. No account.</em>
+        </h2>
+        <p className="reveal" style={{ fontSize: 16, color: 'rgba(255,255,255,.4)', marginBottom: 40, position: 'relative', zIndex: 1 }}>Your first 3 CV scans are completely free.</p>
+        <div className="reveal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 40, position: 'relative', zIndex: 1 }}>
+          {[1, 2, 3].map((n, i) => (
+            <>
+              {i > 0 && <span key={`p${n}`} style={{ color: 'rgba(255,255,255,.2)', fontSize: 20 }}>+</span>}
+              <div key={n} style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', display: 'grid', placeItems: 'center', fontFamily: "'Cormorant Garamond', serif", fontSize: 28, color: 'var(--gold2)', cursor: 'default', transition: 'all .3s' }}>{n}</div>
+            </>
+          ))}
+        </div>
+        <Link href="/auth/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 600, color: 'var(--ink)', background: 'var(--gold2)', padding: '15px 32px', borderRadius: 10, textDecoration: 'none', position: 'relative', zIndex: 1 }}>
+          Scan your first CV free →
+        </Link>
+      </section>
+
+      {/* PRICING */}
+      <section id="pricing" style={{ background: 'var(--paper2)', padding: '110px 5%' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+          <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>After Your 3 Free Scans</p>
+          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(36px,4vw,56px)', color: 'var(--ink)', lineHeight: 1.1, letterSpacing: '-.5px', marginBottom: 16 }}>Choose your path.</h2>
+          <p className="reveal" style={{ fontSize: 16, color: 'var(--ink2)', marginBottom: 64 }}>Two focused plans built for how you actually use TalentIQ.</p>
+          <div className="reveal" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+            {/* Candidate */}
+            <div style={{ background: 'var(--ink)', borderRadius: 20, padding: 44 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '6px 14px', borderRadius: 100, background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.5)', marginBottom: 28 }}>For Job Seekers</div>
+              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: '#fff', lineHeight: 1.15, marginBottom: 12, letterSpacing: '-.4px' }}>Know your score<br />before you apply.</h3>
+              <p style={{ fontSize: 15, color: 'rgba(255,255,255,.45)', lineHeight: 1.75, marginBottom: 28 }}>Scan your CV against any job description and get a full analysis, skill gap report, and improvement tips.</p>
+              <div style={{ marginBottom: 28 }}>
+                <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 52, fontWeight: 600, color: 'var(--gold2)' }}>$9</span>
+                <span style={{ fontSize: 16, color: 'rgba(255,255,255,.3)' }}>/mo</span>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,.35)', marginTop: 4 }}>After 3 free scans · Cancel anytime</p>
+              </div>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+                {['Unlimited CV scans', 'Full match score + breakdown', 'Skill gap reports', 'CV improvement suggestions', 'Job role library access'].map(f => (
+                  <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'rgba(255,255,255,.7)' }}>
+                    <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(226,176,74,.2)', color: 'var(--gold2)', display: 'grid', placeItems: 'center', fontSize: 10, flexShrink: 0 }}>✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/auth/signup/candidate" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, padding: '13px 26px', borderRadius: 10, textDecoration: 'none', background: 'var(--gold2)', color: 'var(--ink)', transition: 'all .25s' }}>Start as Candidate →</Link>
+            </div>
+            {/* HR */}
+            <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 20, padding: 44 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '6px 14px', borderRadius: 100, background: 'var(--paper2)', color: 'var(--ink3)', marginBottom: 28 }}>For HR Teams</div>
+              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 36, color: 'var(--ink)', lineHeight: 1.15, marginBottom: 12, letterSpacing: '-.4px' }}>Screen smarter.<br />Hire faster.</h3>
+              <p style={{ fontSize: 15, color: 'var(--ink3)', lineHeight: 1.75, marginBottom: 28 }}>Bulk-screen candidates, rank your shortlist, and let your policy chatbot handle repetitive HR questions automatically.</p>
+              <div style={{ marginBottom: 28 }}>
+                <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 52, fontWeight: 600, color: 'var(--ink)' }}>$49</span>
+                <span style={{ fontSize: 16, color: 'var(--ink3)' }}>/mo</span>
+                <p style={{ fontSize: 13, color: 'var(--ink3)', marginTop: 4 }}>14-day free trial · No credit card needed</p>
+              </div>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+                {['Unlimited bulk CV screening', 'Ranked candidate shortlists', 'HR policy chatbot', 'Team workspace (up to 5 seats)', 'Export reports as PDF'].map(f => (
+                  <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'var(--ink2)' }}>
+                    <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(11,107,87,.1)', color: 'var(--teal)', display: 'grid', placeItems: 'center', fontSize: 10, flexShrink: 0 }}>✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/auth/signup/hr" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, padding: '13px 26px', borderRadius: 10, textDecoration: 'none', background: 'var(--ink)', color: '#fff', transition: 'all .25s' }}>Start HR Trial →</Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{ background: 'var(--dark)', padding: '80px 5% 36px' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 48, marginBottom: 64 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,.9)', marginBottom: 12 }}>
+                <div style={{ width: 28, height: 28, background: 'var(--gold2)', borderRadius: 7, display: 'grid', placeItems: 'center' }}><svg width="13" height="13" viewBox="0 0 16 16" fill="#0a0a09"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg></div>
+                TalentIQ
+              </div>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,.35)', lineHeight: 1.75, maxWidth: 280 }}>Smarter hiring for teams that value quality, speed, and fairness.</p>
+            </div>
+            {[
+              { h: 'Product', links: ['Features', 'Pricing', 'Changelog', 'API'] },
+              { h: 'For You', links: ['For Candidates', 'For HR Teams', 'For Agencies'] },
+              { h: 'Company', links: ['About', 'Privacy', 'Terms', 'Contact'] },
+            ].map(col => (
+              <div key={col.h}>
+                <h5 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 18 }}>{col.h}</h5>
+                {col.links.map(l => <a key={l} href="#" style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,.4)', textDecoration: 'none', marginBottom: 10 }}>{l}</a>)}
+              </div>
+            ))}
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,.06)', paddingTop: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: 'rgba(255,255,255,.25)' }}>
+            <span>© 2025 TalentIQ · All rights reserved</span>
+            <span>Built for people who care about hiring well</span>
           </div>
         </div>
       </footer>
     </div>
-  );
+  )
 }

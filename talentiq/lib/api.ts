@@ -1,37 +1,78 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-// Helper tools to set dynamic access levels
-export const setAuthSession = (token: string, role: 'hr' | 'candidate') => {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("talentiq_token", token);
-    localStorage.setItem("talentiq_role", role);
-    
-    // Server-side middleware ke liye cookies set karna responsive hai
-    document.cookie = `talentiq_token=${token}; path=/; max-age=86400; SameSite=Strict`;
-    document.cookie = `talentiq_role=${role}; path=/; max-age=86400; SameSite=Strict`;
+export async function apiFetch(path: string, options?: RequestInit) {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options?.headers || {}),
+    },
+    ...options,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Request failed" }));
+    throw new Error(err.detail || "API error");
   }
-};
+  return res.json();
+}
 
-export const clearAuthSession = () => {
-  if (typeof window !== "undefined") {
-    localStorage.clear();
-    document.cookie = "talentiq_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    document.cookie = "talentiq_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-  }
-};
+export const api = {
+  // Auth
+  login: (email: string, password: string) =>
+    apiFetch("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
 
-//  Yeh function missing tha! Isko add karo:
-export const getToken = (): string | null => {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("talentiq_token");
-  }
-  return null;
-};
+  // Single unified signup route — role passed inside body, not in URL
+  signupCandidate: (data: object) =>
+    apiFetch("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify({ ...data, role: "candidate" }),
+    }),
 
-//  Future use ke liye role nikalne ka helper bhi rakh lo:
-export const getRole = (): string | null => {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("talentiq_role");
-  }
-  return null;
+  signupHR: (data: object) =>
+    apiFetch("/auth/signup", {
+      method: "POST",
+      body: JSON.stringify({ ...data, role: "hr" }),
+    }),
+
+  me: () => apiFetch("/auth/me"),
+
+  // CV Management — candidate uploads CV
+  uploadCV: (formData: FormData) =>
+    fetch(`${API_BASE_URL}/Candidate/upload`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${typeof window !== "undefined" ? localStorage.getItem("token") || "" : ""}`,
+      },
+      body: formData,
+    }).then((r) => {
+      if (!r.ok) throw new Error("Upload failed");
+      return r.json();
+    }),
+
+  // CV Screening — HR scores/ranks a candidate against a job description
+  screenCandidate: (data: object) =>
+    apiFetch("/Rating/screen", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  // Candidate-side chatbot (CV Chat)
+  chat: (message: string) =>
+    apiFetch("/chat", {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    }),
+
+  getChatHistory: () => apiFetch("/chat/history"),
+
+  // HR Policy RAG chatbot
+  hrChat: (message: string) =>
+    apiFetch("/hr/chat", {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    }),
 };

@@ -1,40 +1,29 @@
-// talentiq/middleware.ts
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+const PROTECTED_CANDIDATE = ['/candidate']
+const PROTECTED_HR = ['/hr']
+const AUTH_PAGES = ['/auth/login', '/auth/signup']
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get("talentiq_token")?.value;
-  const role = request.cookies.get("talentiq_role")?.value;
-  const { pathname } = request.nextUrl;
+  const { pathname } = request.nextUrl
+  const token = request.cookies.get('token')?.value
 
-  // 1. Strict Protection for HR Routes
-  if (pathname.startsWith("/hr")) {
-    if (!token || role !== "hr") {
-      return NextResponse.redirect(new URL("/auth/login/hr", request.url));
-    }
+  const isCandidateRoute = PROTECTED_CANDIDATE.some(p => pathname.startsWith(p))
+  const isHRRoute = PROTECTED_HR.some(p => pathname.startsWith(p))
+  const isAuthPage = AUTH_PAGES.some(p => pathname.startsWith(p))
+
+  if ((isCandidateRoute || isHRRoute) && !token) {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  // 2. Strict Protection for Candidate Routes
-  if (pathname.startsWith("/candidate")) {
-    if (!token || role !== "candidate") {
-      return NextResponse.redirect(new URL("/auth/login/candidate", request.url));
-    }
+  if (isAuthPage && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // 3. Prevent logged-in users from accessing wrong auth gates
-  if (token && pathname.startsWith("/auth/login/")) {
-    if (role === "hr" && pathname.includes("/candidate")) {
-      return NextResponse.redirect(new URL("/hr/dashboard", request.url));
-    }
-    if (role === "candidate" && pathname.includes("/hr")) {
-      return NextResponse.redirect(new URL("/candidate/dashboard", request.url));
-    }
-  }
-
-  return NextResponse.next();
+  return NextResponse.next()
 }
 
-// Global configuration matcher rules
 export const config = {
-  matcher: ["/hr/:path*", "/candidate/:path*", "/auth/login/:path*"],
-};
+  matcher: ['/candidate/:path*', '/hr/:path*', '/auth/:path*', '/dashboard/:path*'],
+}

@@ -1,34 +1,26 @@
-// app/dashboard/page.tsx
-"use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { getToken, getRole } from "@/lib/api";
+'use client'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
-export default function RootDashboardRedirector() {
-  const router = useRouter();
-
+export default function DashboardPage() {
+  const router = useRouter()
   useEffect(() => {
-    const token = getToken();
-    const role = getRole();
-
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    // Role ke mutabiq sahi dashboard par bhejo
-    if (role === "hr") {
-      router.replace("/hr/dashboard");
-    } else if (role === "candidate") {
-      router.replace("/candidate/dashboard");
+    // Check role from localStorage and redirect
+    const role = localStorage.getItem('role')
+    if (role === 'hr') {
+      router.replace('/hr/dashboard')
     } else {
-      router.replace("/login"); // Kuch gadbad ho toh login par wapis
+      router.replace('/candidate/dashboard')
     }
-  }, [router]);
+  }, [router])
 
   return (
-    <div className="h-screen bg-[#060814] flex items-center justify-center text-xs text-slate-400 font-mono">
-      Routing session workspace...
+    <div style={{ minHeight: '100vh', background: '#0c0c0a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 40, height: 40, border: '3px solid rgba(226,176,74,.2)', borderTopColor: '#e2b04a', borderRadius: '50%', animation: 'spin .7s linear infinite', margin: '0 auto 16px' }} />
+        <p style={{ color: 'rgba(255,255,255,.4)', fontSize: 14, fontFamily: 'Syne, sans-serif' }}>Redirecting...</p>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
-  );
+  )
 }

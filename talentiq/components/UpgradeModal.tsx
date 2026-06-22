@@ -1,121 +1,80 @@
-"use client";
-import { useState } from "react";
-import { X, Zap, Building2, Check, Loader2, Crown, Lock } from "lucide-react";
-import { getToken } from "@/lib/api";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+'use client'
+import { useEffect, useRef } from 'react'
 
 interface Props {
-  isOpen:      boolean;
-  onClose:     () => void;
-  role:        "candidate" | "hr";
-  reason?:     string;  // message to show why modal opened
+  role: 'candidate' | 'hr'
+  onClose: () => void
 }
 
-export default function UpgradeModal({ isOpen, onClose, role, reason }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
+export default function UpgradeModal({ role, onClose }: Props) {
+  const ref = useRef<HTMLDivElement>(null)
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [onClose])
 
-  const plan = role === "candidate"
-    ? { id: "candidate_pro", name: "Candidate Pro", price: "$9", period: "/month",
-        icon: Zap, color: "text-g-400",
-        features: ["Unlimited CV screenings", "Deep AI eligibility analysis", "Actionable skill gap feedback", "Priority AI processing"] }
-    : { id: "hr_suite", name: "HR Suite", price: "$49", period: "/month",
-        icon: Building2, color: "text-blue-400",
-        features: ["Unlimited CV screening", "Deep candidate analysis", "HR Policy RAG chatbot", "Priority support", "Team access"] };
-
-  const Icon = plan.icon;
-
-  const handleUpgrade = async () => {
-    setLoading(true); setError("");
-    try {
-      const token = getToken();
-      const res = await fetch(`${BASE}/billing/checkout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ plan: plan.id }),
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.detail ?? "Checkout failed"); }
-      const data = await res.json();
-      window.location.href = data.checkout_url;
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
-    } finally { setLoading(false); }
-  };
+  const isCandidate = role === 'candidate'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div ref={ref} className="relative w-full max-w-md mx-4 rounded-2xl overflow-hidden shadow-2xl">
+        {/* Top accent */}
+        <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #c5931f, #e2b04a, #13c28e)' }} />
 
-      {/* Modal */}
-      <div className="relative z-10 w-full max-w-md card rounded-2xl p-6 animate-scale-in">
-        {/* Close */}
-        <button onClick={onClose}
-          className="absolute top-4 right-4 text-slate-600 hover:text-slate-300 transition-colors p-1 rounded-lg hover:bg-white/5">
-          <X size={16} />
-        </button>
-
-        {/* Header */}
-        <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl glass-gold flex items-center justify-center mb-4 animate-glow">
-            <Lock size={22} className="text-g-400" />
-          </div>
-          <h2 className="text-xl font-bold text-white">Upgrade to Continue</h2>
-          {reason && (
-            <p className="text-sm text-slate-500 mt-2 leading-relaxed max-w-sm">{reason}</p>
-          )}
-        </div>
-
-        {/* Plan card */}
-        <div className={`border rounded-2xl p-5 mb-5 ${
-          role === "hr" ? "border-blue-500/25 bg-blue-500/5" : "border-g-500/25 bg-g-500/5"
-        }`}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
-              role === "hr" ? "bg-blue-500/10 border-blue-500/20" : "glass-gold border-g-500/20"
-            }`}>
-              <Icon size={18} className={plan.color} />
-            </div>
+        <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.08)' }} className="p-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <p className="text-sm font-bold text-white">{plan.name}</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-white">{plan.price}</span>
-                <span className="text-xs text-slate-500">{plan.period}</span>
-              </div>
+              <p style={{ color: '#e2b04a', fontSize: 11, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 6 }}>
+                Free Scans Used
+              </p>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 600, color: 'rgba(255,255,255,.9)', lineHeight: 1.15 }}>
+                {isCandidate ? 'Ready to go deeper?' : 'Scale your screening?'}
+              </h2>
+            </div>
+            <button onClick={onClose} style={{ color: 'rgba(255,255,255,.3)', fontSize: 24, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}>×</button>
+          </div>
+
+          {/* Description */}
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,.45)', lineHeight: 1.75, marginBottom: 28 }}>
+            {isCandidate
+              ? "You've used all 3 free scans. Upgrade to run unlimited CV analyses, get full skill breakdowns, and see exactly how to improve."
+              : "Your trial scans are up. Upgrade to unlock unlimited bulk screening, ranked shortlists, and HR policy chatbot."}
+          </p>
+
+          {/* Price highlight */}
+          <div style={{ background: 'rgba(226,176,74,.08)', border: '1px solid rgba(226,176,74,.18)', borderRadius: 12, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', marginBottom: 4, fontWeight: 600 }}>{isCandidate ? 'Candidate Pro' : 'HR Team'}</p>
+              <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 38, fontWeight: 600, color: '#e2b04a', lineHeight: 1 }}>
+                {isCandidate ? '$9' : '$49'}<span style={{ fontFamily: 'Syne, sans-serif', fontSize: 14, color: 'rgba(255,255,255,.3)' }}>/mo</span>
+              </p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              {isCandidate ? (
+                <><p style={{ fontSize: 12, color: 'rgba(255,255,255,.5)' }}>Unlimited scans</p><p style={{ fontSize: 12, color: 'rgba(255,255,255,.5)' }}>Skill gap reports</p><p style={{ fontSize: 12, color: 'rgba(255,255,255,.5)' }}>CV improvement tips</p></>
+              ) : (
+                <><p style={{ fontSize: 12, color: 'rgba(255,255,255,.5)' }}>Bulk screening</p><p style={{ fontSize: 12, color: 'rgba(255,255,255,.5)' }}>Policy chatbot</p><p style={{ fontSize: 12, color: 'rgba(255,255,255,.5)' }}>Team workspace</p></>
+              )}
             </div>
           </div>
 
-          <ul className="space-y-2">
-            {plan.features.map(f => (
-              <li key={f} className="flex items-center gap-2.5">
-                <Check size={12} className="text-green-400 flex-shrink-0" />
-                <span className="text-xs text-slate-400">{f}</span>
-              </li>
-            ))}
-          </ul>
+          {/* CTA */}
+          <button
+            onClick={() => { onClose(); window.location.href = '/pricing' }}
+            style={{ width: '100%', background: '#e2b04a', color: '#0a0a09', fontWeight: 700, fontSize: 15, padding: '14px', borderRadius: 10, border: 'none', cursor: 'pointer', transition: 'all .25s', letterSpacing: '.02em', fontFamily: 'Syne, sans-serif', marginBottom: 10 }}
+            onMouseOver={e => { (e.target as HTMLButtonElement).style.background = '#f5d87a'; (e.target as HTMLButtonElement).style.transform = 'translateY(-1px)' }}
+            onMouseOut={e => { (e.target as HTMLButtonElement).style.background = '#e2b04a'; (e.target as HTMLButtonElement).style.transform = 'none' }}
+          >
+            Upgrade now — {isCandidate ? '$9' : '$49'}/mo →
+          </button>
+          <button onClick={onClose} style={{ width: '100%', background: 'transparent', border: '1px solid rgba(255,255,255,.1)', color: 'rgba(255,255,255,.35)', fontWeight: 500, fontSize: 13, padding: '11px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
+            Maybe later
+          </button>
         </div>
-
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5 mb-4">
-            <p className="text-xs text-red-400">{error}</p>
-          </div>
-        )}
-
-        <button onClick={handleUpgrade} disabled={loading}
-          className="btn-gold w-full flex items-center justify-center gap-2.5 py-3 rounded-xl text-sm">
-          {loading
-            ? <><Loader2 size={14} className="animate-spin text-black" />Redirecting to payment...</>
-            : <><Crown size={14} />Upgrade Now</>
-          }
-        </button>
-
-        <p className="text-center text-[10px] text-slate-700 mt-3">
-          Secure payment via Lemon Squeezy · Cancel anytime · No card data stored
-        </p>
       </div>
     </div>
-  );
+  )
 }

@@ -1,19 +1,22 @@
 {
-  "name": "talentiq-frontend",
-  "version": "2.0.0",
+  "name": "talentiq",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "lucide-react": "^0.383.0",
-    "next": "14.2.5",
-    "next-auth": "^4.24.14",
-    "openssl": "^2.0.0",
+    "next": "14.2.3",
+    "next-auth": "^4.24.7",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "axios": "^1.7.2",
+    "framer-motion": "^11.2.10",
+    "lucide-react": "^0.383.0",
+    "clsx": "^2.1.1"
   },
   "devDependencies": {
     "@types/node": "^20",
