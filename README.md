@@ -26,7 +26,7 @@ TalentIQ is a next-generation, asynchronous AI recruiting platform designed to a
 [FastAPI Router] ──▶ Clears Stale Cache ──▶ Generates Fresh FAISS Embeddings
        │
        ▼
-[LangGraph Workflow Orchestrator]
+[LangGraph Worksflow Orchestrator]
        │
        ├──► Node 1: '_analyze_cv_node' ──▶ Queries FAISS Store + Triggers LLaMA 3.3 Chain
        │                                  
