@@ -21,7 +21,7 @@ TalentIQ is a next-generation, asynchronous AI recruiting platform designed to a
 
 ```text
 [Frontend Request] 
-       │ (Job Description + Dynamic CV Text)
+       │ (Jobs Descriptions + Dynamic CV Text)
        ▼
 [FastAPI Router] ──▶ Clears Stale Cache ──▶ Generates Fresh FAISS Embeddings
        │
