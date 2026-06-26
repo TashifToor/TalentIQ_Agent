@@ -1,6 +1,6 @@
 # 🤖 TalentIQ v2 — Agentic CV Screening Platform
 
-TalentIQ is a next-generation, asynchronous AI recruiting platform designed to automate deep technical candidate screening. Moving away from legacy keyword-matching ATS, TalentIQ uses an advanced multi-modal agentic graph workflow powered by **LLaMA 3.3 (70B)** and **FAISS(Facebook AI Search System) Vector Storage** to read, analyze, and grade candidate CVs against complex Job Descriptions with absolute chain-of-thought reasoning.
+TalentIQ is a next-generation, asynchronous AI recruiting platform designed to automate deep technical candidate screening. Moving away from legacy keyword-matching ATS, TalentIQ uses an advanced multi-modal agentic graph workflow powered by **LLaMA 3.3 (70B)** and **FAISS (Facebook AI Search System) Vector Storage** to read, analyze, and grade candidate CVs against complex Job Descriptions with absolute chain-of-thought reasoning.
 
 ![Premium Tech Dark Mode Visual](https://img.shields.io/badge/Architecture-Agentic%20LangGraph-emerald?style=for-the-badge)
 ![Tech Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20React%20%7C%20Docker-blue?style=for-the-badge)
@@ -20,7 +20,7 @@ TalentIQ is a next-generation, asynchronous AI recruiting platform designed to a
 ## 🏗️ Technical Architecture Flow
 
 ```text
-[Frontend Request] 
+[Frontend Requests] 
        │ (Jobs Descriptions + Dynamic CV Text)
        ▼
 [FastAPI Router] ──▶ Clears Stale Cache ──▶ Generates Fresh FAISS Embeddings
@@ -33,7 +33,9 @@ TalentIQ is a next-generation, asynchronous AI recruiting platform designed to a
        ├──► Node 2: '_rank_candidate'  ──▶ Computes Matrix Scores & Formats Structured JSON
        ▼
 [Frontend Dashboard UI] ──▶ Renders Score, Matched Skills, Gaps, and Deep Markdown Analysis
+
 🛠️ The Tech Stack
+
 Backend: FastAPI (Python 3.12+), Uvicorn
 
 Orchestration & AI: LangChain, LangGraph (StateGraph Workflow)
