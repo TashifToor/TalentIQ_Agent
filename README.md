@@ -1,6 +1,6 @@
 # 🤖 TalentIQ v2 — Agentic CV Screening Platform
 
-TalentIQ is a next-generation, asynchronous AI recruiting platform designed to automate deep technical candidate screening. Moving away from legacy keyword-matching ATS, TalentIQ uses an advanced multi-modal agentic graph workflow powered by **LLaMA 3.3 (70B)** and **FAISS Vector Storage** to read, analyze, and grade candidate CVs against complex Job Descriptions with absolute chain-of-thought reasoning.
+TalentIQ is a next-generation, asynchronous AI recruiting platform designed to automate deep technical candidate screening. Moving away from legacy keyword-matching ATS, TalentIQ uses an advanced multi-modal agentic graph workflow powered by **LLaMA 3.3 (70B)** and **FAISS(Facebook AI Search System) Vector Storage** to read, analyze, and grade candidate CVs against complex Job Descriptions with absolute chain-of-thought reasoning.
 
 ![Premium Tech Dark Mode Visual](https://img.shields.io/badge/Architecture-Agentic%20LangGraph-emerald?style=for-the-badge)
 ![Tech Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20React%20%7C%20Docker-blue?style=for-the-badge)
