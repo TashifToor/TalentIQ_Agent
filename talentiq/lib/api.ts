@@ -11,6 +11,23 @@ function parseError(err: any): string {
   return "API error";
 }
 
+export class ApiError extends Error {
+  code?: string;
+  constructor(message: string, code?: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
+function buildApiError(err: any): ApiError {
+  const raw = parseError(err);
+  if (raw.includes("|")) {
+    const [code, msg] = raw.split("|");
+    return new ApiError(msg.trim(), code.trim());
+  }
+  return new ApiError(raw);
+}
+
 export async function apiFetch(path: string, options?: RequestInit) {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -23,7 +40,7 @@ export async function apiFetch(path: string, options?: RequestInit) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Request failed" }));
-    throw new Error(parseError(err));
+    throw buildApiError(err);
   }
   return res.json();
 }
@@ -60,7 +77,7 @@ export const api = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: "Upload failed" }));
-      throw new Error(parseError(err));
+      throw buildApiError(err);
     }
     return res.json();
   },

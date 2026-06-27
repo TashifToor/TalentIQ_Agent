@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react'
 import Link from 'next/link'
 import UpgradeModal from '@/components/UpgradeModal'
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 
 const ICONS: Record<string, JSX.Element> = {
   dashboard: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
@@ -78,16 +78,23 @@ export default function CandidateDashboard() {
       const data = await api.screenCandidate(jd, cvText)
       console.log('Scan response:', data)
       setResult(data)
-      setScansLeft(s => Math.max(0, s - 1))
+      if (typeof data.scans_remaining === 'number') setScansLeft(data.scans_remaining)
+      else setScansLeft(s => Math.max(0, s - 1))
+      const score = data?.metrics?.candidate_score ?? 0
       setHistory(h => [{
-        score: data.score ?? 0,
-        role: data.role_title || 'Untitled Role',
-        skills: (data.skills || []).slice(0, 3).map((s: any) => s.n).join(', '),
+        score,
+        role: jd.split('\n')[0]?.slice(0, 60) || 'Untitled Role',
+        skills: (data?.metrics?.matched_skills || []).slice(0, 3).join(', '),
         date: 'Just now',
-        color: data.score >= 80 ? '#13c28e' : data.score >= 50 ? '#e2b04a' : '#ef4444',
+        color: score >= 80 ? '#13c28e' : score >= 50 ? '#e2b04a' : '#ef4444',
       }, ...h])
     } catch (err: any) {
-      setError(err.message || 'Scan failed. Try again.')
+      if (err instanceof ApiError && err.code === 'FREE_LIMIT_REACHED') {
+        setScansLeft(0)
+        setShowUpgrade(true)
+      } else {
+        setError(err.message || 'Scan failed. Try again.')
+      }
     } finally {
       setScanning(false)
     }
@@ -224,15 +231,26 @@ export default function CandidateDashboard() {
                 <div style={{ position: 'relative', width: 120, height: 120, marginBottom: 16 }}>
                   <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
                     <circle cx="60" cy="60" r="54" fill="none" stroke="#1e1e1b" strokeWidth="10" />
-                    <circle className="ring-anim" cx="60" cy="60" r="54" fill="none" stroke="url(#rg)" strokeWidth="10" strokeLinecap="round" strokeDasharray="339" strokeDashoffset={339 - (339 * (result.score ?? 0)) / 100} />
+                    <circle className="ring-anim" cx="60" cy="60" r="54" fill="none" stroke="url(#rg)" strokeWidth="10" strokeLinecap="round" strokeDasharray="339" strokeDashoffset={339 - (339 * (result.metrics?.candidate_score ?? 0)) / 100} />
                   </svg>
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 38, fontWeight: 600, lineHeight: 1 }}>{result.score}</span>
+                    <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 38, fontWeight: 600, lineHeight: 1 }}>{result.metrics?.candidate_score ?? 0}</span>
                     <small style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>/ 100</small>
                   </div>
                 </div>
-                <div style={{ background: 'rgba(19,194,142,.12)', color: '#13c28e', fontSize: 12, fontWeight: 600, padding: '5px 14px', borderRadius: 100, border: '1px solid rgba(19,194,142,.2)', marginBottom: 12 }}>{result.label || 'Match Result'}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', textAlign: 'center', lineHeight: 1.5 }}>You match {result.score}% of<br />this role's requirements</div>
+                <div style={{ background: 'rgba(19,194,142,.12)', color: '#13c28e', fontSize: 12, fontWeight: 600, padding: '5px 14px', borderRadius: 100, border: '1px solid rgba(19,194,142,.2)', marginBottom: 12, textAlign: 'center' }}>{result.metrics?.final_verdict || 'Match Result'}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', textAlign: 'center', lineHeight: 1.5, marginBottom: 14 }}>You match {result.metrics?.candidate_score ?? 0}% of<br />this role's requirements</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+                  {result.flags?.is_shortlisted && (
+                    <div style={{ fontSize: 11, color: '#13c28e', background: 'rgba(19,194,142,.08)', border: '1px solid rgba(19,194,142,.18)', borderRadius: 6, padding: '5px 10px', textAlign: 'center' }}>Shortlisted</div>
+                  )}
+                  {result.flags?.trigger_interview && (
+                    <div style={{ fontSize: 11, color: '#e2b04a', background: 'rgba(226,176,74,.08)', border: '1px solid rgba(226,176,74,.18)', borderRadius: 6, padding: '5px 10px', textAlign: 'center' }}>Interview Recommended</div>
+                  )}
+                  {result.flags?.has_min_experience === false && (
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '5px 10px', textAlign: 'center' }}>Below Minimum Experience</div>
+                  )}
+                </div>
               </div>
 
               {/* Analysis Panel */}
@@ -245,32 +263,51 @@ export default function CandidateDashboard() {
                   ))}
                 </div>
 
-                {activeTab === 'skills' && (result.skills || []).map((s: any, i: number) => (
-                  <div key={s.n} className="fade-up" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, animationDelay: `${i * 60}ms` }}>
-                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,.5)', width: 140, flexShrink: 0 }}>{s.n}</span>
-                    <div style={{ flex: 1, height: 6, background: '#1e1e1b', borderRadius: 3, overflow: 'hidden' }}>
-                      <div className="bar-anim" style={{ height: '100%', borderRadius: 3, background: s.gold ? 'linear-gradient(90deg,#c5931f,#e2b04a)' : s.w < 40 ? '#ef4444' : 'linear-gradient(90deg,#0b7c5e,#13c28e)', '--bw': `${s.w}%` } as React.CSSProperties} />
+                {activeTab === 'skills' && (
+                  (result.metrics?.matched_skills?.length ?? 0) === 0 ? (
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '20px 0' }}>No matched skills found.</div>
+                  ) : (result.metrics?.matched_skills || []).map((s: string, i: number) => (
+                    <div key={s} className="fade-up" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#161614', borderRadius: 8, border: '1px solid rgba(255,255,255,.06)', marginBottom: 8, animationDelay: `${i * 50}ms` }}>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(19,194,142,.12)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#13c28e" strokeWidth="3"><path d="M5 12l5 5L20 7"/></svg>
+                      </div>
+                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)' }}>{s}</span>
                     </div>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', width: 32, textAlign: 'right' }}>{s.w}%</span>
-                  </div>
-                ))}
+                  ))
+                )}
 
-                {activeTab === 'gaps' && (result.gaps || []).map((g: any, i: number) => {
-                  const c = g.status === 'match' ? { bg: 'rgba(34,197,94,.12)', col: '#22c55e', label: 'Matched' } : g.status === 'partial' ? { bg: 'rgba(234,179,8,.12)', col: '#eab308', label: 'Partial' } : { bg: 'rgba(239,68,68,.1)', col: '#ef4444', label: 'Missing' }
-                  return (
-                    <div key={g.s} className="fade-up" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#161614', borderRadius: 8, border: '1px solid rgba(255,255,255,.06)', marginBottom: 8, animationDelay: `${i * 60}ms` }}>
-                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,.7)', flex: 1 }}>{g.s}</span>
-                      <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 100, background: c.bg, color: c.col }}>{c.label}</span>
+                {activeTab === 'gaps' && (
+                  (result.metrics?.missing_skills?.length ?? 0) === 0 ? (
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '20px 0' }}>No skill gaps found — strong match.</div>
+                  ) : (result.metrics?.missing_skills || []).map((s: string, i: number) => (
+                    <div key={s} className="fade-up" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#161614', borderRadius: 8, border: '1px solid rgba(255,255,255,.06)', marginBottom: 8, animationDelay: `${i * 50}ms` }}>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(239,68,68,.1)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="3"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                      </div>
+                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,.7)', flex: 1 }}>{s}</span>
+                      <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 100, background: 'rgba(239,68,68,.1)', color: '#ef4444' }}>Missing</span>
                     </div>
-                  )
-                })}
+                  ))
+                )}
 
-                {activeTab === 'recos' && (result.recos || []).map((r: any, i: number) => (
-                  <div key={i} className="fade-up" style={{ padding: '12px 14px', background: '#161614', borderRadius: 8, marginBottom: 8, borderLeft: `3px solid ${i === 2 ? '#13c28e' : '#e2b04a'}`, animationDelay: `${i * 80}ms` }}>
-                    <h5 style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{r.t}</h5>
-                    <p style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', lineHeight: 1.6 }}>{r.d}</p>
+                {activeTab === 'recos' && (
+                  <div className="fade-up" style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+                    {(result.deep_analysis || 'No suggestions available.')
+                      .split(/\n(?=\*\*)/)
+                      .filter(Boolean)
+                      .map((block: string, i: number) => {
+                        const headingMatch = block.match(/^\*\*(.+?)\*\*/)
+                        const heading = headingMatch ? headingMatch[1] : null
+                        const body = heading ? block.replace(/^\*\*(.+?)\*\*/, '').trim() : block.trim()
+                        return (
+                          <div key={i} style={{ marginBottom: 16, padding: '12px 14px', background: '#161614', borderRadius: 8, borderLeft: '3px solid #e2b04a' }}>
+                            {heading && <h5 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: 'rgba(255,255,255,.85)' }}>{heading}</h5>}
+                            <p style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', lineHeight: 1.7, margin: 0 }}>{body.replace(/^\n+/, '')}</p>
+                          </div>
+                        )
+                      })}
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
