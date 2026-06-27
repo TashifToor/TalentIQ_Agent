@@ -24,6 +24,7 @@ export default function CandidateDashboard() {
   const [activeNav, setActiveNav] = useState('dashboard')
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [file, setFile] = useState<File | null>(null)
+  const [cvText, setCvText] = useState('')
   const [uploading, setUploading] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -45,7 +46,18 @@ export default function CandidateDashboard() {
     try {
       const formData = new FormData()
       formData.append('file', f)
-      await api.uploadCV(formData)
+      const res = await api.uploadCV(formData)
+      console.log('Upload response:', res)
+      let extracted = ''
+      if (typeof res === 'string') {
+        extracted = res
+      } else if (res && typeof res === 'object') {
+        extracted = res.cv_text || res.text || res.extracted_text || res.content || ''
+      }
+      if (!extracted) {
+        setError('Upload succeeded but no CV text was returned — check console log and share the response shape.')
+      }
+      setCvText(extracted)
     } catch (err: any) {
       setError(err.message || 'Upload failed')
       setFile(null)
@@ -56,13 +68,15 @@ export default function CandidateDashboard() {
 
   const handleScan = async () => {
     if (!file) { setError('Upload a CV first.'); return }
+    if (!cvText) { setError('CV text not extracted yet — try re-uploading.'); return }
     if (!jd.trim()) { setError('Paste a job description first.'); return }
     if (scansLeft <= 0) { setShowUpgrade(true); return }
 
     setError('')
     setScanning(true)
     try {
-      const data = await api.screenCandidate({ job_description: jd })
+      const data = await api.screenCandidate(jd, cvText)
+      console.log('Scan response:', data)
       setResult(data)
       setScansLeft(s => Math.max(0, s - 1))
       setHistory(h => [{

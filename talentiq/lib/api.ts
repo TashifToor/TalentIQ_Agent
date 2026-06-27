@@ -1,5 +1,16 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+function parseError(err: any): string {
+  if (!err) return "API error";
+  if (typeof err.detail === "string") return err.detail;
+  if (Array.isArray(err.detail)) {
+    return err.detail
+      .map((d: any) => `${(d.loc || []).slice(-1)[0]}: ${d.msg}`)
+      .join(" · ");
+  }
+  return "API error";
+}
+
 export async function apiFetch(path: string, options?: RequestInit) {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -12,7 +23,7 @@ export async function apiFetch(path: string, options?: RequestInit) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Request failed" }));
-    throw new Error(err.detail || "API error");
+    throw new Error(parseError(err));
   }
   return res.json();
 }
@@ -25,7 +36,6 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
-  // Single unified signup route — role passed inside body, not in URL
   signupCandidate: (data: object) =>
     apiFetch("/auth/signup", {
       method: "POST",
@@ -40,39 +50,35 @@ export const api = {
 
   me: () => apiFetch("/auth/me"),
 
-  // CV Management — candidate uploads CV
-  uploadCV: (formData: FormData) =>
-    fetch(`${API_BASE_URL}/Candidate/upload`, {
+  // CV Management — returns extracted CV text as a string
+  uploadCV: async (formData: FormData): Promise<string> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+    const res = await fetch(`${API_BASE_URL}/Candidate/upload`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${typeof window !== "undefined" ? localStorage.getItem("token") || "" : ""}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
       body: formData,
-    }).then((r) => {
-      if (!r.ok) throw new Error("Upload failed");
-      return r.json();
-    }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+      throw new Error(parseError(err));
+    }
+    return res.json();
+  },
 
-  // CV Screening — HR scores/ranks a candidate against a job description
-  screenCandidate: (data: object) =>
+  // CV Screening — needs both job_description AND cv_text
+  screenCandidate: (jobDescription: string, cvText: string) =>
     apiFetch("/Rating/screen", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ job_description: jobDescription, cv_text: cvText }),
     }),
 
-  // Candidate-side chatbot (CV Chat)
+  // Candidate chatbot
   chat: (message: string) =>
-    apiFetch("/chat", {
-      method: "POST",
-      body: JSON.stringify({ message }),
-    }),
+    apiFetch("/chat", { method: "POST", body: JSON.stringify({ message }) }),
 
   getChatHistory: () => apiFetch("/chat/history"),
 
   // HR Policy RAG chatbot
   hrChat: (message: string) =>
-    apiFetch("/hr/chat", {
-      method: "POST",
-      body: JSON.stringify({ message }),
-    }),
+    apiFetch("/hr/chat", { method: "POST", body: JSON.stringify({ message }) }),
 };
