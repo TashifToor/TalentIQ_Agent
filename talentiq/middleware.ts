@@ -14,11 +14,13 @@ export function middleware(request: NextRequest) {
   const isAuthPage = AUTH_PAGES.some(p => pathname.startsWith(p))
 
   if ((isCandidateRoute || isHRRoute) && !token) {
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+    return NextResponse.redirect(new URL('/auth/login/candidate', request.url))
   }
 
   if (isAuthPage && token) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    const role = request.cookies.get('role')?.value
+    const dest = role === 'hr' ? '/hr/dashboard' : '/candidate/dashboard'
+    return NextResponse.redirect(new URL(dest, request.url))
   }
 
   return NextResponse.next()

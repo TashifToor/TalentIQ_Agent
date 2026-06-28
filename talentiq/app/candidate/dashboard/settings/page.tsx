@@ -60,7 +60,9 @@ export default function CandidateSettings() {
 
   const handleLogout = () => {
     localStorage.removeItem('token')
-    router.push('/auth/login/candidate')
+    localStorage.removeItem('role')
+    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+    window.location.replace('/auth/login/candidate')
   }
 
   const handleDelete = async () => {

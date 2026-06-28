@@ -163,12 +163,26 @@ export default function CandidateDashboard() {
           )
         })}
         <div style={{ marginTop: 'auto', padding: '14px', borderTop: '1px solid rgba(255,255,255,.07)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, cursor: 'pointer' }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#c5931f,#e2b04a)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#0a0a09' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8 }}>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#c5931f,#e2b04a)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#0a0a09', flexShrink: 0 }}>
               {(user?.name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
             </div>
-            <div><div style={{ fontSize: 13, fontWeight: 600 }}>{user?.name || 'Loading…'}</div><div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>{user?.email || ''}</div></div>
-            <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(226,176,74,.15)', color: '#e2b04a', padding: '2px 7px', borderRadius: 100, marginLeft: 'auto', border: '1px solid rgba(226,176,74,.2)' }}>Free</span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name || 'Loading…'}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email || ''}</div>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.removeItem('token')
+                localStorage.removeItem('role')
+                document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+                window.location.replace('/auth/login/candidate')
+              }}
+              title="Log out"
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.35)', cursor: 'pointer', flexShrink: 0, display: 'flex', padding: 4 }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            </button>
           </div>
         </div>
       </div>
