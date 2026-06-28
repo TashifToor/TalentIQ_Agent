@@ -7,7 +7,7 @@ from routes.upload import router as upload_router
 from routes.hr import router as hr_router
 # from routes.jobs import router as jobs_router
 # from routes.apply import router as apply_router
-
+from routes.scan import router as scan_router
 
 from models.user import User  
 from models.chat import Chat
@@ -38,6 +38,7 @@ app.include_router(chat_router)
 app.include_router(screen_router)
 app.include_router(upload_router)
 app.include_router(hr_router)
+app.include_router(scan_router)
 # app.include_router(jobs_router)
 # app.include_router(apply_router)
 
