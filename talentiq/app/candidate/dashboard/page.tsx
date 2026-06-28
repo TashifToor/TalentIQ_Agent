@@ -14,7 +14,7 @@ const ICONS: Record<string, JSX.Element> = {
 
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', href: '/candidate/dashboard' },
-  { key: 'scan', label: 'Scan CV', href: '/candidate/dashboard' },
+  { key: 'scan', label: 'Scan CV', href: '/candidate/dashboard#scan-area' },
   { key: 'history', label: 'History', href: '/candidate/dashboard/history' },
   { key: 'profile', label: 'My Profile', href: '/candidate/dashboard/profile' },
   { key: 'settings', label: 'Settings', href: '/candidate/dashboard/settings' },
@@ -107,8 +107,12 @@ export default function CandidateDashboard() {
 
   const handleNavClick = (item: typeof NAV[number]) => {
     setActiveNav(item.key)
-    if (item.href.startsWith('#')) {
-      document.querySelector(item.href)?.scrollIntoView({ behavior: 'smooth' })
+    const hashIndex = item.href.indexOf('#')
+    if (hashIndex !== -1) {
+      const id = item.href.slice(hashIndex)
+      setTimeout(() => {
+        document.querySelector(id)?.scrollIntoView({ behavior: 'smooth' })
+      }, 50)
     }
   }
 
@@ -188,7 +192,7 @@ export default function CandidateDashboard() {
         <div className="dark-scroll" style={{ flex: 1, overflowY: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Scan Area */}
-          <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24 }}>
+          <div id="scan-area" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div><div style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-.2px' }}>Scan Your CV</div><div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginTop: 2 }}>Upload a CV and paste a job description to get your match score</div></div>
               <span style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>{scansLeft} free scan{scansLeft === 1 ? '' : 's'} left</span>

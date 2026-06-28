@@ -85,7 +85,7 @@ async def signup(body: RegisterRequest, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    return user
+    return await build_user_response(user)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -112,7 +112,7 @@ async def login(body: LoginRequest, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: User = Depends(get_current_user)):
-    return current_user
+    return await build_user_response(current_user)
 
 
 # ---------------------------------------------------------------------------
@@ -141,7 +141,7 @@ async def update_profile(
     db.add(current_user)
     db.commit()
     db.refresh(current_user)
-    return current_user
+    return await build_user_response(current_user)
 
 
 @router.post("/change-password")
