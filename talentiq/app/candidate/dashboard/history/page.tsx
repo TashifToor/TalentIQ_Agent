@@ -3,10 +3,23 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 
+function parseAnalysis(text: string) {
+  return (text || 'No analysis available.')
+    .split(/\n(?=\*\*)/)
+    .filter(Boolean)
+    .map((block: string) => {
+      const headingMatch = block.match(/^\*\*(.+?)\*\*/)
+      const heading = headingMatch ? headingMatch[1] : null
+      const body = heading ? block.replace(/^\*\*(.+?)\*\*/, '').trim() : block.trim()
+      return { heading, body: body.replace(/^\n+/, '') }
+    })
+}
+
 export default function CandidateHistory() {
   const [history, setHistory] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [expandedId, setExpandedId] = useState<number | string | null>(null)
 
   useEffect(() => {
     api.getScanHistory()
@@ -20,19 +33,22 @@ export default function CandidateHistory() {
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Syne:wght@400;500;600;700&display=swap');
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes expandIn { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 1000px; } }
         .fade-up { animation: fadeUp .4s ease both; }
-        .history-row { transition: background .2s, transform .2s; }
-        .history-row:hover { background: #1b1b18; transform: translateX(2px); }
+        .expand-in { animation: expandIn .35s ease both; overflow: hidden; }
+        .history-row { transition: background .2s; cursor: pointer; }
+        .history-row:hover { background: #1b1b18; }
+        .chevron { transition: transform .25s; }
       `}</style>
 
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px 80px' }}>
+      <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px 80px' }}>
         <Link href="/candidate/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'rgba(255,255,255,.4)', textDecoration: 'none', marginBottom: 28 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
           Back to Dashboard
         </Link>
 
         <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 600, marginBottom: 4 }}>Scan History</div>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,.3)', marginBottom: 28 }}>All your past CV screenings</div>
+        <div style={{ fontSize: 13, color: 'rgba(255,255,255,.3)', marginBottom: 28 }}>All your past CV screenings — click any scan to see the full breakdown</div>
 
         {error && (
           <div style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', color: '#ef4444', fontSize: 12, padding: '10px 14px', borderRadius: 8, marginBottom: 20 }}>{error}</div>
@@ -50,30 +66,65 @@ export default function CandidateHistory() {
             {history.map((h, i) => {
               const score = h.candidate_score ?? 0
               const color = score >= 80 ? '#13c28e' : score >= 50 ? '#e2b04a' : '#ef4444'
+              const isOpen = expandedId === (h.id ?? i)
               return (
-                <div key={h.id ?? i} className="history-row fade-up" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 10, padding: '16px 20px', animationDelay: `${i * 40}ms` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, color, width: 44, textAlign: 'center', flexShrink: 0 }}>{score}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.role_title || 'Untitled Role'}</div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>
-                        {h.final_verdict || 'Match Result'} · {h.created_at ? new Date(h.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                <div key={h.id ?? i} className="fade-up" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 10, overflow: 'hidden', animationDelay: `${i * 40}ms` }}>
+                  <div className="history-row" onClick={() => setExpandedId(isOpen ? null : (h.id ?? i))} style={{ padding: '16px 20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, color, width: 44, textAlign: 'center', flexShrink: 0 }}>{score}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.role_title || 'Untitled Role'}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>
+                          {h.final_verdict || 'Match Result'} · {h.created_at ? new Date(h.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+                        </div>
+                      </div>
+                      {h.is_shortlisted === 'True' && (
+                        <span style={{ fontSize: 10, fontWeight: 600, color: '#13c28e', background: 'rgba(19,194,142,.1)', border: '1px solid rgba(19,194,142,.2)', padding: '3px 9px', borderRadius: 100, flexShrink: 0 }}>Shortlisted</span>
+                      )}
+                      <svg className="chevron" style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+                    </div>
+                  </div>
+
+                  {isOpen && (
+                    <div className="expand-in" style={{ borderTop: '1px solid rgba(255,255,255,.07)', padding: '20px 20px 22px', background: '#0e0e0c' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: '#13c28e', letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 8 }}>Matched Skills</div>
+                          {(h.matched_skills?.length ?? 0) === 0 ? (
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.25)' }}>None recorded.</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              {h.matched_skills.map((s: string) => (
+                                <span key={s} style={{ fontSize: 11, color: '#13c28e', background: 'rgba(19,194,142,.08)', padding: '4px 10px', borderRadius: 100 }}>{s}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 8 }}>Missing Skills</div>
+                          {(h.missing_skills?.length ?? 0) === 0 ? (
+                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.25)' }}>None — full match.</div>
+                          ) : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              {h.missing_skills.map((s: string) => (
+                                <span key={s} style={{ fontSize: 11, color: '#ef4444', background: 'rgba(239,68,68,.06)', padding: '4px 10px', borderRadius: 100 }}>{s}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.35)', letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 10 }}>Full Analysis</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {parseAnalysis(h.deep_analysis).map((block, bi) => (
+                          <div key={bi} style={{ padding: '12px 14px', background: '#161614', borderRadius: 8, borderLeft: '3px solid #e2b04a' }}>
+                            {block.heading && <h5 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: 'rgba(255,255,255,.85)' }}>{block.heading}</h5>}
+                            <p style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-wrap' }}>{block.body}</p>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    {h.is_shortlisted === 'True' && (
-                      <span style={{ fontSize: 10, fontWeight: 600, color: '#13c28e', background: 'rgba(19,194,142,.1)', border: '1px solid rgba(19,194,142,.2)', padding: '3px 9px', borderRadius: 100, flexShrink: 0 }}>Shortlisted</span>
-                    )}
-                  </div>
-                  {(h.matched_skills?.length || h.missing_skills?.length) ? (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.05)' }}>
-                      {(h.matched_skills || []).slice(0, 5).map((s: string) => (
-                        <span key={s} style={{ fontSize: 11, color: '#13c28e', background: 'rgba(19,194,142,.08)', padding: '3px 9px', borderRadius: 100 }}>{s}</span>
-                      ))}
-                      {(h.missing_skills || []).slice(0, 3).map((s: string) => (
-                        <span key={s} style={{ fontSize: 11, color: '#ef4444', background: 'rgba(239,68,68,.06)', padding: '3px 9px', borderRadius: 100 }}>{s}</span>
-                      ))}
-                    </div>
-                  ) : null}
+                  )}
                 </div>
               )
             })}
