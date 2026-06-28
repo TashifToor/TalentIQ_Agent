@@ -13,8 +13,8 @@ class ScanHistory(Base):
     role_title = Column(String, nullable=True)
     candidate_score = Column(Float, nullable=False)
     final_verdict = Column(String, nullable=True)
-    matched_skills = Column(JSON, nullable=True) 
-    missing_skills = Column(JSON, nullable=True)   
+    matched_skills = Column(JSON, nullable=True)   # list[str]
+    missing_skills = Column(JSON, nullable=True)   # list[str]
     is_shortlisted = Column(String, nullable=True)
     trigger_interview = Column(String, nullable=True)
     deep_analysis = Column(String, nullable=True)
