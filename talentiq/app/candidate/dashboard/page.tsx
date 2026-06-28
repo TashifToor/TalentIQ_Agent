@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import UpgradeModal from '@/components/UpgradeModal'
 import { api, ApiError } from '@/lib/api'
@@ -15,13 +15,14 @@ const ICONS: Record<string, JSX.Element> = {
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', href: '/candidate/dashboard' },
   { key: 'scan', label: 'Scan CV', href: '/candidate/dashboard' },
-  { key: 'history', label: 'History', href: '#history' },
+  { key: 'history', label: 'History', href: '/candidate/dashboard/history' },
   { key: 'profile', label: 'My Profile', href: '/candidate/dashboard/profile' },
   { key: 'settings', label: 'Settings', href: '/candidate/dashboard/settings' },
 ]
 
 export default function CandidateDashboard() {
   const [activeNav, setActiveNav] = useState('dashboard')
+  const [user, setUser] = useState<{ name?: string; email?: string } | null>(null)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [cvText, setCvText] = useState('')
@@ -34,6 +35,10 @@ export default function CandidateDashboard() {
   const [scansLeft, setScansLeft] = useState(3)
   const [history, setHistory] = useState<any[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    api.me().then((u: any) => setUser({ name: u?.name || u?.full_name, email: u?.email })).catch(() => {})
+  }, [])
 
   const handlePickFile = () => fileRef.current?.click()
 
@@ -83,7 +88,7 @@ export default function CandidateDashboard() {
       const score = data?.metrics?.candidate_score ?? 0
       setHistory(h => [{
         score,
-        role: jd.split('\n')[0]?.slice(0, 60) || 'Untitled Role',
+        role: (jd.match(/Job Title:\s*(.+)/i)?.[1] || jd.split('\n')[0])?.trim().slice(0, 60) || 'Untitled Role',
         skills: (data?.metrics?.matched_skills || []).slice(0, 3).join(', '),
         date: 'Just now',
         color: score >= 80 ? '#13c28e' : score >= 50 ? '#e2b04a' : '#ef4444',
@@ -155,8 +160,10 @@ export default function CandidateDashboard() {
         })}
         <div style={{ marginTop: 'auto', padding: '14px', borderTop: '1px solid rgba(255,255,255,.07)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, cursor: 'pointer' }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#c5931f,#e2b04a)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#0a0a09' }}>YU</div>
-            <div><div style={{ fontSize: 13, fontWeight: 600 }}>Your Name</div><div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>candidate@email.com</div></div>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#c5931f,#e2b04a)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#0a0a09' }}>
+              {(user?.name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+            </div>
+            <div><div style={{ fontSize: 13, fontWeight: 600 }}>{user?.name || 'Loading…'}</div><div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>{user?.email || ''}</div></div>
             <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(226,176,74,.15)', color: '#e2b04a', padding: '2px 7px', borderRadius: 100, marginLeft: 'auto', border: '1px solid rgba(226,176,74,.2)' }}>Free</span>
           </div>
         </div>
@@ -314,7 +321,12 @@ export default function CandidateDashboard() {
 
           {/* History */}
           <div id="history" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 16 }}>Recent Scans</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Recent Scans</div>
+              {history.length > 0 && (
+                <button onClick={() => setHistory([])} style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>Clear</button>
+              )}
+            </div>
             {history.length === 0 ? (
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '20px 0' }}>No scans yet — run your first analysis above.</div>
             ) : (

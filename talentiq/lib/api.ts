@@ -67,6 +67,19 @@ export const api = {
 
   me: () => apiFetch("/auth/me"),
 
+  updateProfile: (name: string) =>
+    apiFetch("/auth/me", { method: "PATCH", body: JSON.stringify({ name }) }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiFetch("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    }),
+
+  deleteAccount: () => apiFetch("/auth/me", { method: "DELETE" }),
+
+  getScanHistory: () => apiFetch("/scans/history"),
+
   // CV Management — returns extracted CV text as a string
   uploadCV: async (formData: FormData): Promise<string> => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
