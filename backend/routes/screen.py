@@ -76,6 +76,8 @@ async def screen_candidate(
         final_report = screening_agent.run_screening(
             job_description=payload.job_description
         )
+        print(f"[Screen DEBUG] final_report keys: {list(final_report.keys()) if final_report else None}")
+        print(f"[Screen DEBUG] screening_analysis length: {len(final_report.get('screening_analysis', '') or '')}")
 
         if not final_report:
             raise HTTPException(
@@ -108,7 +110,10 @@ async def screen_candidate(
 
         # --- Persist this scan to history (so /scans/history can show it later) ---
         try:
-            role_title = (payload.job_description or "").strip().split("\n")[0][:150]
+            jd = (payload.job_description or "").strip()
+            import re
+            title_match = re.search(r"Job\s*Title:\s*(.+)", jd, re.IGNORECASE)
+            role_title = (title_match.group(1).strip() if title_match else jd.split("\n")[0].strip())[:150]
             history_entry = ScanHistory(
                 user_id=current_user.id,
                 role_title=role_title or "Untitled Role",
