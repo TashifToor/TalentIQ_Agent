@@ -40,9 +40,13 @@ export async function apiFetch(path: string, options?: RequestInit) {
   });
   if (res.status === 401) {
     if (typeof window !== "undefined") {
+      const role = localStorage.getItem("role");
       localStorage.removeItem("token");
-      if (!window.location.pathname.includes("/login")) {
-        window.location.href = "/login";
+      localStorage.removeItem("role");
+      document.cookie = "token=; path=/; max-age=0";
+      document.cookie = "role=; path=/; max-age=0";
+      if (!window.location.pathname.includes("/auth/login")) {
+        window.location.href = role === "hr" ? "/auth/login/hr" : "/auth/login/candidate";
       }
     }
     throw new ApiError("Session expired. Please log in again.", "SESSION_EXPIRED");
@@ -99,9 +103,13 @@ export const api = {
     });
     if (res.status === 401) {
       if (typeof window !== "undefined") {
+        const role = localStorage.getItem("role");
         localStorage.removeItem("token");
-        if (!window.location.pathname.includes("/login")) {
-          window.location.href = "/login";
+        localStorage.removeItem("role");
+        document.cookie = "token=; path=/; max-age=0";
+        document.cookie = "role=; path=/; max-age=0";
+        if (!window.location.pathname.includes("/auth/login")) {
+          window.location.href = role === "hr" ? "/auth/login/hr" : "/auth/login/candidate";
         }
       }
       throw new ApiError("Session expired. Please log in again.", "SESSION_EXPIRED");
