@@ -37,7 +37,10 @@ export default function CandidateDashboard() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    api.me().then((u: any) => setUser({ name: u?.name || u?.full_name, email: u?.email })).catch(() => {})
+    api.me().then((u: any) => {
+      setUser({ name: u?.name || u?.full_name, email: u?.email })
+      if (typeof u?.scans_remaining === 'number') setScansLeft(u.scans_remaining)
+    }).catch(() => {})
   }, [])
 
   const handlePickFile = () => fileRef.current?.click()
