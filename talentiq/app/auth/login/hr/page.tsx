@@ -38,6 +38,7 @@ export default function HRLogin() {
       localStorage.setItem('token', data.access_token)
       localStorage.setItem('role', 'hr')
       document.cookie = `token=${data.access_token}; path=/`
+      document.cookie = `role=hr; path=/`
       router.push('/hr/dashboard')
     } catch (e: any) {
       setError(e.message || 'Login failed. Please check your credentials.')
@@ -54,6 +55,7 @@ export default function HRLogin() {
       localStorage.setItem('token', data.access_token)
       localStorage.setItem('role', 'hr')
       document.cookie = `token=${data.access_token}; path=/`
+      document.cookie = `role=hr; path=/`
       router.push('/hr/dashboard')
     } catch (e: any) {
       setError(e.message || 'Signup failed. Please try again.')

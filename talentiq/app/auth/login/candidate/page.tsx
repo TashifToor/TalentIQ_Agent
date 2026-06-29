@@ -89,6 +89,7 @@ export default function CandidateLogin() {
       localStorage.setItem('token', data.access_token)
       localStorage.setItem('role', 'candidate')
       document.cookie = `token=${data.access_token}; path=/`
+      document.cookie = `role=candidate; path=/`
       router.push('/candidate/dashboard')
     } catch (e: any) {
       setError(e.message || 'Login failed. Please check your credentials.')
@@ -105,6 +106,7 @@ export default function CandidateLogin() {
       localStorage.setItem('token', data.access_token)
       localStorage.setItem('role', 'candidate')
       document.cookie = `token=${data.access_token}; path=/`
+      document.cookie = `role=candidate; path=/`
       router.push('/candidate/dashboard')
     } catch (e: any) {
       setError(e.message || 'Signup failed. Please try again.')
