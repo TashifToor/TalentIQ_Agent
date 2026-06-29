@@ -38,6 +38,15 @@ export async function apiFetch(path: string, options?: RequestInit) {
     },
     ...options,
   });
+  if (res.status === 401) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      if (!window.location.pathname.includes("/login")) {
+        window.location.href = "/login";
+      }
+    }
+    throw new ApiError("Session expired. Please log in again.", "SESSION_EXPIRED");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Request failed" }));
     throw buildApiError(err);
@@ -88,6 +97,15 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
+    if (res.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
+        if (!window.location.pathname.includes("/login")) {
+          window.location.href = "/login";
+        }
+      }
+      throw new ApiError("Session expired. Please log in again.", "SESSION_EXPIRED");
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: "Upload failed" }));
       throw buildApiError(err);
