@@ -32,6 +32,7 @@ async def get_scan_history(
             "missing_skills": r.missing_skills,
             "is_shortlisted": r.is_shortlisted,
             "trigger_interview": r.trigger_interview,
+            "deep_analysis": r.deep_analysis,
             "created_at": r.created_at.isoformat() if r.created_at else None,
         }
         for r in records
