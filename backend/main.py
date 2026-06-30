@@ -5,8 +5,8 @@ from routes.auth import router as auth_router
 from routes.screen import router as screen_router
 from routes.upload import router as upload_router
 from routes.hr import router as hr_router
-# from routes.jobs import router as jobs_router
-# from routes.apply import router as apply_router
+from routes.jobs import router as jobs_router
+from routes.apply import router as apply_router
 from routes.scan import router as scan_router
 
 from models.user import User  
@@ -39,8 +39,8 @@ app.include_router(screen_router)
 app.include_router(upload_router)
 app.include_router(hr_router)
 app.include_router(scan_router)
-# app.include_router(jobs_router)
-# app.include_router(apply_router)
+app.include_router(jobs_router)
+app.include_router(apply_router)
 
 
 @app.get("/")
