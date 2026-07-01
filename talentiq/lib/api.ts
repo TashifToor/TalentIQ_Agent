@@ -137,4 +137,36 @@ export const api = {
   // HR Policy RAG chatbot
   hrChat: (message: string) =>
     apiFetch("/hr/chat", { method: "POST", body: JSON.stringify({ message }) }),
+
+  // HR Bulk Screening — ZIP of CVs + job description + top_n
+  bulkScreen: async (jobDescription: string, topN: number, zipFile: File) => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+    const formData = new FormData();
+    formData.append("job_description", jobDescription);
+    formData.append("top_n", String(topN));
+    formData.append("zip_file", zipFile);
+    const res = await fetch(`${API_BASE_URL}/bulk/screen`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (res.status === 401) {
+      if (typeof window !== "undefined") {
+        const role = localStorage.getItem("role");
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        document.cookie = "token=; path=/; max-age=0";
+        document.cookie = "role=; path=/; max-age=0";
+        if (!window.location.pathname.includes("/auth/login")) {
+          window.location.href = role === "hr" ? "/auth/login/hr" : "/auth/login/candidate";
+        }
+      }
+      throw new ApiError("Session expired. Please log in again.", "SESSION_EXPIRED");
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Bulk screening failed" }));
+      throw buildApiError(err);
+    }
+    return res.json();
+  },
 };
