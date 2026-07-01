@@ -13,7 +13,7 @@ TalentIQ is a next-generation, asynchronous AI recruiting platform designed to a
 * **On-The-Fly Dynamic Ingestion:** Hot-reloads and overwrites the local FAISS vector store on every single HTTP request—zero residual cache or cross-candidate data leak.
 * **Deep LLaMA 3.3 Reasoning:** Leverages the 70B model to perform multi-step analysis on stack alignment, project complexity, and core execution capabilities.
 * **Structured JSON Extraction:** Strict Pydantic parsing that automatically updates frontend metric widgets (Scores, Flag triggers, Missing Skill Gaps).
-* **Secure Multi-Tenant Architecture:** Fully equipped with JWT-based route authentication and secure dependency-injected PostgreSQL session handling.
+* **Secure Multi-Tenant SaaS Architecture:** Fully equipped with JWT-based route authentication and secure dependency-injected PostgreSQL session handling.
 
 ---
 
