@@ -7,7 +7,7 @@ TalentIQ is a next-generation, asynchronous AI recruiting platform designed to a
 
 ---
 
-## ⚡ Key Core Features
+##  Key Core Features
 
 * **Agentic Graph Pipeline:** Built using **LangGraph** to process multi-step screening boundaries (Sequential `analyze_cv` ➡️ `rank_candidate` node).
 * **On-The-Fly Dynamic Ingestion:** Hot-reloads and overwrites the local FAISS vector store on every single HTTP request—zero residual cache or cross-candidate data leak.
