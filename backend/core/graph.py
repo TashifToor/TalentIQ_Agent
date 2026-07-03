@@ -35,7 +35,6 @@ class TalentIQGraph:
         return self.agent._rank_candidate(state)
 
     def run_screening(self, job_description: str) -> Dict[str, Any]:
-        # Frontend/Router se aane wala input dictionary format mein state ko set karega
         initial_state = {
             "job_description": job_description,
             "retrieved_cv_context": "",
@@ -50,3 +49,9 @@ class TalentIQGraph:
             "has_relevant_experience": False    
         }
         return self.app.invoke(initial_state)
+
+    def run_screening_with_index(self, job_description: str, faiss_index) -> Dict[str, Any]:
+        """Bulk screening ke liye — prebuilt in-memory FAISS index inject karta hai, disk load skip."""
+        self.agent.faiss_db = faiss_index
+        self.agent.retriever = faiss_index.as_retriever(search_kwargs={"k": 4})
+        return self.run_screening(job_description=job_description)
