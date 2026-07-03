@@ -47,27 +47,33 @@ async def bulk_screen(
     if top_n > MAX_CVS_PER_ZIP:
         top_n = MAX_CVS_PER_ZIP
 
-    if not zip_file.filename.lower().endswith(".zip"):
-        raise HTTPException(status_code=400, detail="Please upload a .zip file containing CVs.")
+    if not zip_file.filename.lower().endswith(".zip") and not zip_file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Please upload a .zip file or a single .pdf CV.")
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        zip_path = os.path.join(tmp_dir, zip_file.filename)
-        with open(zip_path, "wb") as f:
-            shutil.copyfileobj(zip_file.file, f)
+        # Single PDF — wrap it so rest of the logic stays the same
+        if zip_file.filename.lower().endswith(".pdf"):
+            pdf_path = os.path.join(tmp_dir, zip_file.filename)
+            with open(pdf_path, "wb") as f:
+                shutil.copyfileobj(zip_file.file, f)
+            pdf_files = [pdf_path]
+        else:
+            zip_path = os.path.join(tmp_dir, zip_file.filename)
+            with open(zip_path, "wb") as f:
+                shutil.copyfileobj(zip_file.file, f)
+            extract_dir = os.path.join(tmp_dir, "extracted")
+            os.makedirs(extract_dir, exist_ok=True)
+            try:
+                with zipfile.ZipFile(zip_path, "r") as z:
+                    z.extractall(extract_dir)
+            except zipfile.BadZipFile:
+                raise HTTPException(status_code=400, detail="Invalid zip file.")
 
-        extract_dir = os.path.join(tmp_dir, "extracted")
-        os.makedirs(extract_dir, exist_ok=True)
-        try:
-            with zipfile.ZipFile(zip_path, "r") as z:
-                z.extractall(extract_dir)
-        except zipfile.BadZipFile:
-            raise HTTPException(status_code=400, detail="Invalid zip file.")
-
-        pdf_files = []
-        for root, _, files in os.walk(extract_dir):
-            for fn in files:
-                if fn.lower().endswith(".pdf"):
-                    pdf_files.append(os.path.join(root, fn))
+            pdf_files = []
+            for root, _, files in os.walk(extract_dir):
+                for fn in files:
+                    if fn.lower().endswith(".pdf"):
+                        pdf_files.append(os.path.join(root, fn))
 
         if not pdf_files:
             raise HTTPException(status_code=400, detail="No PDF CVs found inside the zip.")
