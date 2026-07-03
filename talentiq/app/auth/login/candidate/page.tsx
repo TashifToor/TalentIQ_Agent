@@ -109,6 +109,22 @@ export default function CandidateLogin() {
       document.cookie = `role=candidate; path=/`
       router.push('/candidate/dashboard')
     } catch (e: any) {
+      // If already registered, try logging in with same credentials
+      if (e.message?.toLowerCase().includes('already registered')) {
+        try {
+          const loginData: any = await api.login(email, password)
+          localStorage.setItem('token', loginData.access_token)
+          localStorage.setItem('role', 'candidate')
+          document.cookie = `token=${loginData.access_token}; path=/`
+          document.cookie = `role=candidate; path=/`
+          router.push('/candidate/dashboard')
+          return
+        } catch {
+          setError('Email already registered. Please use the Login tab.')
+          setTab('login')
+          return
+        }
+      }
       setError(e.message || 'Signup failed. Please try again.')
     } finally {
       setLoading(false)
