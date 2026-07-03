@@ -112,7 +112,17 @@ export default function HRDashboard() {
     { icon: '⭐', label: 'Shortlist', active: false },
     { icon: '💬', label: 'Policy Chatbot', active: false },
     { icon: '👥', label: 'Team', active: false },
+    { icon: '⚙️', label: 'Settings', active: false },
+    { icon: '👤', label: 'Profile', active: false },
   ]
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('role')
+    document.cookie = 'token=; path=/; max-age=0'
+    document.cookie = 'role=; path=/; max-age=0'
+    window.location.replace('/auth/login/hr')
+  }
 
   const selectedCandidate = candidates[selected]
 
@@ -134,11 +144,18 @@ export default function HRDashboard() {
           </button>
         ))}
         <div style={{ marginTop: 'auto', padding: 14, borderTop: '1px solid rgba(255,255,255,.07)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, cursor: 'pointer' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8 }}>
             <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#fff' }}>HR</div>
-            <div><div style={{ fontSize: 13, fontWeight: 600 }}>{userName}</div><div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>{userEmail}</div></div>
-            <span style={{ fontSize: 10, fontWeight: 600, background: 'rgba(59,130,246,.12)', color: '#3b82f6', padding: '2px 6px', borderRadius: 100, marginLeft: 'auto', border: '1px solid rgba(59,130,246,.2)' }}>Trial</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 600, background: 'rgba(59,130,246,.12)', color: '#3b82f6', padding: '2px 6px', borderRadius: 100, border: '1px solid rgba(59,130,246,.2)', flexShrink: 0 }}>Trial</span>
           </div>
+          <button onClick={handleLogout} style={{ width: '100%', marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.06)', color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'Syne, sans-serif', transition: 'all .2s' }}>
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Logout
+          </button>
         </div>
       </div>
 
