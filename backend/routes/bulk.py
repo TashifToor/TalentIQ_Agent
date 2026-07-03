@@ -19,7 +19,7 @@ MAX_CVS_PER_ZIP = 25  # safety limit — sequential LLM calls, prevent abuse/tim
 
 
 def require_hr(current_user: User):
-    if current_user.role != "hr":
+    if (current_user.role or "").lower() != "hr":
         raise HTTPException(status_code=403, detail="Only HR users can do this.")
     return current_user
 
@@ -85,6 +85,7 @@ async def bulk_screen(
             )
 
         results = []
+        agent = TalentIQGraph()  # single agent instance reused for all CVs
         for pdf_path in pdf_files:
             candidate_name = os.path.splitext(os.path.basename(pdf_path))[0]
             try:
@@ -101,13 +102,14 @@ async def bulk_screen(
                 chunker = TextChunker()
                 chunks = chunker.split_documents(documents)
 
-                # Overwrites the shared FAISS index — fine since we screen
-                # one CV at a time, sequentially, before moving to the next.
+                # In-memory FAISS — no disk save/load per CV (3-5s faster each)
                 vector_store = VectorStore()
-                vector_store.create_and_save_store(chunks)
+                faiss_index = vector_store.create_in_memory(chunks)
 
-                agent = TalentIQGraph()
-                report = agent.run_screening(job_description=job_description)
+                report = agent.run_screening_with_index(
+                    job_description=job_description,
+                    faiss_index=faiss_index,
+                )
 
                 results.append({
                     "filename": candidate_name,

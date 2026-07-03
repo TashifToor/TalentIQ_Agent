@@ -25,6 +25,12 @@ class VectorStore:
         self.faiss_index.save_local(self.persist_directory)
         print(f"faiss index successfully stored at ({self.persist_directory})")
         return self.faiss_index
+
+    def create_in_memory(self, chunks):
+        """Bulk screening ke liye — disk pe save nahi karta, sirf memory mein FAISS banata hai."""
+        print(f"[FAISS] Creating in-memory index (no disk IO)...")
+        self.faiss_index = FAISS.from_documents(chunks, self.embedding_wrapper)
+        return self.faiss_index
     
     def load_store(self):
         """Production mai database se direct load krne ke liye"""
@@ -42,4 +48,3 @@ class VectorStore:
         else:
             print(f"NO faiss index existing found at: {index_file_path}")
             return None
-        
