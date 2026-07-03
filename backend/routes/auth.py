@@ -66,13 +66,12 @@ pwd_context = CryptContext(
 )
 
 
-@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def signup(body: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == body.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # Validate role
     if body.role not in ["candidate", "hr"]:
         raise HTTPException(status_code=400, detail="Role must be 'candidate' or 'hr'")
 
@@ -85,7 +84,9 @@ async def signup(body: RegisterRequest, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    return await build_user_response(user)
+
+    token = await create_access_token(user.id)
+    return TokenResponse(access_token=token, token_type="bearer", role=user.role)
 
 
 @router.post("/login", response_model=TokenResponse)
