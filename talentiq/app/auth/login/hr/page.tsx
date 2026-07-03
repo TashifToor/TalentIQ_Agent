@@ -58,6 +58,21 @@ export default function HRLogin() {
       document.cookie = `role=hr; path=/`
       router.push('/hr/dashboard')
     } catch (e: any) {
+      if (e.message?.toLowerCase().includes('already registered')) {
+        try {
+          const loginData: any = await api.login(email, password)
+          localStorage.setItem('token', loginData.access_token)
+          localStorage.setItem('role', 'hr')
+          document.cookie = `token=${loginData.access_token}; path=/`
+          document.cookie = `role=hr; path=/`
+          router.push('/hr/dashboard')
+          return
+        } catch {
+          setError('Email already registered. Please use the Login tab.')
+          setTab('login')
+          return
+        }
+      }
       setError(e.message || 'Signup failed. Please try again.')
     } finally {
       setLoading(false)
