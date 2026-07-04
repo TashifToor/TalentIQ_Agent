@@ -105,19 +105,54 @@ export default function HRDashboard() {
     window.location.replace('/auth/login/hr')
   }
 
-  // ── Bulk screening ──
+  // ── Bulk screening (async + polling) ──
+  const [pollProgress, setPollProgress] = useState({ current: 0, total: 0, currentName: '' })
+
   const runBulk = async () => {
-    setBulkError(''); if (!jobDescription.trim()) { setBulkError('Paste a job description first.'); return }
+    setBulkError('')
+    if (!jobDescription.trim()) { setBulkError('Paste a job description first.'); return }
     if (!zipFile) { setBulkError('Select a ZIP or PDF file first.'); fileRef.current?.click(); return }
-    setLoading(true); setBulkStatus(`Screening ${zipFile.name}…`)
+    setLoading(true)
+    setBulkStatus('Uploading CVs…')
+    setPollProgress({ current: 0, total: 0, currentName: '' })
     try {
       const jd = jobTitle ? `Job Title: ${jobTitle}\n\n${jobDescription}` : jobDescription
-      const res:any = await api.bulkScreen(jd, topN, zipFile)
-      const ranked: Candidate[] = (res.all_results || res.top_candidates || []).map((c:Candidate) => ({ ...c, status:'active', jobTitle, screenedAt: new Date().toLocaleString() }))
-      setCandidates(ranked); setTotalProcessed(res.total_cvs_processed || ranked.length)
-      setSelectedIdx(null); setBulkStatus(`✓ Complete · ${res.total_cvs_processed} CV(s) ranked`)
-    } catch(e:any) { setBulkError(e.message||'Bulk screening failed.'); setBulkStatus('') }
-    finally { setLoading(false) }
+      const res: any = await api.bulkScreen(jd, topN, zipFile)
+      const taskId: string = res.task_id
+      const totalCvs: number = res.total_cvs || 0
+      setPollProgress(p => ({ ...p, total: totalCvs }))
+      setBulkStatus(`Screening started — ${totalCvs} CV(s) in queue…`)
+
+      // Poll every 2s until done
+      await new Promise<void>((resolve, reject) => {
+        const interval = setInterval(async () => {
+          try {
+            const status: any = await api.pollBulkStatus(taskId)
+            if (status.state === 'progress') {
+              setPollProgress({ current: status.current || 0, total: status.total || totalCvs, currentName: status.current_name || '' })
+              setBulkStatus(status.status || 'Processing…')
+            } else if (status.state === 'success') {
+              clearInterval(interval)
+              const ranked: Candidate[] = (status.all_results || status.top_candidates || []).map((c: Candidate) => ({ ...c, status: 'active', jobTitle, screenedAt: new Date().toLocaleString() }))
+              setCandidates(ranked)
+              setTotalProcessed(status.total_cvs_processed || ranked.length)
+              setSelectedIdx(null)
+              setBulkStatus(`✓ Complete · ${status.total_cvs_processed} CV(s) ranked`)
+              setPollProgress({ current: 0, total: 0, currentName: '' })
+              resolve()
+            } else if (status.state === 'failure') {
+              clearInterval(interval)
+              reject(new Error(status.error || 'Screening failed'))
+            }
+          } catch (e) { clearInterval(interval); reject(e) }
+        }, 2000)
+      })
+    } catch (e: any) {
+      setBulkError(e.message || 'Bulk screening failed.')
+      setBulkStatus('')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // ── Shortlist / Reject ──
@@ -278,8 +313,43 @@ export default function HRDashboard() {
         <input type="number" min={1} max={25} value={topN} onChange={e=>setTopN(Number(e.target.value)||1)} style={{ width:60, background:'#161614', border:'1px solid rgba(255,255,255,.07)', borderRadius:6, padding:'7px 10px', fontSize:13, color:'rgba(255,255,255,.8)', outline:'none', fontFamily:'Syne,sans-serif' }} />
       </div>
       {bulkError && <div style={{ fontSize:12, color:'#ef4444', marginBottom:10 }}>{bulkError}</div>}
-      <button onClick={runBulk} disabled={loading} style={{ width:'100%', background: loading?'rgba(19,194,142,.5)':'#13c28e', color:'#fff', fontSize:13, fontWeight:700, fontFamily:'Syne,sans-serif', padding:12, borderRadius:8, border:'none', cursor: loading?'default':'pointer', letterSpacing:'.04em' }}>
-        {loading ? bulkStatus : bulkStatus ? bulkStatus : 'Run Bulk Screening'}
+
+      {/* Loading Animation */}
+      {loading && (
+        <div style={s(card, { marginBottom:14, padding:20 })}>
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
+            <div style={{ position:'relative', width:40, height:40, flexShrink:0 }}>
+              <svg viewBox="0 0 40 40" style={{ width:40, height:40, animation:'spin 1.2s linear infinite' }}>
+                <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(255,255,255,.07)" strokeWidth="3"/>
+                <circle cx="20" cy="20" r="16" fill="none" stroke="#13c28e" strokeWidth="3" strokeDasharray="60 40" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>{bulkStatus}</div>
+              {pollProgress.currentName && <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Analyzing: {pollProgress.currentName}</div>}
+            </div>
+          </div>
+          {pollProgress.total > 0 && (
+            <>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:6 }}>
+                <span>Progress</span>
+                <span>{pollProgress.current}/{pollProgress.total} CVs</span>
+              </div>
+              <div style={{ height:6, background:'rgba(255,255,255,.06)', borderRadius:3, overflow:'hidden' }}>
+                <div style={{ height:'100%', background:'linear-gradient(90deg,#0b7c5e,#13c28e)', borderRadius:3, width:`${Math.round((pollProgress.current/pollProgress.total)*100)}%`, transition:'width .5s ease' }}/>
+              </div>
+              <div style={{ display:'flex', gap:4, marginTop:10 }}>
+                {Array.from({ length: pollProgress.total }, (_,i) => (
+                  <div key={i} style={{ flex:1, height:4, borderRadius:2, background: i < pollProgress.current ? '#13c28e' : i === pollProgress.current ? '#e2b04a' : 'rgba(255,255,255,.06)', transition:'all .4s' }}/>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <button onClick={runBulk} disabled={loading} style={{ width:'100%', background: loading?'rgba(19,194,142,.3)':'#13c28e', color:'#fff', fontSize:13, fontWeight:700, fontFamily:'Syne,sans-serif', padding:12, borderRadius:8, border:'none', cursor: loading?'default':'pointer', letterSpacing:'.04em', opacity: loading ? 0.7 : 1 }}>
+        {loading ? 'Screening in progress…' : bulkStatus ? bulkStatus : 'Run Bulk Screening'}
       </button>
       {bulkStatus && candidates.length>0 && (
         <button onClick={()=>setSection('candidates')} style={{ width:'100%', marginTop:10, fontSize:12, fontWeight:600, color:'#13c28e', background:'transparent', border:'1px solid rgba(19,194,142,.2)', borderRadius:8, padding:10, cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
@@ -461,6 +531,7 @@ export default function HRDashboard() {
 
   return (
     <div style={s(base, { display:'flex', height:'100vh', overflow:'hidden' })}>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-4px)}}`}</style>
       {/* SIDEBAR */}
       <div style={{ width:224, flexShrink:0, background:'#101010', borderRight:'1px solid rgba(255,255,255,.07)', display:'flex', flexDirection:'column' }}>
         <Link href="/" style={{ padding:'20px 18px', borderBottom:'1px solid rgba(255,255,255,.07)', display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
