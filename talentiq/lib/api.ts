@@ -138,7 +138,7 @@ export const api = {
   hrChat: (message: string) =>
     apiFetch("/hr/chat", { method: "POST", body: JSON.stringify({ message }) }),
 
-  // HR Bulk Screening — ZIP of CVs + job description + top_n
+  // HR Bulk Screening — async version (returns task_id)
   bulkScreen: async (jobDescription: string, topN: number, zipFile: File) => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
     const formData = new FormData();
@@ -150,23 +150,20 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
-    if (res.status === 401) {
-      if (typeof window !== "undefined") {
-        const role = localStorage.getItem("role");
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
-        document.cookie = "token=; path=/; max-age=0";
-        document.cookie = "role=; path=/; max-age=0";
-        if (!window.location.pathname.includes("/auth/login")) {
-          window.location.href = role === "hr" ? "/auth/login/hr" : "/auth/login/candidate";
-        }
-      }
-      throw new ApiError("Session expired. Please log in again.", "SESSION_EXPIRED");
-    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: "Bulk screening failed" }));
       throw buildApiError(err);
     }
     return res.json();
   },
-}; 
+
+  // Poll bulk screening task status
+  pollBulkStatus: (taskId: string) => apiFetch(`/bulk/status/${taskId}`),
+
+  // Forgot password
+  forgotPassword: (email: string) =>
+    apiFetch("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+};
