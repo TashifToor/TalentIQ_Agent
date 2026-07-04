@@ -31,3 +31,10 @@ groq
 pypdf
 pymupdf
 chromadb
+
+# Background Tasks
+celery[redis]==5.3.6
+redis==5.0.1
+
+# Email
+fastapi-mail==1.4.1
