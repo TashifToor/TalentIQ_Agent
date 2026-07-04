@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
@@ -29,7 +30,6 @@ export default function HRLogin() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [company, setCompany] = useState('')
-
   const [showForgot, setShowForgot] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotMsg, setForgotMsg] = useState('')
@@ -40,12 +40,9 @@ export default function HRLogin() {
     setForgotLoading(true)
     try {
       await api.forgotPassword(forgotEmail.trim())
-      setForgotMsg('✓ Check your email — a temporary password has been sent.')
-    } catch (e: any) {
-      setForgotMsg('Something went wrong. Please try again.')
-    } finally {
-      setForgotLoading(false)
-    }
+      setForgotMsg('Password sent! Check your email.')
+    } catch { setForgotMsg('Something went wrong. Please try again.') }
+    finally { setForgotLoading(false) }
   }
 
   const handleLogin = async () => {
@@ -78,26 +75,20 @@ export default function HRLogin() {
     } catch (e: any) {
       if (e.message?.toLowerCase().includes('already registered')) {
         try {
-          const loginData: any = await api.login(email, password)
-          localStorage.setItem('token', loginData.access_token)
+          const d: any = await api.login(email, password)
+          localStorage.setItem('token', d.access_token)
           localStorage.setItem('role', 'hr')
-          document.cookie = `token=${loginData.access_token}; path=/`
+          document.cookie = `token=${d.access_token}; path=/`
           document.cookie = `role=hr; path=/`
-          router.push('/hr/dashboard')
-          return
-        } catch {
-          setError('Email already registered. Please use the Login tab.')
-          setTab('login')
-          return
-        }
+          router.push('/hr/dashboard'); return
+        } catch { setError('Email taken. Please login.'); setTab('login'); return }
       }
       setError(e.message || 'Signup failed. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   return (
+    <>
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif" }}>
       <FontImports />
 
@@ -219,50 +210,34 @@ export default function HRLogin() {
           )}
 
           {tab === 'login' ? (
-  <>
-    <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#1a1a16', marginBottom: 8, letterSpacing: '-0.3px' }}>
-      Welcome back
-    </h1>
-    <p style={{ fontSize: 13.5, color: '#7a7768', marginBottom: 30, fontWeight: 300 }}>
-      Not on TalentIQ yet?{' '}
-      <button onClick={() => setTab('signup')} style={{ color: '#3f6e58', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontFamily: 'inherit', padding: 0 }}>
-        Start your trial
-      </button>
-    </p>
+            <div>
+              <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#1a1a16', marginBottom: 8, letterSpacing: '-0.3px' }}>
+                Welcome back
+              </h1>
+              <p style={{ fontSize: 13.5, color: '#7a7768', marginBottom: 30, fontWeight: 300 }}>
+                Not on TalentIQ yet?{' '}
+                <button onClick={() => setTab('signup')} style={{ color: '#3f6e58', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontFamily: 'inherit', padding: 0 }}>
+                  Start your trial
+                </button>
+              </p>
 
-    <LightField label="Work email" type="email" value={email} onChange={setEmail} placeholder="you@company.com"
-      focused={focused === 'email'} onFocus={() => setFocused('email')} onBlur={() => setFocused(null)} />
-    <LightField label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••"
-      focused={focused === 'password'} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} />
+              <LightField label="Work email" type="email" value={email} onChange={setEmail} placeholder="you@company.com"
+                focused={focused === 'email'} onFocus={() => setFocused('email')} onBlur={() => setFocused(null)} />
+              <LightField label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••"
+                focused={focused === 'password'} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} />
 
-    <div style={{ textAlign: 'right', marginBottom: 28 }}>
-      <a href="#" onClick={e=>{e.preventDefault();setShowForgot(true);setForgotMsg('');setForgotEmail(email)}} style={{ fontSize: 12.5, color: '#a3a092', textDecoration: 'none' }}>Forgot password?</a>
-    </div>
+              <div style={{ textAlign: 'right', marginBottom: 28 }}>
+                <a href="#" onClick={e=>{e.preventDefault();setShowForgot(true);setForgotMsg('');setForgotEmail(email)}} style={{ fontSize: 12.5, color: '#a3a092', textDecoration: 'none' }}>Forgot password?</a>
+              </div>
 
-    <button onClick={handleLogin} disabled={loading} style={primaryBtnDark}>
-      {loading ? 'Signing in…' : 'Sign in'}
-    </button>
+              <button onClick={handleLogin} disabled={loading} style={primaryBtnDark}>
+                {loading ? 'Signing in…' : 'Sign in'}
+              </button>
 
-    <LightDivider />
-    <LightGoogleButton />
-
-    {/* Forgot Password Modal — Fragment ke andar safely integrated */}
-    {showForgot && (
-      <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:999, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={()=>setShowForgot(false)}>
-        <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,.08)', borderRadius:16, padding:28, width:340, maxWidth:'90vw', boxShadow:'0 20px 60px rgba(0,0,0,.15)' }} onClick={e=>e.stopPropagation()}>
-          <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:6, color:'#1a1a16' }}>Forgot Password</div>
-          <p style={{ fontSize:13, color:'#7a7768', marginBottom:20 }}>Enter your email — we'll send a temporary password.</p>
-          <input value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="your@email.com" style={{ width:'100%', background:'#f5f4f0', border:'1px solid rgba(0,0,0,.08)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'#1a1a16', outline:'none', fontFamily:'inherit', marginBottom:12, boxSizing:'border-box' as any }} />
-          {forgotMsg && <div style={{ fontSize:12, color: forgotMsg.startsWith('✓')?'#2d7a5f':'#dc2626', marginBottom:12 }}>{forgotMsg}</div>}
-          <div style={{ display:'flex', gap:8 }}>
-            <button onClick={()=>setShowForgot(false)} style={{ flex:1, fontSize:13, padding:'9px', borderRadius:8, border:'1px solid rgba(0,0,0,.08)', background:'transparent', color:'#7a7768', cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
-            <button onClick={handleForgotPassword} disabled={forgotLoading} style={{ flex:1, fontSize:13, fontWeight:600, padding:'9px', borderRadius:8, border:'none', background:'#2d5a47', color:'#fff', cursor:'pointer', fontFamily:'inherit' }}>{forgotLoading?'Sending…':'Send Password'}</button>
-          </div>
-        </div>
-      </div>
-    )}
-  </>
-) : (
+              <LightDivider />
+              <LightGoogleButton />
+            </div>
+          ) : (
             <div>
               <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 500, color: '#1a1a16', marginBottom: 8, letterSpacing: '-0.3px' }}>
                 Start your trial
@@ -300,27 +275,42 @@ export default function HRLogin() {
           <Link href="/auth/login/candidate" style={{ fontSize: 12.5, color: '#3f6e58', textDecoration: 'none', fontWeight: 500 }}>Candidate portal →</Link>
         </div>
       </div>
-    </div>
+        </div>
+      {showForgot && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowForgot(false)}>
+          <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)', borderRadius: 16, padding: 28, width: 340, maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,.15)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, marginBottom: 6, color: '#1a1a16' }}>Forgot Password</div>
+            <p style={{ fontSize: 13, color: '#7a7768', margin: '0 0 20px' }}>Enter your email to receive a temporary password.</p>
+            <input value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleForgotPassword()} placeholder="your@email.com" style={{ width: '100%', background: '#f5f4f0', border: '1px solid rgba(0,0,0,.08)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#1a1a16', outline: 'none', fontFamily: 'inherit', marginBottom: 12, boxSizing: 'border-box' }} />
+            {forgotMsg && <div style={{ fontSize: 12, color: forgotMsg.startsWith('P') ? '#2d7a5f' : '#dc2626', marginBottom: 12 }}>{forgotMsg}</div>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowForgot(false)} style={{ flex: 1, fontSize: 13, padding: '9px', borderRadius: 8, border: '1px solid rgba(0,0,0,.08)', background: 'transparent', color: '#7a7768', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={handleForgotPassword} disabled={forgotLoading} style={{ flex: 1, fontSize: 13, fontWeight: 600, padding: '9px', borderRadius: 8, border: 'none', background: '#2d5a47', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>{forgotLoading ? 'Sending...' : 'Send Password'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
-const lightLabelStyle: React.CSSProperties = {
+const lightLabelStyle: CSSProperties = {
   display: 'block', fontSize: 11.5, fontWeight: 500, letterSpacing: '0.05em',
   color: '#a3a092', marginBottom: 10,
 }
 
-const lightInputBareStyle: React.CSSProperties = {
+const lightInputBareStyle: CSSProperties = {
   width: '100%', background: 'transparent', border: 'none', outline: 'none',
   color: '#1a1a16', fontSize: 14.5, fontFamily: 'inherit', padding: '10px 0',
 }
 
-const primaryBtnDark: React.CSSProperties = {
+const primaryBtnDark: CSSProperties = {
   width: '100%', background: '#1a1a16', color: '#fbfaf7', fontWeight: 600,
   fontSize: 14, padding: '15px', borderRadius: 3, border: 'none',
   cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.01em', marginBottom: 24,
 }
 
-const primaryBtnGreen: React.CSSProperties = {
+const primaryBtnGreen: CSSProperties = {
   width: '100%', background: '#3f6e58', color: '#fbfaf7', fontWeight: 600,
   fontSize: 14, padding: '15px', borderRadius: 3, border: 'none',
   cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.01em',

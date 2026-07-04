@@ -39,15 +39,19 @@ export async function apiFetch(path: string, options?: RequestInit) {
     ...options,
   });
   if (res.status === 401) {
+    const isAuthPage = typeof window !== "undefined" && window.location.pathname.includes("/auth/");
+    if (isAuthPage) {
+      // Login/signup page pe 401 = wrong credentials, not session expired
+      const err = await res.json().catch(() => ({ detail: "Invalid email or password." }));
+      throw buildApiError(err);
+    }
     if (typeof window !== "undefined") {
       const role = localStorage.getItem("role");
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       document.cookie = "token=; path=/; max-age=0";
       document.cookie = "role=; path=/; max-age=0";
-      if (!window.location.pathname.includes("/auth/login")) {
-        window.location.href = role === "hr" ? "/auth/login/hr" : "/auth/login/candidate";
-      }
+      window.location.href = role === "hr" ? "/auth/login/hr" : "/auth/login/candidate";
     }
     throw new ApiError("Session expired. Please log in again.", "SESSION_EXPIRED");
   }
