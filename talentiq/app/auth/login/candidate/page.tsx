@@ -127,7 +127,6 @@ export default function CandidateLogin() {
       document.cookie = `role=candidate; path=/`
       router.push('/candidate/dashboard')
     } catch (e: any) {
-      // If already registered, try logging in with same credentials
       if (e.message?.toLowerCase().includes('already registered')) {
         try {
           const loginData: any = await api.login(email, password)
@@ -160,7 +159,7 @@ export default function CandidateLogin() {
       <div style={{ flex: '1 1 52%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'radial-gradient(ellipse 120% 80% at 20% 0%, #161310 0%, #0a0a08 60%)' }}>
         <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.9 }} />
 
-        {/* Fine hairline frame — gives the panel a designed edge, not a flat block */}
+        {/* Fine hairline frame */}
         <div style={{ position: 'absolute', inset: 24, border: '1px solid rgba(212,175,109,.14)', borderRadius: 2, pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: '56px 60px' }}>
@@ -173,7 +172,7 @@ export default function CandidateLogin() {
             <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 21, fontWeight: 500, color: 'rgba(245,242,235,.92)', letterSpacing: '0.5px' }}>TalentIQ</span>
           </Link>
 
-          {/* Middle: refined proof panel — single composed card, not scattered chips */}
+          {/* Middle: refined proof panel */}
           <div style={{ maxWidth: 380 }}>
             <div style={{
               background: 'linear-gradient(165deg, rgba(255,255,255,.045), rgba(255,255,255,.015))',
@@ -206,7 +205,7 @@ export default function CandidateLogin() {
             </div>
           </div>
 
-          {/* Bottom: editorial headline + restrained stat row */}
+          {/* Bottom: editorial headline */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#d4af6d', marginBottom: 20 }}>
               For candidates
@@ -248,7 +247,7 @@ export default function CandidateLogin() {
             <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(212,175,109,.85)' }}>Candidate portal</span>
           </div>
 
-          {/* Tabs — underline style, not boxed pill (reads less templated) */}
+          {/* Tabs */}
           <div style={{ display: 'flex', gap: 28, marginBottom: 36, borderBottom: '1px solid rgba(255,255,255,.08)' }}>
             {(['login', 'signup'] as const).map(t => (
               <button
@@ -300,23 +299,6 @@ export default function CandidateLogin() {
 
               <RefinedDivider />
               <GoogleButton />
-            </div>
-
-            {/* Forgot Password Modal */}
-            {showForgot && (
-              <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.7)', zIndex:999, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={()=>setShowForgot(false)}>
-                <div style={{ background:'#141412', border:'1px solid rgba(255,255,255,.1)', borderRadius:16, padding:28, width:340, maxWidth:'90vw' }} onClick={e=>e.stopPropagation()}>
-                  <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:6, color:'#f5f2eb' }}>Forgot Password</div>
-                  <p style={{ fontSize:13, color:'rgba(255,255,255,.35)', marginBottom:20 }}>Enter your email — we'll send a temporary password.</p>
-                  <input value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="your@email.com" style={{ width:'100%', background:'#1e1e1b', border:'1px solid rgba(255,255,255,.08)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'rgba(255,255,255,.8)', outline:'none', fontFamily:'inherit', marginBottom:12, boxSizing:'border-box' as any }} />
-                  {forgotMsg && <div style={{ fontSize:12, color: forgotMsg.startsWith('✓')?'#13c28e':'#ef4444', marginBottom:12 }}>{forgotMsg}</div>}
-                  <div style={{ display:'flex', gap:8 }}>
-                    <button onClick={()=>setShowForgot(false)} style={{ flex:1, fontSize:13, padding:'9px', borderRadius:8, border:'1px solid rgba(255,255,255,.08)', background:'transparent', color:'rgba(255,255,255,.4)', cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
-                    <button onClick={handleForgotPassword} disabled={forgotLoading} style={{ flex:1, fontSize:13, fontWeight:600, padding:'9px', borderRadius:8, border:'none', background:'#d4af6d', color:'#0a0a08', cursor:'pointer', fontFamily:'inherit' }}>{forgotLoading?'Sending…':'Send Password'}</button>
-                  </div>
-                </div>
-              </div>
-            )}
             </div>
           ) : (
             <div>
@@ -375,6 +357,22 @@ export default function CandidateLogin() {
           <Link href="/auth/login/hr" style={{ fontSize: 12.5, color: '#d4af6d', textDecoration: 'none', fontWeight: 500 }}>HR portal →</Link>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgot && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setShowForgot(false)}>
+          <div style={{ background: '#141412', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, padding: 28, width: 340, maxWidth: '90vw' }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, marginBottom: 6, color: '#f5f2eb' }}>Forgot Password</div>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,.35)', marginBottom: 20 }}>Enter your email — we'll send a temporary password.</p>
+            <input value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="your@email.com" style={{ width: '100%', background: '#1e1e1b', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: 'rgba(255,255,255,.8)', outline: 'none', fontFamily: 'inherit', marginBottom: 12, boxSizing: 'border-box' }} />
+            {forgotMsg && <div style={{ fontSize: 12, color: forgotMsg.startsWith('✓') ? '#13c28e' : '#ef4444', marginBottom: 12 }}>{forgotMsg}</div>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowForgot(false)} style={{ flex: 1, fontSize: 13, padding: '9px', borderRadius: 8, border: '1px solid rgba(255,255,255,.08)', background: 'transparent', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={handleForgotPassword} disabled={forgotLoading} style={{ flex: 1, fontSize: 13, fontWeight: 600, padding: '9px', borderRadius: 8, border: 'none', background: '#d4af6d', color: '#0a0a08', cursor: 'pointer', fontFamily: 'inherit' }}>{forgotLoading ? 'Sending…' : 'Send Password'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
