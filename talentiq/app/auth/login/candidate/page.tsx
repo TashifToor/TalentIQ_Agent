@@ -26,6 +26,24 @@ export default function CandidateLogin() {
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
 
+  const [showForgot, setShowForgot] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotMsg, setForgotMsg] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+
+  const handleForgotPassword = async () => {
+    if (!forgotEmail.trim()) return
+    setForgotLoading(true)
+    try {
+      await api.forgotPassword(forgotEmail.trim())
+      setForgotMsg('✓ Check your email — a temporary password has been sent.')
+    } catch (e: any) {
+      setForgotMsg('Something went wrong. Please try again.')
+    } finally {
+      setForgotLoading(false)
+    }
+  }
+
   /* Ambient particle field — quiet, slow, premium */
   useEffect(() => {
     const canvas = canvasRef.current
@@ -273,7 +291,7 @@ export default function CandidateLogin() {
                 focused={focused === 'password'} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} />
 
               <div style={{ textAlign: 'right', marginBottom: 28 }}>
-                <a href="#" style={{ fontSize: 12.5, color: 'rgba(245,242,235,.32)', textDecoration: 'none' }}>Forgot password?</a>
+                <a href="#" onClick={e=>{e.preventDefault();setShowForgot(true);setForgotMsg('');setForgotEmail(email)}} style={{ fontSize: 12.5, color: 'rgba(245,242,235,.32)', textDecoration: 'none' }}>Forgot password?</a>
               </div>
 
               <button onClick={handleLogin} disabled={loading} style={primaryBtn}>
@@ -282,6 +300,23 @@ export default function CandidateLogin() {
 
               <RefinedDivider />
               <GoogleButton />
+            </div>
+
+            {/* Forgot Password Modal */}
+            {showForgot && (
+              <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.7)', zIndex:999, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={()=>setShowForgot(false)}>
+                <div style={{ background:'#141412', border:'1px solid rgba(255,255,255,.1)', borderRadius:16, padding:28, width:340, maxWidth:'90vw' }} onClick={e=>e.stopPropagation()}>
+                  <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:6, color:'#f5f2eb' }}>Forgot Password</div>
+                  <p style={{ fontSize:13, color:'rgba(255,255,255,.35)', marginBottom:20 }}>Enter your email — we'll send a temporary password.</p>
+                  <input value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="your@email.com" style={{ width:'100%', background:'#1e1e1b', border:'1px solid rgba(255,255,255,.08)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'rgba(255,255,255,.8)', outline:'none', fontFamily:'inherit', marginBottom:12, boxSizing:'border-box' as any }} />
+                  {forgotMsg && <div style={{ fontSize:12, color: forgotMsg.startsWith('✓')?'#13c28e':'#ef4444', marginBottom:12 }}>{forgotMsg}</div>}
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button onClick={()=>setShowForgot(false)} style={{ flex:1, fontSize:13, padding:'9px', borderRadius:8, border:'1px solid rgba(255,255,255,.08)', background:'transparent', color:'rgba(255,255,255,.4)', cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
+                    <button onClick={handleForgotPassword} disabled={forgotLoading} style={{ flex:1, fontSize:13, fontWeight:600, padding:'9px', borderRadius:8, border:'none', background:'#d4af6d', color:'#0a0a08', cursor:'pointer', fontFamily:'inherit' }}>{forgotLoading?'Sending…':'Send Password'}</button>
+                  </div>
+                </div>
+              </div>
+            )}
             </div>
           ) : (
             <div>
