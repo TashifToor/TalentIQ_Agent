@@ -28,6 +28,7 @@ export default function CandidateDashboard() {
   const [cvText, setCvText] = useState('')
   const [uploading, setUploading] = useState(false)
   const [scanning, setScanning] = useState(false)
+  const [scanStep, setScanStep] = useState(-1)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('skills')
@@ -35,6 +36,16 @@ export default function CandidateDashboard() {
   const [scansLeft, setScansLeft] = useState(3)
   const [history, setHistory] = useState<any[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const SCAN_STEPS = [
+    'Parsing your CV...',
+    'Creating text chunks...',
+    'Building vector embeddings...',
+    'Storing in FAISS index...',
+    'Retrieving relevant context...',
+    'Reasoning with LLaMA 3.3...',
+    'Generating score & analysis...',
+  ]
 
   useEffect(() => {
     api.me().then((u: any) => {
@@ -60,7 +71,8 @@ export default function CandidateDashboard() {
       if (typeof res === 'string') {
         extracted = res
       } else if (res && typeof res === 'object') {
-        extracted = res.cv_text || res.text || res.extracted_text || res.content || ''
+        const data = res as any
+        extracted = data.cv_text || data.text || data.extracted_text || data.content || ''
       }
       if (!extracted) {
         setError('Upload succeeded but no CV text was returned — check console log and share the response shape.')
@@ -82,8 +94,18 @@ export default function CandidateDashboard() {
 
     setError('')
     setScanning(true)
+    setScanStep(0)
+
+    // Cycle through steps while API call runs
+    const stepInterval = setInterval(() => {
+      setScanStep(s => s < SCAN_STEPS.length - 1 ? s + 1 : s)
+    }, 900)
+
     try {
       const data = await api.screenCandidate(jd, cvText)
+      clearInterval(stepInterval)
+      setScanStep(SCAN_STEPS.length - 1)
+      await new Promise(r => setTimeout(r, 400)) // brief pause on last step
       console.log('Scan response:', data)
       setResult(data)
       if (typeof data.scans_remaining === 'number') setScansLeft(data.scans_remaining)
@@ -97,6 +119,7 @@ export default function CandidateDashboard() {
         color: score >= 80 ? '#13c28e' : score >= 50 ? '#e2b04a' : '#ef4444',
       }, ...h])
     } catch (err: any) {
+      clearInterval(stepInterval)
       if (err instanceof ApiError && err.code === 'FREE_LIMIT_REACHED') {
         setScansLeft(0)
         setShowUpgrade(true)
@@ -105,6 +128,7 @@ export default function CandidateDashboard() {
       }
     } finally {
       setScanning(false)
+      setScanStep(-1)
     }
   }
 
@@ -243,9 +267,26 @@ export default function CandidateDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.3)', letterSpacing: '.06em', textTransform: 'uppercase' }}>Job Description</div>
                 <textarea value={jd} onChange={e => setJd(e.target.value)} placeholder={"Paste the job description here…\n\ne.g. 'We're looking for a Senior React Developer with 4+ years…'"} style={{ flex: 1, background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, padding: 14, fontSize: 13, fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.8)', outline: 'none', resize: 'none', lineHeight: 1.6, minHeight: 100 }} />
-                <button onClick={handleScan} disabled={scanning || uploading} style={{ width: '100%', background: scanning ? '#b8860b' : '#e2b04a', color: '#0a0a09', fontSize: 14, fontWeight: 700, fontFamily: 'Syne, sans-serif', padding: 13, borderRadius: 10, border: 'none', cursor: scanning ? 'wait' : 'pointer', letterSpacing: '.04em' }}>
-                  {scanning ? 'Analyzing…' : result ? 'Analysis Complete — Scan Again' : 'Analyze Match'}
+                <button onClick={handleScan} disabled={scanning || uploading} style={{ width: '100%', background: scanning ? 'rgba(226,176,74,.15)' : '#e2b04a', color: scanning ? '#e2b04a' : '#0a0a09', fontSize: 14, fontWeight: 700, fontFamily: 'Syne, sans-serif', padding: 13, borderRadius: 10, border: scanning ? '1px solid rgba(226,176,74,.3)' : 'none', cursor: scanning ? 'default' : 'pointer', letterSpacing: '.04em' }}>
+                  {scanning ? SCAN_STEPS[scanStep] || 'Analyzing...' : result ? 'Analysis Complete — Scan Again' : 'Analyze Match'}
                 </button>
+                {scanning && (
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {SCAN_STEPS.map((step, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: i <= scanStep ? 1 : 0.2, transition: 'opacity 0.4s ease', fontSize: 11, color: i === scanStep ? '#e2b04a' : i < scanStep ? '#13c28e' : 'rgba(255,255,255,.3)' }}>
+                          <div style={{ width: 5, height: 5, borderRadius: '50%', background: i === scanStep ? '#e2b04a' : i < scanStep ? '#13c28e' : 'rgba(255,255,255,.15)', flexShrink: 0, transition: 'background 0.4s' }} />
+                          <span style={{ fontFamily: 'Syne, sans-serif' }}>{step}</span>
+                          {i < scanStep && <span style={{ marginLeft: 'auto', color: '#13c28e', fontSize: 10 }}>done</span>}
+                          {i === scanStep && <span style={{ marginLeft: 'auto', fontSize: 10, animation: 'pulse 1s infinite' }}>...</span>}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 10, height: 2, background: 'rgba(255,255,255,.06)', borderRadius: 1 }}>
+                      <div style={{ height: '100%', background: 'linear-gradient(90deg,#b8860b,#e2b04a)', borderRadius: 1, width: `${Math.round(((scanStep + 1) / SCAN_STEPS.length) * 100)}%`, transition: 'width 0.6s ease' }} />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
