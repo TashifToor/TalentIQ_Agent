@@ -9,6 +9,7 @@ from routes.jobs import router as jobs_router
 from routes.apply import router as apply_router
 from routes.bulk import router as bulk_router
 from routes.forgot_password import router as forgot_password_router
+from routes.policy_docs_route import router as policy_docs_router
 from routes.scan import router as scan_router
 
 from models.user import User  
@@ -47,6 +48,7 @@ app.include_router(jobs_router)
 app.include_router(apply_router)
 app.include_router(bulk_router)
 app.include_router(forgot_password_router)
+app.include_router(policy_docs_router)
 
 
 @app.get("/")
