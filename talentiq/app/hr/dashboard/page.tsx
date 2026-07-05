@@ -269,15 +269,20 @@ export default function HRDashboard() {
       </div>
       {candidates.length > 0 && (
         <>
-          <div style={{ fontSize:13, fontWeight:600, marginBottom:12 }}>Score Distribution</div>
+          <div style={{ fontSize:13, fontWeight:600, marginBottom:12 }}>ATS Score Distribution</div>
           <div style={s(card, { marginBottom:24 })}>
-            <div style={{ display:'flex', alignItems:'flex-end', gap:4, height:60 }}>
+            <div style={{ display:'flex', alignItems:'flex-end', gap:6, height:80, padding:'8px 4px 0' }}>
               {candidates.map((c,i)=>(
-                <div key={i} title={c.filename} style={{ flex:1, borderRadius:'3px 3px 0 0', height:`${Math.max(c.ai_score,3)}%`, background: c.ai_score>75?'#13c28e':c.ai_score>50?'#e2b04a':'rgba(239,68,68,.5)', cursor:'pointer', transition:'all .3s' }} onClick={()=>setSection('candidates')} />
+                <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4, cursor:'pointer' }} onClick={()=>setSection('candidates')}>
+                  <span style={{ fontSize:9, color:'rgba(255,255,255,.4)', fontWeight:600 }}>{c.ai_score}</span>
+                  <div title={c.filename} style={{ width:'100%', borderRadius:'3px 3px 0 0', height:`${Math.max(c.ai_score,4)}%`, background: c.ai_score>=80?'#13c28e':c.ai_score>=60?'#e2b04a':'rgba(239,68,68,.5)', transition:'all .3s', minHeight:4 }} />
+                </div>
               ))}
             </div>
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:'rgba(255,255,255,.2)', marginTop:6 }}>
-              <span>0</span><span>40</span><span>60</span><span>80</span><span>100</span>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:10 }}>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,.2)' }}>Lowest: {Math.min(...candidates.map(c=>c.ai_score))}</span>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,.2)' }}>Avg: {Math.round(candidates.reduce((s,c)=>s+c.ai_score,0)/candidates.length)}</span>
+              <span style={{ fontSize:10, color:'rgba(255,255,255,.2)' }}>Highest: {Math.max(...candidates.map(c=>c.ai_score))}</span>
             </div>
           </div>
           <div style={{ fontSize:13, fontWeight:600, marginBottom:12 }}>Top Candidates</div>
