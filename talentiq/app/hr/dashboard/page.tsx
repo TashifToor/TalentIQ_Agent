@@ -23,6 +23,7 @@ type Section = 'dashboard' | 'candidates' | 'bulk' | 'shortlist' | 'chatbot' | '
 
 const STEP_ICONS = ['🔧', '📊', '🎯', '✅']
 const STEP_COLORS_C = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
+const CARD_COLORS = ['#4f46e5', '#13c28e', '#e2b04a', '#ef4444', '#8b5cf6', '#06b6d4']
 
 function AnalysisCarousel({ text }: { text: string }) {
   const [active, setActive] = useState(0)
@@ -239,7 +240,7 @@ export default function HRDashboard() {
 
   const CandidateCard = ({ c, idx, showActions=true }: { c:Candidate, idx:number, showActions?:boolean }) => {
     const av = initials(c.filename)
-    const color = COLORS[idx%COLORS.length]
+    const color = CARD_COLORS[idx % CARD_COLORS.length]
     return (
       <div onClick={()=>setSelectedIdx(selectedIdx===idx?null:idx)}
         style={s(card, { cursor:'pointer', transition:'all .2s', marginBottom:8,
