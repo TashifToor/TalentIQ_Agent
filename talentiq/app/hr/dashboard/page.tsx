@@ -23,7 +23,7 @@ type Section = 'dashboard' | 'candidates' | 'bulk' | 'shortlist' | 'chatbot' | '
 
 const STEP_ICONS = ['🔧', '📊', '🎯', '✅']
 const STEP_COLORS_C = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
-const CARD_COLORS = ['#4f46e5', '#13c28e', '#e2b04a', '#ef4444', '#8b5cf6', '#06b6d4']
+const COLORS = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e', '#8b5cf6', '#06b6d4']
 
 function AnalysisCarousel({ text }: { text: string }) {
   const [active, setActive] = useState(0)
@@ -110,6 +110,11 @@ export default function HRDashboard() {
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [historySelected, setHistorySelected] = useState<HistoryEntry | null>(null)
 
+  // Policy docs state
+  const [policyDocs, setPolicyDocs] = useState<{filename:string, size_kb:number}[]>([])
+  const [policyUploading, setPolicyUploading] = useState(false)
+  const policyFileRef = useRef<HTMLInputElement>(null)
+
   // Chatbot state
   const [messages, setMessages] = useState([
     { role:'bot', text:"Hi! I'm your HR Policy assistant. Ask me anything about company policies, leave, benefits, or onboarding." }
@@ -124,6 +129,7 @@ export default function HRDashboard() {
       setUserEmail(u?.email || '')
     }).catch(()=>{})
     setHistory(loadHistory())
+    api.listPolicyDocs().then((r:any) => setPolicyDocs(r.documents || [])).catch(()=>{})
   }, [])
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:'smooth' }) }, [messages, typing])
@@ -132,6 +138,31 @@ export default function HRDashboard() {
     localStorage.removeItem('token'); localStorage.removeItem('role')
     document.cookie='token=; path=/; max-age=0'; document.cookie='role=; path=/; max-age=0'
     window.location.replace('/auth/login/hr')
+  }
+
+  const uploadPolicyDoc = async (file: File) => {
+    setPolicyUploading(true)
+    try {
+      await api.uploadPolicyDoc(file)
+      const r:any = await api.listPolicyDocs()
+      setPolicyDocs(r.documents || [])
+    } catch(e:any) { alert(e.message || 'Upload failed') }
+    finally { setPolicyUploading(false) }
+  }
+
+  const exportCSV = () => {
+    if (!candidates.length) return
+    const headers = ['Rank','Filename','Score','Verdict','Matched Skills','Missing Skills']
+    const rows = candidates.map((c,i) => [
+      i+1, c.filename, c.ai_score, c.final_verdict||'',
+      (c.matched_skills||[]).join('; '), (c.missing_skills||[]).join('; ')
+    ])
+    const csv = [headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv],{type:'text/csv'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url
+    a.download=`${jobTitle||'screening'}_${new Date().toLocaleDateString('en-GB').replace(/\//g,'-')}.csv`
+    a.click(); URL.revokeObjectURL(url)
   }
 
   // ── Bulk screening (async + polling) ──
@@ -240,7 +271,7 @@ export default function HRDashboard() {
 
   const CandidateCard = ({ c, idx, showActions=true }: { c:Candidate, idx:number, showActions?:boolean }) => {
     const av = initials(c.filename)
-    const color = CARD_COLORS[idx % CARD_COLORS.length]
+    const color = COLORS[idx%COLORS.length]
     return (
       <div onClick={()=>setSelectedIdx(selectedIdx===idx?null:idx)}
         style={s(card, { cursor:'pointer', transition:'all .2s', marginBottom:8,
@@ -279,8 +310,17 @@ export default function HRDashboard() {
 
   const renderDashboard = () => (
     <div style={{ padding:28, overflowY:'auto', height:'100%' }}>
-      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:600, marginBottom:4 }}>HR Dashboard</div>
-      <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:24 }}>Overview of your latest screening session</div>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:24 }}>
+        <div>
+          <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:600, marginBottom:4 }}>HR Dashboard</div>
+          <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>Overview of your latest screening session</div>
+        </div>
+        {candidates.length > 0 && (
+          <button onClick={exportCSV} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, padding:'8px 16px', borderRadius:8, border:'1px solid rgba(19,194,142,.2)', background:'rgba(19,194,142,.08)', color:'#13c28e', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+            ⬇ Export CSV
+          </button>
+        )}
+      </div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:24 }}>
         {[
           { v: totalProcessed||'—', l:'Total Screened' },
@@ -464,7 +504,29 @@ export default function HRDashboard() {
   const renderChatbot = () => (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', padding:28, maxWidth:700 }}>
       <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:600, marginBottom:4 }}>Policy Chatbot</div>
-      <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:20 }}>Ask anything about your company HR policies</div>
+      <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:16 }}>Ask anything about your company HR policies</div>
+
+      {/* Policy document upload */}
+      <input ref={policyFileRef} type="file" accept=".pdf" style={{ display:'none' }} onChange={e=>e.target.files?.[0]&&uploadPolicyDoc(e.target.files[0])} />
+      <div style={s(card, { marginBottom:16, padding:12 })}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+          <span style={{ fontSize:12, fontWeight:600 }}>Policy Documents ({policyDocs.length})</span>
+          <button onClick={()=>policyFileRef.current?.click()} disabled={policyUploading} style={{ fontSize:11, fontWeight:600, padding:'5px 12px', borderRadius:6, border:'1px solid rgba(19,194,142,.2)', background:'rgba(19,194,142,.08)', color:'#13c28e', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+            {policyUploading ? 'Uploading…' : '+ Upload PDF'}
+          </button>
+        </div>
+        {policyDocs.length === 0 ? (
+          <div style={{ fontSize:11, color:'rgba(255,255,255,.25)', textAlign:'center', padding:'8px 0' }}>No documents yet — upload a PDF to power the chatbot</div>
+        ) : (
+          <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+            {policyDocs.map(d => (
+              <div key={d.filename} style={{ fontSize:10, padding:'3px 10px', borderRadius:100, background:'rgba(255,255,255,.05)', color:'rgba(255,255,255,.4)', border:'1px solid rgba(255,255,255,.07)' }}>
+                📄 {d.filename.replace(/^\d{8}_\d{6}_/, '')} ({d.size_kb}KB)
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
       <div style={s(card, { flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:10, padding:16, marginBottom:12 })}>
         {messages.map((m,i)=>(
           <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:8, justifyContent: m.role==='user'?'flex-end':'flex-start' }}>
