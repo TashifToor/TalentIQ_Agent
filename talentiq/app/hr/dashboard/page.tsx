@@ -5,6 +5,7 @@ import { api } from '@/lib/api'
 
 type Candidate = {
   filename: string
+  candidate_name?: string
   ai_score: number
   matched_skills?: string[]
   missing_skills?: string[]
@@ -19,11 +20,10 @@ type Candidate = {
 }
 
 type HistoryEntry = Candidate & { jobTitle: string; screenedAt: string }
-type Section = 'dashboard' | 'candidates' | 'bulk' | 'shortlist' | 'chatbot' | 'history' | 'settings' | 'profile'
+type Section = 'dashboard' | 'candidates' | 'bulk' | 'shortlist' | 'chatbot' | 'history' | 'open-roles' | 'settings' | 'profile'
 
-const STEP_ICONS = ['🔧', '📊', '🎯', '✅']
+const STEP_ICONS = ['', '', '', '']
 const STEP_COLORS_C = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
-const COLORS = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e', '#8b5cf6', '#06b6d4']
 
 function AnalysisCarousel({ text }: { text: string }) {
   const [active, setActive] = useState(0)
@@ -37,12 +37,12 @@ function AnalysisCarousel({ text }: { text: string }) {
       <div style={{ display:'flex', gap:5, marginBottom:10, flexWrap:'wrap' }}>
         {steps.map((s,i) => (
           <button key={i} onClick={()=>setActive(i)} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:100, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'Syne,sans-serif', border:`1px solid ${active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.08)'}`, background:active===i?`${STEP_COLORS_C[i%4]}18`:'transparent', color:active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.3)', transition:'all .2s' }}>
-            {STEP_ICONS[i%4]} Step {i+1}
+            Step {i+1}
           </button>
         ))}
       </div>
       <div style={{ padding:'14px 16px', background:'rgba(255,255,255,.02)', borderRadius:10, borderLeft:`3px solid ${STEP_COLORS_C[active%4]}` }}>
-        <div style={{ fontSize:12, fontWeight:600, marginBottom:6, color:'rgba(255,255,255,.8)' }}>{STEP_ICONS[active%4]} {steps[active]?.heading}</div>
+        <div style={{ fontSize:12, fontWeight:600, marginBottom:6, color:'rgba(255,255,255,.8)' }}>{steps[active]?.heading}</div>
         <p style={{ fontSize:12, color:'rgba(255,255,255,.45)', lineHeight:1.8, margin:0, whiteSpace:'pre-wrap' }}>{steps[active]?.body}</p>
       </div>
       <div style={{ display:'flex', justifyContent:'center', gap:5, marginTop:10 }}>
@@ -104,11 +104,16 @@ export default function HRDashboard() {
   const [bulkStatus, setBulkStatus] = useState('')
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [totalProcessed, setTotalProcessed] = useState(0)
-  const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
 
   // History (persisted)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [historySelected, setHistorySelected] = useState<HistoryEntry | null>(null)
+
+  // DB jobs state
+  const [dbJobs, setDbJobs] = useState<any[]>([])
+  const [dbJobsLoading, setDbJobsLoading] = useState(false)
+  const [selectedJob, setSelectedJob] = useState<any>(null)
 
   // Policy docs state
   const [policyDocs, setPolicyDocs] = useState<{filename:string, size_kb:number}[]>([])
@@ -130,6 +135,8 @@ export default function HRDashboard() {
     }).catch(()=>{})
     setHistory(loadHistory())
     api.listPolicyDocs().then((r:any) => setPolicyDocs(r.documents || [])).catch(()=>{})
+    setDbJobsLoading(true)
+    api.getHRJobs().then((r:any) => setDbJobs(Array.isArray(r) ? r : [])).catch(()=>{}).finally(()=>setDbJobsLoading(false))
   }, [])
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:'smooth' }) }, [messages, typing])
@@ -196,7 +203,7 @@ export default function HRDashboard() {
               const ranked: Candidate[] = (status.all_results || status.top_candidates || []).map((c: Candidate) => ({ ...c, status: 'active', jobTitle, screenedAt: new Date().toLocaleString() }))
               setCandidates(ranked)
               setTotalProcessed(status.total_cvs_processed || ranked.length)
-              setSelectedIdx(null)
+              setSelectedKey(null)
               setBulkStatus(`✓ Complete · ${status.total_cvs_processed} CV(s) ranked`)
               setPollProgress({ current: 0, total: 0, currentName: '' })
               resolve()
@@ -252,36 +259,38 @@ export default function HRDashboard() {
 
   // ── Styles ──
   const base = { background:'#0a0a08', fontFamily:'Syne, sans-serif', color:'rgba(255,255,255,.88)' }
-  const card = { background:'#161614', border:'1px solid rgba(255,255,255,.07)', borderRadius:10, padding:14 }
-  const inputSt = { background:'#161614', border:'1px solid rgba(255,255,255,.07)', borderRadius:8, padding:'10px 12px', fontSize:13, fontFamily:'Syne, sans-serif', color:'rgba(255,255,255,.8)', outline:'none', width:'100%' }
+  const card = { background:'#111110', border:'1px solid rgba(255,255,255,.06)', borderRadius:8, padding:16 }
+  const inputSt = { background:'#111110', border:'1px solid rgba(255,255,255,.06)', borderRadius:8, padding:'10px 12px', fontSize:13, fontFamily:'Syne, sans-serif', color:'rgba(255,255,255,.8)', outline:'none', width:'100%' }
 
   // ── Nav ──
   const NAV = [
-    { id:'dashboard', icon:'⊞', label:'Dashboard' },
-    { id:'candidates', icon:'📋', label:'All Candidates', badge: candidates.length||undefined },
-    { id:'bulk', icon:'⚡', label:'Bulk Screen' },
-    { id:'shortlist', icon:'⭐', label:'Shortlist', badge: shortlistedList.length||undefined },
-    { id:'chatbot', icon:'💬', label:'Policy Chatbot' },
-    { id:'history', icon:'🕓', label:'History', badge: history.length||undefined },
-    { id:'settings', icon:'⚙️', label:'Settings' },
-    { id:'profile', icon:'👤', label:'Profile' },
+    { id:'dashboard', icon:'', label:'Dashboard' },
+    { id:'candidates', icon:'', label:'All Candidates', badge: candidates.length||undefined },
+    { id:'bulk', icon:'', label:'Bulk Screen' },
+    { id:'open-roles', icon:'', label:'Open Roles', badge: dbJobs.length||undefined },
+    { id:'shortlist', icon:'', label:'Shortlist', badge: shortlistedList.length||undefined },
+    { id:'chatbot', icon:'', label:'Policy Chatbot' },
+    { id:'history', icon:'', label:'History', badge: history.length||undefined },
+    { id:'settings', icon:'', label:'Settings' },
+    { id:'profile', icon:'', label:'Profile' },
   ] as const
 
   // ══════════════ SECTION RENDERERS ══════════════
 
   const CandidateCard = ({ c, idx, showActions=true }: { c:Candidate, idx:number, showActions?:boolean }) => {
-    const av = initials(c.filename)
+    const displayName = c.candidate_name || c.filename
+    const av = initials(displayName)
     const color = COLORS[idx%COLORS.length]
     return (
-      <div onClick={()=>setSelectedIdx(selectedIdx===idx?null:idx)}
+      <div onClick={()=>setSelectedKey(selectedKey===c.filename?null:c.filename)}
         style={s(card, { cursor:'pointer', transition:'all .2s', marginBottom:8,
-          border:`1px solid ${selectedIdx===idx?'rgba(19,194,142,.25)':'rgba(255,255,255,.07)'}`,
-          background: selectedIdx===idx?'rgba(19,194,142,.03)':'#161614', position:'relative' })}>
+          border:`1px solid ${selectedKey===c.filename?'rgba(19,194,142,.25)':'rgba(255,255,255,.07)'}`,
+          background: selectedKey===c.filename?'rgba(19,194,142,.03)':'#161614', position:'relative' })}>
         {idx < 3 && <div style={{ position:'absolute', top:10, left:-1, width:22, height:22, borderRadius:'0 6px 6px 0', display:'grid', placeItems:'center', fontSize:10, fontWeight:700, background: idx===0?'#c5931f':'rgba(255,255,255,.1)', color: idx===0?'#0a0a08':'rgba(255,255,255,.4)' }}>#{idx+1}</div>}
         <div style={{ display:'flex', alignItems:'center', gap:10, paddingLeft: idx<3?16:0, marginBottom:6 }}>
           <div style={{ width:32, height:32, borderRadius:'50%', background:`linear-gradient(135deg,${color})`, display:'grid', placeItems:'center', fontSize:12, fontWeight:700, color:'#fff', flexShrink:0 }}>{av}</div>
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontSize:13, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{c.filename}</div>
+            <div style={{ fontSize:13, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{c.candidate_name || c.filename}</div>
             <div style={{ fontSize:11, color:'rgba(255,255,255,.3)' }}>{c.final_verdict||'—'}</div>
           </div>
           <ScoreChip score={c.ai_score} />
@@ -299,7 +308,7 @@ export default function HRDashboard() {
             <button onClick={e=>{e.stopPropagation();undoMark(idx)}} style={{ fontSize:10, color:'rgba(255,255,255,.3)', background:'transparent', border:'1px solid rgba(255,255,255,.08)', borderRadius:6, padding:'4px 8px', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>Undo</button>
           </div>
         ) : null}
-        {selectedIdx===idx && c.deep_analysis && (
+        {selectedKey===c.filename && c.deep_analysis && (
           <div style={{ marginTop:10, padding:12, background:'rgba(255,255,255,.02)', borderRadius:8, border:'1px solid rgba(255,255,255,.05)' }}>
             <AnalysisCarousel text={c.deep_analysis} />
           </div>
@@ -360,7 +369,7 @@ export default function HRDashboard() {
       )}
       {candidates.length===0 && (
         <div style={s(card, { textAlign:'center', padding:40 })}>
-          <div style={{ fontSize:32, marginBottom:12 }}>⚡</div>
+          
           <div style={{ fontSize:14, fontWeight:600, marginBottom:6 }}>No screenings yet</div>
           <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:16 }}>Upload a ZIP of CVs to get started</div>
           <button onClick={()=>setSection('bulk')} style={{ fontSize:13, fontWeight:700, background:'#13c28e', color:'#fff', border:'none', borderRadius:8, padding:'10px 20px', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>Run Bulk Screening</button>
@@ -375,7 +384,7 @@ export default function HRDashboard() {
       <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:24 }}>Upload CVs and a job description — AI ranks them all</div>
       <input ref={fileRef} type="file" accept=".zip,.pdf" style={{ display:'none' }} onChange={e=>setZipFile(e.target.files?.[0]||null)} />
       <div onClick={()=>fileRef.current?.click()} style={s(card, { border:'2px dashed rgba(255,255,255,.12)', textAlign:'center', padding:28, cursor:'pointer', marginBottom:14 })}>
-        <div style={{ fontSize:28, marginBottom:8 }}>{zipFile?'📦':'📂'}</div>
+        <div style={{ fontSize:28, marginBottom:8 }}></div>
         <div style={{ fontSize:13, fontWeight:600 }}>{zipFile?zipFile.name:'Select ZIP of CVs or single PDF'}</div>
         {!zipFile && <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:4 }}>Max 25 CVs per ZIP</div>}
       </div>
@@ -530,7 +539,7 @@ export default function HRDashboard() {
       <div style={s(card, { flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:10, padding:16, marginBottom:12 })}>
         {messages.map((m,i)=>(
           <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:8, justifyContent: m.role==='user'?'flex-end':'flex-start' }}>
-            {m.role==='bot' && <div style={{ width:26, height:26, background:'#e2b04a', borderRadius:'50%', display:'grid', placeItems:'center', fontSize:10, fontWeight:700, color:'#0a0a08', flexShrink:0 }}>IQ</div>}
+            {m.role==='bot' && <div style={{ width:26, height:26, background:'#e2b04a', borderRadius:'50%', display:'grid', placeItems:'center', fontSize:10, fontWeight:700, color:'#0a0a08', flexShrink:0 }}></div>}
             <div style={{ maxWidth:'85%', padding:'10px 14px', borderRadius:12, fontSize:13, lineHeight:1.6,
               background: m.role==='bot'?'rgba(255,255,255,.04)':'rgba(19,194,142,.12)',
               color: m.role==='bot'?'rgba(255,255,255,.65)':'#13c28e',
@@ -542,7 +551,7 @@ export default function HRDashboard() {
         ))}
         {typing && (
           <div style={{ display:'flex', gap:8 }}>
-            <div style={{ width:26, height:26, background:'#e2b04a', borderRadius:'50%', display:'grid', placeItems:'center', fontSize:10, fontWeight:700, color:'#0a0a08' }}>IQ</div>
+            <div style={{ width:26, height:26, background:'#e2b04a', borderRadius:'50%', display:'grid', placeItems:'center', fontSize:10, fontWeight:700, color:'#0a0a08' }}></div>
             <div style={{ padding:'12px 16px', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.07)', borderRadius:12, display:'flex', gap:4, alignItems:'center' }}>
               {[0,1,2].map(j=><div key={j} style={{ width:5, height:5, background:'rgba(255,255,255,.3)', borderRadius:'50%', animation:`bounce ${0.6+j*0.15}s infinite alternate` }} />)}
             </div>
@@ -610,6 +619,72 @@ export default function HRDashboard() {
     </div>
   )
 
+  const renderOpenRoles = () => (
+    <div style={{ padding:28, overflowY:'auto', height:'100%' }}>
+      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:600, marginBottom:4 }}>Past Screenings</div>
+      <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:24 }}>All screening jobs saved from bulk runs</div>
+      {dbJobsLoading && <div style={{ fontSize:13, color:'rgba(255,255,255,.3)' }}>Loading...</div>}
+      {!dbJobsLoading && dbJobs.length === 0 && (
+        <div style={s(card, { textAlign:'center', padding:40, color:'rgba(255,255,255,.3)' })}>
+          No past screenings yet. Run a bulk screen to see results saved here.
+        </div>
+      )}
+      <div style={{ display:'flex', gap:20, height: dbJobs.length ? 'calc(100% - 80px)' : 'auto', overflow:'hidden' }}>
+        {/* Job list */}
+        <div style={{ width:280, flexShrink:0, overflowY:'auto' }}>
+          {dbJobs.map((job:any) => (
+            <div key={job.id} onClick={()=>setSelectedJob(job)}
+              style={s(card, { marginBottom:8, cursor:'pointer',
+                border:`1px solid ${selectedJob?.id===job.id?'rgba(255,255,255,.15)':'rgba(255,255,255,.06)'}`,
+                background: selectedJob?.id===job.id?'#161614':'#111110' })}>
+              <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>{job.title}</div>
+              <div style={{ display:'flex', gap:12, fontSize:11, color:'rgba(255,255,255,.3)' }}>
+                <span>{job.total_candidates} CVs</span>
+                <span>{job.shortlisted} shortlisted</span>
+                <span>Top: {job.top_score}</span>
+              </div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,.2)', marginTop:4 }}>
+                {job.created_at ? new Date(job.created_at).toLocaleDateString() : ''}
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Job detail */}
+        <div style={{ flex:1, overflowY:'auto' }}>
+          {!selectedJob ? (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'rgba(255,255,255,.2)', fontSize:13 }}>
+              Select a screening run to view candidates
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>{selectedJob.title}</div>
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:20 }}>{selectedJob.total_candidates} candidates screened</div>
+              {(selectedJob.candidates || []).map((c:any, i:number) => (
+                <div key={i} style={s(card, { marginBottom:8 })}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
+                    <div style={{ width:30, height:30, borderRadius:'50%', background:'linear-gradient(135deg,#0b7c5e,#13c28e)', display:'grid', placeItems:'center', fontSize:11, fontWeight:700, color:'#fff' }}>
+                      {initials(c.filename)}
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:13, fontWeight:600 }}>{c.filename}</div>
+                      <div style={{ fontSize:11, color:'rgba(255,255,255,.3)' }}>{c.final_verdict}</div>
+                    </div>
+                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, color: c.ai_score>=80?'#13c28e':c.ai_score>=60?'#e2b04a':'#ef4444' }}>{c.ai_score}</div>
+                  </div>
+                  <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+                    {(c.matched_skills||[]).slice(0,4).map((sk:string) => (
+                      <span key={sk} style={{ fontSize:10, padding:'2px 8px', borderRadius:100, background:'rgba(19,194,142,.1)', color:'#13c28e', border:'1px solid rgba(19,194,142,.15)' }}>{sk}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+
   const renderSection = () => {
     switch(section) {
       case 'dashboard': return renderDashboard()
@@ -618,6 +693,7 @@ export default function HRDashboard() {
       case 'shortlist': return renderCandidates(shortlistedList, 'Shortlisted', 'No candidates shortlisted yet. Go to All Candidates and shortlist the ones you like.')
       case 'chatbot': return renderChatbot()
       case 'history': return renderHistory()
+      case 'open-roles': return renderOpenRoles()
       case 'settings': return renderSettings()
       case 'profile': return renderProfile()
       default: return renderDashboard()
@@ -628,24 +704,23 @@ export default function HRDashboard() {
     <div style={s(base, { display:'flex', height:'100vh', overflow:'hidden' })}>
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-4px)}}`}</style>
       {/* SIDEBAR */}
-      <div style={{ width:224, flexShrink:0, background:'#101010', borderRight:'1px solid rgba(255,255,255,.07)', display:'flex', flexDirection:'column' }}>
-        <Link href="/" style={{ padding:'20px 18px', borderBottom:'1px solid rgba(255,255,255,.07)', display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
+      <div style={{ width:224, flexShrink:0, background:'#0c0c0b', borderRight:'1px solid rgba(255,255,255,.05)', display:'flex', flexDirection:'column' }}>
+        <Link href="/" style={{ padding:'22px 20px', borderBottom:'1px solid rgba(255,255,255,.05)', display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
           <div style={{ width:28, height:28, background:'#e2b04a', borderRadius:7, display:'grid', placeItems:'center' }}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="#0a0a08"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z"/></svg>
           </div>
-          <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:600, color:'rgba(255,255,255,.9)' }}>TalentIQ</span>
+          <span style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:600, color:'rgba(255,255,255,.9)' }}>Talent</span>
           <span style={{ fontSize:10, fontWeight:700, background:'rgba(19,194,142,.12)', color:'#13c28e', padding:'3px 8px', borderRadius:100, marginLeft:'auto', border:'1px solid rgba(19,194,142,.18)' }}>HR</span>
         </Link>
-        <div style={{ padding:'16px 14px 4px', fontSize:10, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(255,255,255,.22)' }}>Workspace</div>
+        <div style={{ padding:'20px 16px 6px', fontSize:9, fontWeight:700, letterSpacing:'.14em', textTransform:'uppercase', color:'rgba(255,255,255,.18)' }}>Workspace</div>
         <div style={{ flex:1, overflowY:'auto' }}>
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>setSection(n.id as Section)}
-              style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 14px', borderRadius:8, fontSize:13, fontWeight:500,
-                color: section===n.id?'#13c28e':'rgba(255,255,255,.45)', cursor:'pointer', transition:'all .15s',
-                margin:'0 6px 2px', border: section===n.id?'1px solid rgba(19,194,142,.12)':'1px solid transparent',
-                background: section===n.id?'rgba(19,194,142,.08)':'transparent',
+              style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 16px', borderRadius:6, fontSize:12, fontWeight:500, letterSpacing:'.01em',
+                color: section===n.id?'rgba(255,255,255,.88)':'rgba(255,255,255,.38)', cursor:'pointer', transition:'all .15s',
+                margin:'0 6px 2px', border: section===n.id?'1px solid rgba(255,255,255,.08)':'1px solid transparent',
+                background: section===n.id?'rgba(255,255,255,.04)':'transparent',
                 fontFamily:'Syne,sans-serif', width:'calc(100% - 12px)', textAlign:'left' }}>
-              <span style={{ fontSize:14 }}>{n.icon}</span>
               {n.label}
               {'badge' in n && n.badge ? <span style={{ marginLeft:'auto', minWidth:18, height:18, borderRadius:9, background:'rgba(19,194,142,.15)', color:'#13c28e', fontSize:10, fontWeight:700, display:'grid', placeItems:'center', padding:'0 4px' }}>{n.badge}</span> : null}
             </button>
@@ -667,7 +742,7 @@ export default function HRDashboard() {
       </div>
 
       {/* MAIN CONTENT */}
-      <div style={{ flex:1, overflowY: section==='history'||section==='chatbot'?'hidden':'auto', background:'#0d0d0b' }}>
+      <div style={{ flex:1, overflowY: section==='history'||section==='chatbot'?'hidden':'auto', background:'#0a0a09' }}>
         {renderSection()}
       </div>
     </div>
