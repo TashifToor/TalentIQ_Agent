@@ -25,6 +25,7 @@ export default function CandidateLogin() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
+
   const [showForgot, setShowForgot] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotMsg, setForgotMsg] = useState('')
@@ -32,9 +33,13 @@ export default function CandidateLogin() {
 
   const handleForgotPassword = async () => {
     if (!forgotEmail.trim()) return
+    setForgotLoading(true)
     try {
       await api.forgotPassword(forgotEmail.trim())
-      setForgotMsg('Password sent! Check your email.')
+      setShowForgot(false)
+      setEmail(forgotEmail)
+      setTab('login')
+      setError('✓ Temporary password sent! Check your email then login with it.')
     } catch {
       setForgotMsg('Something went wrong. Please try again.')
     } finally { setForgotLoading(false) }
@@ -123,25 +128,32 @@ export default function CandidateLogin() {
       document.cookie = `role=candidate; path=/`
       router.push('/candidate/dashboard')
     } catch (e: any) {
+      // If already registered, try logging in with same credentials
       if (e.message?.toLowerCase().includes('already registered')) {
         try {
-          const d: any = await api.login(email, password)
-          localStorage.setItem('token', d.access_token)
+          const loginData: any = await api.login(email, password)
+          localStorage.setItem('token', loginData.access_token)
           localStorage.setItem('role', 'candidate')
-          document.cookie = `token=${d.access_token}; path=/`
+          document.cookie = `token=${loginData.access_token}; path=/`
           document.cookie = `role=candidate; path=/`
-          router.push('/candidate/dashboard'); return
-        } catch { setError('Email taken. Please login.'); setTab('login'); return }
+          router.push('/candidate/dashboard')
+          return
+        } catch {
+          setError('Email already registered. Please use the Login tab.')
+          setTab('login')
+          return
+        }
       }
       setError(e.message || 'Signup failed. Please try again.')
-    } finally { setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }
 
   const strengthColors = ['#c44b4b', '#c4843f', '#b8a23c', '#4a9d6e']
   const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong']
 
   return (
-    <>
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a08', fontFamily: "'Inter', system-ui, sans-serif" }}>
       <FontImports />
 
@@ -263,6 +275,7 @@ export default function CandidateLogin() {
           )}
 
           {tab === 'login' ? (
+            <>
             <div>
               <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#f5f2eb', marginBottom: 8, letterSpacing: '-0.3px' }}>
                 Welcome back
@@ -290,6 +303,23 @@ export default function CandidateLogin() {
               <RefinedDivider />
               <GoogleButton />
             </div>
+
+            {/* Forgot Password Modal */}
+            {showForgot && (
+              <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.7)', zIndex:999, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={()=>setShowForgot(false)}>
+                <div style={{ background:'#141412', border:'1px solid rgba(255,255,255,.1)', borderRadius:16, padding:28, width:340, maxWidth:'90vw' }} onClick={e=>e.stopPropagation()}>
+                  <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:6, color:'#f5f2eb' }}>Forgot Password</div>
+                  <p style={{ fontSize:13, color:'rgba(255,255,255,.35)', marginBottom:20 }}>Enter your email — we'll send a temporary password.</p>
+                  <input value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="your@email.com" style={{ width:'100%', background:'#1e1e1b', border:'1px solid rgba(255,255,255,.08)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'rgba(255,255,255,.8)', outline:'none', fontFamily:'inherit', marginBottom:12, boxSizing:'border-box' as any }} />
+                  {forgotMsg && <div style={{ fontSize:12, color: forgotMsg.startsWith('✓')?'#13c28e':'#ef4444', marginBottom:12 }}>{forgotMsg}</div>}
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button onClick={()=>setShowForgot(false)} style={{ flex:1, fontSize:13, padding:'9px', borderRadius:8, border:'1px solid rgba(255,255,255,.08)', background:'transparent', color:'rgba(255,255,255,.4)', cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
+                    <button onClick={handleForgotPassword} disabled={forgotLoading} style={{ flex:1, fontSize:13, fontWeight:600, padding:'9px', borderRadius:8, border:'none', background:'#d4af6d', color:'#0a0a08', cursor:'pointer', fontFamily:'inherit' }}>{forgotLoading?'Sending…':'Send Password'}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            </>
           ) : (
             <div>
               <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#f5f2eb', marginBottom: 8, letterSpacing: '-0.3px' }}>
@@ -347,22 +377,7 @@ export default function CandidateLogin() {
           <Link href="/auth/login/hr" style={{ fontSize: 12.5, color: '#d4af6d', textDecoration: 'none', fontWeight: 500 }}>HR portal →</Link>
         </div>
       </div>
-      {showForgot && (
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.75)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setShowForgot(false)}>
-          <div style={{background:'#141412',border:'1px solid rgba(255,255,255,.1)',borderRadius:16,padding:28,width:340,maxWidth:'90vw'}} onClick={e=>e.stopPropagation()}>
-            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,marginBottom:6,color:'#f5f2eb'}}>Forgot Password</div>
-            <p style={{fontSize:13,color:'rgba(255,255,255,.35)',margin:'0 0 20px'}}>Enter your email to receive a temporary password.</p>
-            <input value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleForgotPassword()} placeholder="your@email.com" style={{width:'100%',background:'#1e1e1b',border:'1px solid rgba(255,255,255,.08)',borderRadius:8,padding:'10px 12px',fontSize:13,color:'rgba(255,255,255,.8)',outline:'none',fontFamily:'inherit',marginBottom:12,boxSizing:'border-box'}} />
-            {forgotMsg&&<div style={{fontSize:12,color:forgotMsg.startsWith('P')?'#13c28e':'#ef4444',marginBottom:12}}>{forgotMsg}</div>}
-            <div style={{display:'flex',gap:8}}>
-              <button onClick={()=>setShowForgot(false)} style={{flex:1,fontSize:13,padding:'9px',borderRadius:8,border:'1px solid rgba(255,255,255,.08)',background:'transparent',color:'rgba(255,255,255,.4)',cursor:'pointer',fontFamily:'inherit'}}>Cancel</button>
-              <button onClick={handleForgotPassword} disabled={forgotLoading} style={{flex:1,fontSize:13,fontWeight:600,padding:'9px',borderRadius:8,border:'none',background:'#d4af6d',color:'#0a0a08',cursor:'pointer',fontFamily:'inherit'}}>{forgotLoading?'Sending...':'Send Password'}</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
-    </>
   )
 }
 
