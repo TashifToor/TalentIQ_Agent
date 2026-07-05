@@ -21,7 +21,35 @@ type Candidate = {
 type HistoryEntry = Candidate & { jobTitle: string; screenedAt: string }
 type Section = 'dashboard' | 'candidates' | 'bulk' | 'shortlist' | 'chatbot' | 'history' | 'settings' | 'profile'
 
-const COLORS = ['#c5931f,#e2b04a','#4f46e5,#818cf8','#0b7c5e,#13c28e','#ec4899,#f472b6','#f59e0b,#fcd34d']
+const STEP_ICONS = ['🔧', '📊', '🎯', '✅']
+const STEP_COLORS_C = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
+
+function AnalysisCarousel({ text }: { text: string }) {
+  const [active, setActive] = useState(0)
+  const steps = (text || '').split(/\n(?=\*\*Step)/).filter(Boolean).map((block: string) => {
+    const m = block.match(/^\*\*(.+?)\*\*/)
+    return { heading: m ? m[1].replace(/^Step \d+:\s*/, '') : 'Analysis', body: block.replace(/^\*\*(.+?)\*\*/, '').replace(/^\n+/, '').trim() }
+  })
+  if (!steps.length) return <div style={{ fontSize:12, color:'rgba(255,255,255,.35)' }}>No analysis available.</div>
+  return (
+    <div>
+      <div style={{ display:'flex', gap:5, marginBottom:10, flexWrap:'wrap' }}>
+        {steps.map((s,i) => (
+          <button key={i} onClick={()=>setActive(i)} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:100, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'Syne,sans-serif', border:`1px solid ${active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.08)'}`, background:active===i?`${STEP_COLORS_C[i%4]}18`:'transparent', color:active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.3)', transition:'all .2s' }}>
+            {STEP_ICONS[i%4]} Step {i+1}
+          </button>
+        ))}
+      </div>
+      <div style={{ padding:'14px 16px', background:'rgba(255,255,255,.02)', borderRadius:10, borderLeft:`3px solid ${STEP_COLORS_C[active%4]}` }}>
+        <div style={{ fontSize:12, fontWeight:600, marginBottom:6, color:'rgba(255,255,255,.8)' }}>{STEP_ICONS[active%4]} {steps[active]?.heading}</div>
+        <p style={{ fontSize:12, color:'rgba(255,255,255,.45)', lineHeight:1.8, margin:0, whiteSpace:'pre-wrap' }}>{steps[active]?.body}</p>
+      </div>
+      <div style={{ display:'flex', justifyContent:'center', gap:5, marginTop:10 }}>
+        {steps.map((_,i) => <div key={i} onClick={()=>setActive(i)} style={{ width:active===i?18:5, height:5, borderRadius:3, background:active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.1)', cursor:'pointer', transition:'all .3s' }} />)}
+      </div>
+    </div>
+  )
+}
 const s = (base: object, ...rest: object[]) => Object.assign({}, base, ...rest)
 
 function initials(name: string) {
@@ -240,9 +268,8 @@ export default function HRDashboard() {
           </div>
         ) : null}
         {selectedIdx===idx && c.deep_analysis && (
-          <div style={{ marginTop:10, padding:12, background:'rgba(255,255,255,.03)', borderRadius:8, border:'1px solid rgba(255,255,255,.06)' }}>
-            <div style={{ fontSize:11, fontWeight:600, marginBottom:6, color:'rgba(255,255,255,.5)' }}>Full Analysis</div>
-            <div style={{ fontSize:12, color:'rgba(255,255,255,.45)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>{c.deep_analysis}</div>
+          <div style={{ marginTop:10, padding:12, background:'rgba(255,255,255,.02)', borderRadius:8, border:'1px solid rgba(255,255,255,.05)' }}>
+            <AnalysisCarousel text={c.deep_analysis} />
           </div>
         )}
       </div>
@@ -423,8 +450,8 @@ export default function HRDashboard() {
             </div>
             {historySelected.deep_analysis && (
               <div style={card}>
-                <div style={{ fontSize:12, fontWeight:600, marginBottom:10 }}>Full Analysis</div>
-                <div style={{ fontSize:13, color:'rgba(255,255,255,.5)', lineHeight:1.7, whiteSpace:'pre-wrap' }}>{historySelected.deep_analysis}</div>
+                <div style={{ fontSize:12, fontWeight:600, marginBottom:12 }}>Full Analysis</div>
+                <AnalysisCarousel text={historySelected.deep_analysis} />
               </div>
             )}
           </>
