@@ -136,7 +136,7 @@ export default function HRDashboard() {
     setHistory(loadHistory())
     api.listPolicyDocs().then((r:any) => setPolicyDocs(r.documents || [])).catch(()=>{})
     setDbJobsLoading(true)
-    api.getHRJobs().then((r:any) => setDbJobs(Array.isArray(r) ? r : [])).catch(()=>{}).finally(()=>setDbJobsLoading(false))
+    ;(api as any).getHRJobs?.().then((r:any) => setDbJobs(Array.isArray(r) ? r : [])).catch(()=>{}).finally(()=>setDbJobsLoading(false))
   }, [])
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:'smooth' }) }, [messages, typing])
@@ -280,7 +280,7 @@ export default function HRDashboard() {
   const CandidateCard = ({ c, idx, showActions=true }: { c:Candidate, idx:number, showActions?:boolean }) => {
     const displayName = c.candidate_name || c.filename
     const av = initials(displayName)
-    const color = COLORS[idx%COLORS.length]
+    const color = STEP_COLORS_C[idx%STEP_COLORS_C.length]
     return (
       <div onClick={()=>setSelectedKey(selectedKey===c.filename?null:c.filename)}
         style={s(card, { cursor:'pointer', transition:'all .2s', marginBottom:8,
