@@ -24,6 +24,7 @@ type Section = 'dashboard' | 'candidates' | 'bulk' | 'shortlist' | 'chatbot' | '
 
 const STEP_ICONS = ['', '', '', '']
 const STEP_COLORS_C = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
+const COLORS = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
 
 function AnalysisCarousel({ text }: { text: string }) {
   const [active, setActive] = useState(0)
@@ -136,7 +137,7 @@ export default function HRDashboard() {
     setHistory(loadHistory())
     api.listPolicyDocs().then((r:any) => setPolicyDocs(r.documents || [])).catch(()=>{})
     setDbJobsLoading(true)
-    ;(api as any).getHRJobs?.().then((r:any) => setDbJobs(Array.isArray(r) ? r : [])).catch(()=>{}).finally(()=>setDbJobsLoading(false))
+    setDbJobs([])
   }, [])
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:'smooth' }) }, [messages, typing])
@@ -280,7 +281,7 @@ export default function HRDashboard() {
   const CandidateCard = ({ c, idx, showActions=true }: { c:Candidate, idx:number, showActions?:boolean }) => {
     const displayName = c.candidate_name || c.filename
     const av = initials(displayName)
-    const color = STEP_COLORS_C[idx%STEP_COLORS_C.length]
+    const color = COLORS[idx%COLORS.length]
     return (
       <div onClick={()=>setSelectedKey(selectedKey===c.filename?null:c.filename)}
         style={s(card, { cursor:'pointer', transition:'all .2s', marginBottom:8,
