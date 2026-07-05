@@ -161,6 +161,25 @@ export const api = {
     return res.json();
   },
 
+  // HR Policy document management
+  uploadPolicyDoc: async (file: File) => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE_URL}/hr/policy/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+      throw buildApiError(err);
+    }
+    return res.json();
+  },
+  listPolicyDocs: () => apiFetch("/hr/policy/list"),
+  deletePolicyDoc: (filename: string) => apiFetch(`/hr/policy/delete/${filename}`, { method: "DELETE" }),
+
   // Poll bulk screening task status
   pollBulkStatus: (taskId: string) => apiFetch(`/bulk/status/${taskId}`),
 
