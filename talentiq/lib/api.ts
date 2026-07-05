@@ -142,11 +142,15 @@ export const api = {
   hrChat: (message: string) =>
     apiFetch("/hr/chat", { method: "POST", body: JSON.stringify({ message }) }),
 
+  // HR job history from DB
+  getHRJobs: () => apiFetch("/bulk/jobs"),
+
   // HR Bulk Screening — async version (returns task_id)
-  bulkScreen: async (jobDescription: string, topN: number, zipFile: File) => {
+  bulkScreen: async (jobDescription: string, topN: number, zipFile: File, jobTitle: string = "") => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : "";
     const formData = new FormData();
     formData.append("job_description", jobDescription);
+    formData.append("job_title", jobTitle);
     formData.append("top_n", String(topN));
     formData.append("zip_file", zipFile);
     const res = await fetch(`${API_BASE_URL}/bulk/screen`, {
