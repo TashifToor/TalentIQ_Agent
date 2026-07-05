@@ -3,16 +3,71 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 
-function parseAnalysis(text: string) {
-  return (text || 'No analysis available.')
-    .split(/\n(?=\*\*)/)
+const STEP_ICONS = ['🔧', '📊', '🎯', '✅']
+const STEP_COLORS = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
+
+function AnalysisCarousel({ text }: { text: string }) {
+  const [active, setActive] = useState(0)
+
+  const steps = (text || '')
+    .split(/\n(?=\*\*Step)/)
     .filter(Boolean)
     .map((block: string) => {
       const headingMatch = block.match(/^\*\*(.+?)\*\*/)
-      const heading = headingMatch ? headingMatch[1] : null
-      const body = heading ? block.replace(/^\*\*(.+?)\*\*/, '').trim() : block.trim()
-      return { heading, body: body.replace(/^\n+/, '') }
+      const heading = headingMatch ? headingMatch[1].replace(/^Step \d+:\s*/, '') : 'Analysis'
+      const body = block.replace(/^\*\*(.+?)\*\*/, '').replace(/^\n+/, '').trim()
+      return { heading, body }
     })
+
+  if (steps.length === 0) return (
+    <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', padding: '12px 0' }}>No analysis available.</div>
+  )
+
+  return (
+    <div>
+      {/* Step tabs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+        {steps.map((s, i) => (
+          <button key={i} onClick={() => setActive(i)} style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 100,
+            fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'Syne, sans-serif',
+            border: `1px solid ${active === i ? STEP_COLORS[i % STEP_COLORS.length] : 'rgba(255,255,255,.08)'}`,
+            background: active === i ? `${STEP_COLORS[i % STEP_COLORS.length]}18` : 'transparent',
+            color: active === i ? STEP_COLORS[i % STEP_COLORS.length] : 'rgba(255,255,255,.35)',
+            transition: 'all .2s',
+          }}>
+            <span>{STEP_ICONS[i % STEP_ICONS.length]}</span>
+            Step {i + 1}
+          </button>
+        ))}
+      </div>
+
+      {/* Active step */}
+      <div style={{
+        padding: '16px 18px', background: '#161614', borderRadius: 10,
+        borderLeft: `3px solid ${STEP_COLORS[active % STEP_COLORS.length]}`,
+        transition: 'all .25s',
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'rgba(255,255,255,.88)' }}>
+          {STEP_ICONS[active % STEP_ICONS.length]} {steps[active]?.heading}
+        </div>
+        <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,.5)', lineHeight: 1.8, margin: 0, whiteSpace: 'pre-wrap' }}>
+          {steps[active]?.body}
+        </p>
+      </div>
+
+      {/* Dot navigation */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+        {steps.map((_, i) => (
+          <div key={i} onClick={() => setActive(i)} style={{
+            width: active === i ? 20 : 6, height: 6, borderRadius: 3,
+            background: active === i ? STEP_COLORS[i % STEP_COLORS.length] : 'rgba(255,255,255,.12)',
+            cursor: 'pointer', transition: 'all .3s',
+          }} />
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export default function CandidateHistory() {
@@ -114,15 +169,8 @@ export default function CandidateHistory() {
                         </div>
                       </div>
 
-                      <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.35)', letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 10 }}>Full Analysis</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {parseAnalysis(h.deep_analysis).map((block, bi) => (
-                          <div key={bi} style={{ padding: '12px 14px', background: '#161614', borderRadius: 8, borderLeft: '3px solid #e2b04a' }}>
-                            {block.heading && <h5 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: 'rgba(255,255,255,.85)' }}>{block.heading}</h5>}
-                            <p style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-wrap' }}>{block.body}</p>
-                          </div>
-                        ))}
-                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.35)', letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 12 }}>Full Analysis</div>
+                      <AnalysisCarousel text={h.deep_analysis} />
                     </div>
                   )}
                 </div>
