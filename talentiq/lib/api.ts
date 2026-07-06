@@ -193,4 +193,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email }),
     }),
+
+  // Reset password with OTP
+  resetPassword: (email: string, otp: string, new_password: string) =>
+    apiFetch("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ email, otp, new_password }),
+    }),
 };
