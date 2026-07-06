@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
@@ -31,21 +31,57 @@ export default function HRLogin() {
   const [company, setCompany] = useState('')
 
   const [showForgot, setShowForgot] = useState(false)
+  const [forgotStep, setForgotStep] = useState<'email' | 'otp'>('email')
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotMsg, setForgotMsg] = useState('')
   const [forgotLoading, setForgotLoading] = useState(false)
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', ''])
+  const [newPassword, setNewPassword] = useState('')
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([])
 
-  const handleForgotPassword = async () => {
+  const handleSendOtp = async () => {
     if (!forgotEmail.trim()) return
     setForgotLoading(true)
+    setForgotMsg('')
     try {
       await api.forgotPassword(forgotEmail.trim())
-      setShowForgot(false)
-      setEmail(forgotEmail)
-      setTab('login')
-      setError('✓ Temporary password sent! Check your email then login with it.')
+      setForgotStep('otp')
+      setForgotMsg('')
+      setTimeout(() => otpRefs.current[0]?.focus(), 50)
     } catch {
       setForgotMsg('Something went wrong. Please try again.')
+    } finally { setForgotLoading(false) }
+  }
+
+  const handleOtpChange = (i: number, v: string) => {
+    if (v && !/^[0-9]$/.test(v)) return
+    const next = [...otpDigits]
+    next[i] = v
+    setOtpDigits(next)
+    if (v && i < 4) otpRefs.current[i + 1]?.focus()
+  }
+
+  const handleOtpKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otpDigits[i] && i > 0) otpRefs.current[i - 1]?.focus()
+  }
+
+  const handleResetPassword = async () => {
+    const otp = otpDigits.join('')
+    if (otp.length < 5) { setForgotMsg('Enter the full 5-digit code.'); return }
+    if (newPassword.length < 6) { setForgotMsg('Password must be at least 6 characters.'); return }
+    setForgotLoading(true)
+    setForgotMsg('')
+    try {
+      await api.resetPassword(forgotEmail.trim(), otp, newPassword)
+      setShowForgot(false)
+      setForgotStep('email')
+      setOtpDigits(['', '', '', '', ''])
+      setNewPassword('')
+      setEmail(forgotEmail)
+      setTab('login')
+      setError('✓ Password reset! Log in with your new password.')
+    } catch (e: any) {
+      setForgotMsg(e.message || 'Invalid or expired code.')
     } finally { setForgotLoading(false) }
   }
 
@@ -251,16 +287,56 @@ export default function HRLogin() {
 
             {/* Forgot Password Modal */}
             {showForgot && (
-              <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:999, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={()=>setShowForgot(false)}>
+              <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:999, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={()=>{setShowForgot(false); setForgotStep('email')}}>
                 <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,.08)', borderRadius:16, padding:28, width:340, maxWidth:'90vw', boxShadow:'0 20px 60px rgba(0,0,0,.15)' }} onClick={e=>e.stopPropagation()}>
-                  <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:6, color:'#1a1a16' }}>Forgot Password</div>
-                  <p style={{ fontSize:13, color:'#7a7768', marginBottom:20 }}>Enter your email — we'll send a temporary password.</p>
-                  <input value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="your@email.com" style={{ width:'100%', background:'#f5f4f0', border:'1px solid rgba(0,0,0,.08)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'#1a1a16', outline:'none', fontFamily:'inherit', marginBottom:12, boxSizing:'border-box' as any }} />
-                  {forgotMsg && <div style={{ fontSize:12, color: forgotMsg.startsWith('✓')?'#2d7a5f':'#dc2626', marginBottom:12 }}>{forgotMsg}</div>}
-                  <div style={{ display:'flex', gap:8 }}>
-                    <button onClick={()=>setShowForgot(false)} style={{ flex:1, fontSize:13, padding:'9px', borderRadius:8, border:'1px solid rgba(0,0,0,.08)', background:'transparent', color:'#7a7768', cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
-                    <button onClick={handleForgotPassword} disabled={forgotLoading} style={{ flex:1, fontSize:13, fontWeight:600, padding:'9px', borderRadius:8, border:'none', background:'#2d5a47', color:'#fff', cursor:'pointer', fontFamily:'inherit' }}>{forgotLoading?'Sending…':'Send Password'}</button>
-                  </div>
+                  {forgotStep === 'email' ? (
+                    <>
+                      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:6, color:'#1a1a16' }}>Forgot Password</div>
+                      <p style={{ fontSize:13, color:'#7a7768', marginBottom:20 }}>Enter your email — we'll send a 5-digit reset code.</p>
+                      <input value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="your@email.com" style={{ width:'100%', background:'#f5f4f0', border:'1px solid rgba(0,0,0,.08)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'#1a1a16', outline:'none', fontFamily:'inherit', marginBottom:12, boxSizing:'border-box' as any }} />
+                      {forgotMsg && <div style={{ fontSize:12, color:'#dc2626', marginBottom:12 }}>{forgotMsg}</div>}
+                      <div style={{ display:'flex', gap:8 }}>
+                        <button onClick={()=>setShowForgot(false)} style={{ flex:1, fontSize:13, padding:'9px', borderRadius:8, border:'1px solid rgba(0,0,0,.08)', background:'transparent', color:'#7a7768', cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
+                        <button onClick={handleSendOtp} disabled={forgotLoading} style={{ flex:1, fontSize:13, fontWeight:600, padding:'9px', borderRadius:8, border:'none', background:'#2d5a47', color:'#fff', cursor:'pointer', fontFamily:'inherit' }}>{forgotLoading?'Sending…':'Send Code'}</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:6, color:'#1a1a16' }}>Enter Code</div>
+                      <p style={{ fontSize:13, color:'#7a7768', marginBottom:18 }}>Sent to {forgotEmail}. Expires in 10 minutes.</p>
+
+                      <div style={{ display:'flex', gap:8, marginBottom:16, justifyContent:'center' }}>
+                        {otpDigits.map((d, i) => (
+                          <input
+                            key={i}
+                            ref={el => { otpRefs.current[i] = el }}
+                            value={d}
+                            onChange={e=>handleOtpChange(i, e.target.value)}
+                            onKeyDown={e=>handleOtpKeyDown(i, e)}
+                            maxLength={1}
+                            inputMode="numeric"
+                            style={{ width:40, height:48, textAlign:'center', fontSize:20, fontWeight:600, background:'#f5f4f0', border:'1px solid rgba(0,0,0,.1)', borderRadius:8, color:'#1a1a16', outline:'none', fontFamily:'inherit' }}
+                          />
+                        ))}
+                      </div>
+
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={e=>setNewPassword(e.target.value)}
+                        placeholder="New password"
+                        style={{ width:'100%', background:'#f5f4f0', border:'1px solid rgba(0,0,0,.08)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'#1a1a16', outline:'none', fontFamily:'inherit', marginBottom:12, boxSizing:'border-box' as any }}
+                      />
+
+                      {forgotMsg && <div style={{ fontSize:12, color:'#dc2626', marginBottom:12 }}>{forgotMsg}</div>}
+
+                      <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+                        <button onClick={()=>{setForgotStep('email'); setForgotMsg('')}} style={{ flex:1, fontSize:13, padding:'9px', borderRadius:8, border:'1px solid rgba(0,0,0,.08)', background:'transparent', color:'#7a7768', cursor:'pointer', fontFamily:'inherit' }}>Back</button>
+                        <button onClick={handleResetPassword} disabled={forgotLoading} style={{ flex:1, fontSize:13, fontWeight:600, padding:'9px', borderRadius:8, border:'none', background:'#2d5a47', color:'#fff', cursor:'pointer', fontFamily:'inherit' }}>{forgotLoading?'Resetting…':'Reset Password'}</button>
+                      </div>
+                      <button onClick={handleSendOtp} disabled={forgotLoading} style={{ width:'100%', fontSize:12, background:'none', border:'none', color:'#a3a092', cursor:'pointer', fontFamily:'inherit' }}>Resend code</button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
