@@ -1,4 +1,3 @@
-
 from sqlalchemy.orm import relationship
 from sqlalchemy import Integer,String,Column,Boolean,DateTime
 from models.database import Base
@@ -35,6 +34,8 @@ class User(Base):
     # HR — trial tracking
     trial_started_at = Column(DateTime(timezone=True), nullable=True)
 
+    # Forgot-password OTP flow
+    reset_otp_hash = Column(String, nullable=True)
+    reset_otp_expires_at = Column(DateTime, nullable=True)
+
     chats = relationship("Chat", back_populates="user")
-    
-    
