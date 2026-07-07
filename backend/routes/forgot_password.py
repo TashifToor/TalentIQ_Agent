@@ -50,20 +50,37 @@ def send_otp_email(to_email: str, otp: str, user_name: str):
     msg["From"]    = MAIL_FROM
     msg["To"]      = to_email
 
-    # Render OTP as spaced-out digits for the email
-    spaced_otp = "  ".join(list(otp))
+    # Render OTP as individual boxed digits — table-based so it renders
+    # consistently across mobile and desktop email clients (no letter-spacing
+    # overflow issues on small screens).
+    digit_cells = "".join(
+        f'''<td style="width:44px;height:52px;background:#1e1e1b;border:1px solid rgba(255,255,255,.15);
+                border-radius:8px;text-align:center;vertical-align:middle;
+                font-family:monospace;font-size:22px;font-weight:700;color:#e2b04a;">{d}</td>
+           <td style="width:8px;"></td>'''
+        for d in otp
+    )
 
     html = f"""
-    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0a0a08;color:#fff;border-radius:12px;">
-      <div style="font-size:24px;font-weight:700;margin-bottom:8px;">TalentIQ</div>
-      <p style="color:rgba(255,255,255,.6)">Hi {user_name},</p>
-      <p style="color:rgba(255,255,255,.6)">Use this code to reset your password:</p>
-      <div style="background:#161614;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:16px;text-align:center;margin:20px 0;">
-        <span style="font-family:monospace;font-size:28px;font-weight:700;letter-spacing:6px;color:#e2b04a">{spaced_otp}</span>
-      </div>
-      <p style="color:rgba(255,255,255,.4);font-size:13px;">This code expires in {OTP_EXPIRY_MINUTES} minutes.</p>
+    <html>
+    <head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="margin:0;padding:0;background:#0a0a08;">
+    <div style="font-family:sans-serif;max-width:480px;width:100%;margin:0 auto;
+                padding:32px 20px;background:#0a0a08;color:#fff;border-radius:12px;
+                box-sizing:border-box;">
+      <div style="font-size:22px;font-weight:700;margin-bottom:8px;">TalentIQ</div>
+      <p style="color:rgba(255,255,255,.6);font-size:14px;">Hi {user_name},</p>
+      <p style="color:rgba(255,255,255,.6);font-size:14px;">Use this code to reset your password:</p>
+
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px auto;">
+        <tr>{digit_cells}</tr>
+      </table>
+
+      <p style="color:rgba(255,255,255,.4);font-size:13px;text-align:center;">This code expires in {OTP_EXPIRY_MINUTES} minutes.</p>
       <p style="color:rgba(255,255,255,.2);font-size:11px;margin-top:24px;">If you did not request this, ignore this email.</p>
     </div>
+    </body>
+    </html>
     """
 
     msg.attach(MIMEText(html, "html"))
