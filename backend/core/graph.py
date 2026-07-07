@@ -5,9 +5,9 @@ from langgraph.graph import StateGraph, START, END
 from typing import List, Dict, Any, TypedDict
 
 class TalentIQGraph:
-    def __init__(self):
+    def __init__(self, user_id: int = None):
         # 1. Pehle agent initialize hoga taake nodes isay access kar sakein
-        self.agent = TalentIQAgent()
+        self.agent = TalentIQAgent(user_id=user_id)
         # 2. Baad mein graph build hoga
         self.app = self._build_graph()
 
