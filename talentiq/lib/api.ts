@@ -82,6 +82,18 @@ export const api = {
       body: JSON.stringify({ ...data, role: "hr" }),
     }),
 
+  verifySignup: (email: string, otp: string) =>
+    apiFetch("/auth/verify-signup", {
+      method: "POST",
+      body: JSON.stringify({ email, otp }),
+    }),
+
+  resendVerification: (email: string) =>
+    apiFetch("/auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
   me: () => apiFetch("/auth/me"),
 
   updateProfile: (name: string) =>
