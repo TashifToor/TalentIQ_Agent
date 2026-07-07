@@ -35,6 +35,54 @@ export default function CandidateLogin() {
   const [newPassword, setNewPassword] = useState('')
   const otpRefs = useRef<(HTMLInputElement | null)[]>([])
 
+  // Signup email verification
+  const [signupStep, setSignupStep] = useState<'form' | 'verify'>('form')
+  const [pendingEmail, setPendingEmail] = useState('')
+  const [verifyOtp, setVerifyOtp] = useState<string[]>(['', '', '', '', ''])
+  const [verifyMsg, setVerifyMsg] = useState('')
+  const [verifyLoading, setVerifyLoading] = useState(false)
+  const verifyRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  const handleVerifyOtpChange = (i: number, v: string) => {
+    if (v && !/^[0-9]$/.test(v)) return
+    const next = [...verifyOtp]
+    next[i] = v
+    setVerifyOtp(next)
+    if (v && i < 4) verifyRefs.current[i + 1]?.focus()
+  }
+
+  const handleVerifyOtpKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !verifyOtp[i] && i > 0) verifyRefs.current[i - 1]?.focus()
+  }
+
+  const handleVerifySignup = async () => {
+    const otp = verifyOtp.join('')
+    if (otp.length < 5) { setVerifyMsg('Enter the full 5-digit code.'); return }
+    setVerifyLoading(true)
+    setVerifyMsg('')
+    try {
+      const data = await api.verifySignup(pendingEmail, otp)
+      localStorage.setItem('token', data.access_token)
+      localStorage.setItem('role', 'candidate')
+      document.cookie = `token=${data.access_token}; path=/`
+      document.cookie = `role=candidate; path=/`
+      router.push('/candidate/dashboard')
+    } catch (e: any) {
+      setVerifyMsg(e.message || 'Invalid or expired code.')
+    } finally { setVerifyLoading(false) }
+  }
+
+  const handleResendVerification = async () => {
+    setVerifyLoading(true)
+    setVerifyMsg('')
+    try {
+      await api.resendVerification(pendingEmail)
+      setVerifyMsg('New code sent.')
+    } catch {
+      setVerifyMsg('Could not resend code. Try again shortly.')
+    } finally { setVerifyLoading(false) }
+  }
+
   const handleSendOtp = async () => {
     if (!forgotEmail.trim()) return
     setForgotLoading(true)
@@ -147,6 +195,15 @@ export default function CandidateLogin() {
       document.cookie = `role=candidate; path=/`
       router.push('/candidate/dashboard')
     } catch (e: any) {
+      if (e.code === 'EMAIL_NOT_VERIFIED') {
+        setPendingEmail(email)
+        setSignupStep('verify')
+        setTab('signup')
+        setVerifyMsg('')
+        try { await api.resendVerification(email) } catch {}
+        setTimeout(() => verifyRefs.current[0]?.focus(), 50)
+        return
+      }
       setError(e.message || 'Login failed. Please check your credentials.')
     } finally {
       setLoading(false)
@@ -157,28 +214,17 @@ export default function CandidateLogin() {
     setError('')
     setLoading(true)
     try {
-      const data = await api.signupCandidate({ name, email, password })
-      localStorage.setItem('token', data.access_token)
-      localStorage.setItem('role', 'candidate')
-      document.cookie = `token=${data.access_token}; path=/`
-      document.cookie = `role=candidate; path=/`
-      router.push('/candidate/dashboard')
+      await api.signupCandidate({ name, email, password })
+      setPendingEmail(email)
+      setSignupStep('verify')
+      setVerifyOtp(['', '', '', '', ''])
+      setVerifyMsg('')
+      setTimeout(() => verifyRefs.current[0]?.focus(), 50)
     } catch (e: any) {
-      // If already registered, try logging in with same credentials
       if (e.message?.toLowerCase().includes('already registered')) {
-        try {
-          const loginData: any = await api.login(email, password)
-          localStorage.setItem('token', loginData.access_token)
-          localStorage.setItem('role', 'candidate')
-          document.cookie = `token=${loginData.access_token}; path=/`
-          document.cookie = `role=candidate; path=/`
-          router.push('/candidate/dashboard')
-          return
-        } catch {
-          setError('Email already registered. Please use the Login tab.')
-          setTab('login')
-          return
-        }
+        setError('Email already registered. Please use the Login tab, or click Forgot Password if you never verified it.')
+        setTab('login')
+        return
       }
       setError(e.message || 'Signup failed. Please try again.')
     } finally {
@@ -396,6 +442,41 @@ export default function CandidateLogin() {
               </div>
             )}
             </>
+          ) : signupStep === 'verify' ? (
+            <div>
+              <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#f5f2eb', marginBottom: 8, letterSpacing: '-0.3px' }}>
+                Verify your email
+              </h1>
+              <p style={{ fontSize: 13.5, color: 'rgba(245,242,235,.4)', marginBottom: 24, fontWeight: 300 }}>
+                Sent to {pendingEmail}. Expires in 10 minutes.
+              </p>
+
+              <div style={{ display: 'flex', gap: 8, marginBottom: 20, justifyContent: 'center' }}>
+                {verifyOtp.map((d, i) => (
+                  <input
+                    key={i}
+                    ref={el => { verifyRefs.current[i] = el }}
+                    value={d}
+                    onChange={e => handleVerifyOtpChange(i, e.target.value)}
+                    onKeyDown={e => handleVerifyOtpKeyDown(i, e)}
+                    maxLength={1}
+                    inputMode="numeric"
+                    style={{ width: 44, height: 52, textAlign: 'center', fontSize: 20, fontWeight: 600, background: '#1e1e1b', border: '1px solid rgba(255,255,255,.12)', borderRadius: 8, color: '#f5f2eb', outline: 'none', fontFamily: 'inherit' }}
+                  />
+                ))}
+              </div>
+
+              {verifyMsg && <div style={{ fontSize: 12, color: verifyMsg === 'New code sent.' ? '#13c28e' : '#ef4444', marginBottom: 16, textAlign: 'center' }}>{verifyMsg}</div>}
+
+              <button onClick={handleVerifySignup} disabled={verifyLoading} style={primaryBtn}>
+                {verifyLoading ? 'Verifying…' : 'Verify & Continue'}
+              </button>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button onClick={() => { setSignupStep('form'); setTab('signup') }} style={{ fontSize: 12.5, color: 'rgba(245,242,235,.32)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Back</button>
+                <button onClick={handleResendVerification} disabled={verifyLoading} style={{ fontSize: 12.5, color: '#d4af6d', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Resend code</button>
+              </div>
+            </div>
           ) : (
             <div>
               <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#f5f2eb', marginBottom: 8, letterSpacing: '-0.3px' }}>
