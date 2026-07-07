@@ -157,7 +157,7 @@ def run_bulk_screening(
     return {
         "status": "done",
         "total_cvs_processed": total,
-        "job_id": job_id,
+        "job_id": job_id, 
         "top_candidates": ranked[:top_n],
         "all_results": ranked,
     }
