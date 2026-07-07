@@ -19,6 +19,8 @@ export default function CandidateSettings() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
     api.me().then((u: any) => {
@@ -66,12 +68,15 @@ export default function CandidateSettings() {
   }
 
   const handleDelete = async () => {
+    if (!deletePassword.trim()) { setDeleteError('Enter your password to confirm.'); return }
     setDeleting(true)
+    setDeleteError('')
     try {
-      await api.deleteAccount()
+      await api.deleteAccount(deletePassword)
       localStorage.removeItem('token')
       router.push('/')
-    } catch (err) {
+    } catch (err: any) {
+      setDeleteError(err.message || 'Failed to delete account.')
       setDeleting(false)
     }
   }
@@ -173,13 +178,23 @@ export default function CandidateSettings() {
               Delete my account
             </button>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button onClick={handleDelete} disabled={deleting} style={{ background: '#ef4444', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
-                {deleting ? 'Deleting…' : 'Yes, delete permanently'}
-              </button>
-              <button onClick={() => setShowDeleteConfirm(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 13, cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
-                Cancel
-              </button>
+            <div>
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={e => setDeletePassword(e.target.value)}
+                placeholder="Enter your password to confirm"
+                style={{ ...inputStyle, marginBottom: 10, maxWidth: 280 }}
+              />
+              {deleteError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 10 }}>{deleteError}</div>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button onClick={handleDelete} disabled={deleting} style={{ background: '#ef4444', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
+                  {deleting ? 'Deleting…' : 'Yes, delete permanently'}
+                </button>
+                <button onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); setDeleteError('') }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 13, cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>
