@@ -22,7 +22,7 @@ type Candidate = {
 type HistoryEntry = Candidate & { jobTitle: string; screenedAt: string }
 type Section = 'dashboard' | 'candidates' | 'bulk' | 'shortlist' | 'chatbot' | 'history' | 'open-roles' | 'settings' | 'profile'
 
-const STEP_ICONS = ['', '', '', '']
+const STEP_ICONS = ['📋', '💪', '⚠️', '✅']
 const STEP_COLORS_C = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
 const COLORS = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
 
@@ -38,7 +38,7 @@ function AnalysisCarousel({ text }: { text: string }) {
       <div style={{ display:'flex', gap:5, marginBottom:10, flexWrap:'wrap' }}>
         {steps.map((s,i) => (
           <button key={i} onClick={()=>setActive(i)} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:100, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'Syne,sans-serif', border:`1px solid ${active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.08)'}`, background:active===i?`${STEP_COLORS_C[i%4]}18`:'transparent', color:active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.3)', transition:'all .2s' }}>
-            Step {i+1}
+            <span>{STEP_ICONS[i%4]}</span> {s.heading}
           </button>
         ))}
       </div>
