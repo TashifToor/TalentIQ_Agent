@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from utils.email_utils import normalize_email
 from utils.otp_mailer import generate_otp, send_otp_email, OTP_EXPIRY_MINUTES
+from core.redis_client import check_rate_limit, record_failed_login, is_login_locked, clear_failed_logins
+from core.analytics import track, identify
 
 FREE_SCANS = 3
 TRIAL_DAYS = 7
@@ -73,6 +75,10 @@ class VerifySignupRequest(BaseModel):
     otp: str
 
 
+class DeleteAccountRequest(BaseModel):
+    password: str
+
+
 class ResendVerificationRequest(BaseModel):
     email: str
 
@@ -81,6 +87,10 @@ class ResendVerificationRequest(BaseModel):
 async def signup(body: RegisterRequest, db: Session = Depends(get_db)):
     clean_email = body.email.strip().lower()
     norm_email = normalize_email(clean_email)
+
+    allowed, wait_seconds = check_rate_limit(f"signup:{clean_email}", cooldown_seconds=45)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before trying again.")
 
     # Block duplicate signups via Gmail dot/+tag aliasing (a.li@gmail.com,
     # ali+hr@gmail.com, ali@gmail.com all resolve to the same inbox).
@@ -138,14 +148,23 @@ async def verify_signup(body: VerifySignupRequest, db: Session = Depends(get_db)
     user.reset_otp_expires_at = None
     db.commit()
 
+    identify(user.id, {"email": user.email, "role": user.role, "name": user.name})
+    track(user.id, "signup_completed", {"role": user.role})
+
     token = await create_access_token(user.id)
     return TokenResponse(access_token=token, token_type="bearer", role=user.role)
 
 
 @router.post("/resend-verification")
 async def resend_verification(body: ResendVerificationRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == body.email.strip().lower()).first()
+    email = body.email.strip().lower()
     generic_msg = {"message": "If this account needs verification, a new code has been sent."}
+
+    allowed, wait_seconds = check_rate_limit(f"resend-verify:{email}", cooldown_seconds=45)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before requesting another code.")
+
+    user = db.query(User).filter(User.email == email).first()
 
     if not user or user.is_active:
         return generic_msg
@@ -166,22 +185,37 @@ async def resend_verification(body: ResendVerificationRequest, db: Session = Dep
 
 @router.post("/login", response_model=TokenResponse)
 async def login(body: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == body.email.strip().lower()).first()
+    email = body.email.strip().lower()
+
+    locked, ttl = is_login_locked(email)
+    if locked:
+        raise HTTPException(status_code=429, detail=f"Too many failed attempts. Try again in {ttl}s.")
+
+    user = db.query(User).filter(User.email == email).first()
 
     if not user:
+        record_failed_login(email)
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     try:
         is_valid = pwd_context.verify(body.password, user.password_hash)
     except (UnknownHashError, MissingBackendError):
         # Do not leak hashing internals to client.
+        record_failed_login(email)
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     if not is_valid:
+        count, now_locked = record_failed_login(email)
+        if now_locked:
+            raise HTTPException(status_code=429, detail="Too many failed attempts. Try again in 5 minutes.")
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    clear_failed_logins(email)
 
     if not user.is_active:
         raise HTTPException(status_code=403, detail="EMAIL_NOT_VERIFIED|Please verify your email before logging in.")
+
+    track(user.id, "login", {"role": user.role})
 
     token = await create_access_token(user.id)
 
@@ -248,9 +282,43 @@ async def change_password(
 
 @router.delete("/me")
 async def delete_account(
+    body: DeleteAccountRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    try:
+        is_valid = pwd_context.verify(body.password, current_user.password_hash)
+    except (UnknownHashError, MissingBackendError):
+        is_valid = False
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="Incorrect password.")
+
+    user_id = current_user.id
+    role = current_user.role
+
+    # Delete in FK-safe order — children before parent. Done at the
+    # application level (rather than relying on DB-level ON DELETE CASCADE)
+    # so the exact deletion order is explicit and auditable.
+    from models.scan_history import ScanHistory
+    from models.chat import Chat
+    from models.application import Application
+    from models.job import Job
+
+    db.query(ScanHistory).filter(ScanHistory.user_id == user_id).delete()
+    db.query(Chat).filter(Chat.user_id == user_id).delete()
+
+    if role == "candidate":
+        db.query(Application).filter(Application.candidate_id == user_id).delete()
+    elif role == "hr":
+        job_ids = [j.id for j in db.query(Job.id).filter(Job.hr_user_id == user_id).all()]
+        if job_ids:
+            db.query(Application).filter(Application.job_id.in_(job_ids)).delete(synchronize_session=False)
+        db.query(Job).filter(Job.hr_user_id == user_id).delete()
+
     db.delete(current_user)
     db.commit()
-    return {"status": "success", "message": "Account deleted."}
+
+    track(user_id, "account_deleted", {"role": role})
+
+    print(f"[Account] Deleted account and all associated data for user_id={user_id} ({role})")
+    return {"status": "success", "message": "Your account and all associated data have been permanently deleted."}
