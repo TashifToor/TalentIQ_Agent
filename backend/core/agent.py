@@ -159,4 +159,4 @@ Respond ONLY with valid JSON. No markdown, no explanation, no backticks.
             "is_shortlisted": metrics.get("is_shortlisted", False),
             "has_min_experience": metrics.get("has_min_experience", False),
             "trigger_interview": metrics.get("trigger_interview", False),
-        }
+        } 
