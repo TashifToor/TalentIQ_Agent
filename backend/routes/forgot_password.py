@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from models.database import get_db
 from models.user import User
 from utils.otp_mailer import generate_otp, send_otp_email, OTP_EXPIRY_MINUTES
+from core.redis_client import check_rate_limit
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -25,7 +26,13 @@ class ResetPasswordRequest(BaseModel):
 
 @router.post("/forgot-password")
 def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == body.email.strip().lower()).first()
+    email = body.email.strip().lower()
+
+    allowed, wait_seconds = check_rate_limit(f"forgot-password:{email}", cooldown_seconds=45)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before requesting another code.")
+
+    user = db.query(User).filter(User.email == email).first()
 
     # Always return success — don't leak whether email exists
     generic_msg = {"message": "If this email is registered, a reset code has been sent."}
