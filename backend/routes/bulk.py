@@ -19,10 +19,13 @@ from models.user import User
 from models.job import Job
 from models.application import Application
 from core.celery_app import celery_app
+from core.redis_client import check_rate_limit
 from tasks.screening_task import run_bulk_screening
 
 router = APIRouter(prefix="/bulk", tags=["Bulk Screening"])
 MAX_CVS = 25
+MAX_ZIP_SIZE_MB = 50
+MAX_ZIP_SIZE_BYTES = MAX_ZIP_SIZE_MB * 1024 * 1024
 
 UPLOAD_TMP = os.path.join(os.path.dirname(__file__), "..", "data", "bulk_tmp")
 os.makedirs(UPLOAD_TMP, exist_ok=True)
@@ -175,10 +178,20 @@ async def bulk_screen(
 ):
     require_hr(current_user)
 
+    allowed, wait_seconds = check_rate_limit(f"bulk:{current_user.id}", cooldown_seconds=30)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before starting another bulk screening.")
+
     if not job_description.strip():
         raise HTTPException(status_code=400, detail="job_description is required.")
     if not zip_file.filename.lower().endswith((".zip", ".pdf")):
         raise HTTPException(status_code=400, detail="Upload a .zip or .pdf file.")
+
+    zip_contents = await zip_file.read()
+    if len(zip_contents) > MAX_ZIP_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {MAX_ZIP_SIZE_MB}MB.")
+    if len(zip_contents) == 0:
+        raise HTTPException(status_code=400, detail="Empty file.")
 
     task_tmp = tempfile.mkdtemp(dir=UPLOAD_TMP)
 
@@ -187,13 +200,13 @@ async def bulk_screen(
             name = os.path.splitext(zip_file.filename)[0]
             pdf_path = os.path.join(task_tmp, zip_file.filename)
             with open(pdf_path, "wb") as f:
-                shutil.copyfileobj(zip_file.file, f)
+                f.write(zip_contents)
             pdf_paths = [pdf_path]
             candidate_names = [name]
         else:
             zip_path = os.path.join(task_tmp, "upload.zip")
             with open(zip_path, "wb") as f:
-                shutil.copyfileobj(zip_file.file, f)
+                f.write(zip_contents)
             extract_dir = os.path.join(task_tmp, "extracted")
             os.makedirs(extract_dir, exist_ok=True)
             try:
