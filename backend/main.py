@@ -1,3 +1,7 @@
+import os
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.chat import router as chat_router
@@ -18,13 +22,33 @@ from models.job import Job
 from models.application import Application
 from models.database import Base, engine
 
+# Error monitoring — only activates if SENTRY_DSN is set in .env, so local
+# dev without a Sentry project configured just runs normally (no crash,
+# no noise). Get a free DSN at https://sentry.io (Python/FastAPI project).
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[StarletteIntegration(), FastApiIntegration()],
+        traces_sample_rate=0.2,       # 20% of requests get performance tracing (keeps quota usage sane)
+        environment=os.getenv("ENVIRONMENT", "development"),
+        send_default_pii=False,       # don't auto-attach request bodies/headers (CVs, tokens) to error events
+    )
+    print("[Sentry] Error monitoring active")
+else:
+    print("[Sentry] SENTRY_DSN not set — error monitoring disabled")
+
 app = FastAPI(title="TalentIQ Backend", version="2.0.0")
 
 
 @app.on_event("startup")
 def create_tables():
+    # Schema is now managed by Alembic (see alembic/ directory) — run
+    # `alembic upgrade head` to apply migrations instead of relying on
+    # create_all(), which can't handle column changes/renames and was
+    # causing manual ALTER TABLE drift in dev. Left as a safety net only.
     Base.metadata.create_all(bind=engine)
-    print("[DB] All tables created/verified ✓")
+    print("[DB] Tables verified (schema managed by Alembic — run 'alembic upgrade head' for migrations)")
 
 
 from fastapi.middleware.cors import CORSMiddleware
