@@ -77,4 +77,4 @@ app.include_router(policy_docs_router)
 
 @app.get("/")
 def root():
-    return {"message": "TalentIQ API v2.0 — Backend is running!"}
+    return {"message": "TalentIQ API v2.0 — Backend is running!"} 
