@@ -143,6 +143,17 @@ def run_bulk_screening(
         except Exception as e:
             print(f"[Task] Email failed: {e}")
 
+    if hr_user_id:
+        try:
+            from core.analytics import track
+            track(hr_user_id, "bulk_screening_completed", {
+                "total_cvs": total,
+                "job_id": job_id,
+                "shortlisted": sum(1 for r in ranked if r.get("is_shortlisted")),
+            })
+        except Exception as e:
+            print(f"[Task] Analytics tracking failed: {e}")
+
     return {
         "status": "done",
         "total_cvs_processed": total,
