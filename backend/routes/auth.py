@@ -13,7 +13,7 @@ from utils.otp_mailer import generate_otp, send_otp_email, OTP_EXPIRY_MINUTES
 from core.redis_client import check_rate_limit, record_failed_login, is_login_locked, clear_failed_logins
 from core.analytics import track, identify
 
-FREE_SCANS = 3
+FREE_SCANS = 3 
 TRIAL_DAYS = 7
 
 
