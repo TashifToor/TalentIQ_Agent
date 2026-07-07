@@ -105,7 +105,8 @@ export const api = {
       body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
     }),
 
-  deleteAccount: () => apiFetch("/auth/me", { method: "DELETE" }),
+  deleteAccount: (password: string) =>
+    apiFetch("/auth/me", { method: "DELETE", body: JSON.stringify({ password }) }),
 
   getScanHistory: () => apiFetch("/scans/history"),
 
@@ -212,4 +213,4 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, otp, new_password }),
     }),
-};
+}; 
