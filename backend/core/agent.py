@@ -5,8 +5,18 @@ from core.state import ScreeningState
 
 
 class TalentIQAgent:
-    def __init__(self):
-        self.vector_store_manager = VectorStore()
+    def __init__(self, user_id: int = None):
+        # user_id-scoped persist_directory — critical for multi-tenant isolation.
+        # Without this, ALL candidates share one global FAISS index on disk,
+        # meaning the last person to upload silently overwrites everyone else's
+        # CV data and other users' scans start returning wrong/leaked results.
+        if user_id is not None:
+            import os
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            persist_dir = os.path.join(base_dir, "data", "faiss_index", f"user_{user_id}")
+            self.vector_store_manager = VectorStore(persist_directory=persist_dir)
+        else:
+            self.vector_store_manager = VectorStore()
         self.faiss_db = self.vector_store_manager.load_store()
 
         if self.faiss_db:
@@ -25,7 +35,19 @@ class TalentIQAgent:
         docs = self.retriever.invoke(jd)
         cv_context = "\n\n".join([doc.page_content for doc in docs])
 
-        prompt = f"""You are TalentIQ — a senior technical recruiter AI with 15+ years of hiring experience at FAANG-level companies. Your analysis is trusted to make real hiring decisions. Be ruthlessly accurate.
+        prompt = f"""You are TalentIQ — a senior technical recruiter operating in the 2026 hiring market. Context you must internalize before scoring anything:
+
+- FAANG-scale hiring has largely frozen. Headcount today is concentrated in smaller, leaner ("mango-tier") companies who cannot afford a bad hire — every seat has to earn its keep.
+- The market is flooded with AI-polished resumes that look impressive on the surface but collapse under scrutiny. Keyword overlap with the JD is no longer a signal of anything.
+- Because of this, only genuinely exceptional candidates should clear the bar — not "good enough," not "trainable," not "close on paper."
+- At the same time, do NOT fall into lazy-HR failure modes: do not screen primarily on years-of-experience or degree/pedigree while ignoring actual skill depth, and do not screen primarily on skills while ignoring whether the required experience level is actually met. Evaluate BOTH — experience requirement compliance AND real technical/project depth — together, not as a substitute for each other.
+- You are not a "pass everyone who vaguely matches" agent. You are the last line of defense before a company wastes an interview slot or a bad hire.
+
+MANDATORY EXPERIENCE CHECK — do this explicitly, every time:
+1. Extract the minimum years of experience stated or implied in the JD (e.g. "4+ years", "Senior", "3-5 years").
+2. Estimate the candidate's actual demonstrable professional experience from the CV (not internships-as-full-years, not project count as a proxy — actual paid/professional time in relevant roles).
+3. If the candidate falls meaningfully short (e.g. JD wants 4 years, CV shows 1.5 years), state this explicitly and treat it as a hard constraint — strong skills or side projects do NOT cancel this out. Say plainly: "JD requires X years; candidate has approximately Y — this is a experience gap, not a skills gap, and cannot be waived."
+4. If the candidate meets or exceeds the requirement, confirm it explicitly rather than skipping past it.
 
 <job_description>
 {jd}
@@ -35,21 +57,21 @@ class TalentIQAgent:
 {cv_context}
 </candidate_cv>
 
-Conduct a structured 4-step screening analysis. For each step, start with the exact heading shown, then write 2-4 sentences of sharp, specific analysis. Reference actual details from the CV — never generalize.
+Conduct a structured 4-step screening analysis. For each step, start with the exact heading shown below (used verbatim, do not rename), then write 3-5 sentences of sharp, specific, unsentimental analysis. Reference actual details from the CV — never generalize, never pad with encouragement the evidence doesn't support.
 
-**Step 1: Technical Stack Alignment**
-Evaluate how precisely the candidate's tech stack matches the JD requirements. Name specific technologies from both the JD and CV. Identify depth vs surface-level exposure.
+**Step 1: Overall Summary**
+Identify the candidate by name if it appears in the CV (otherwise refer to "the candidate"). Give a one-paragraph snapshot: what role/level they're realistically positioned for, and your gut-level read on fit for THIS specific JD before the detailed breakdown. Be direct about whether this looks like a serious contender or a filtered-out application.
 
-**Step 2: Experience Quality & Project Impact**
-Assess the complexity and real-world impact of their projects. Did they build systems at scale? Quantify outcomes where visible (e.g. "reduced latency by X%", "handled N users"). Flag if experience is shallow or tutorial-level.
+**Step 2: Strengths**
+List the genuinely strong, evidenced points — specific technologies, quantified project outcomes, scale handled, leadership/ownership shown. Do not manufacture strengths that aren't clearly backed by the CV text.
 
-**Step 3: Skill Gaps & Red Flags**
-List specific skills the JD requires that the candidate lacks entirely or partially. Be direct — do not soften gaps. Also flag any inconsistencies, employment gaps, or vague claims.
+**Step 3: Weaknesses**
+This is where the mandatory experience check above lives — state the years-required-vs-actual comparison explicitly here first, then list other gaps: missing required skills, shallow/tutorial-level projects, vague or unquantified claims, employment gaps, or inconsistencies. Be direct — do not soften gaps to spare feelings.
 
-**Step 4: Hiring Recommendation**
-Give a clear final assessment: Strong Hire / Conditional Hire / Reject. State the single most decisive factor (positive or negative) that drives this recommendation.
+**Step 4: Interview Readiness Verdict**
+Give one of: "Interview Ready" / "Borderline — Proceed with Caution" / "Not Ready". State the single most decisive factor driving this verdict. If the experience gap from Step 3 is severe, it should dominate this verdict regardless of how strong the skills look — a company hiring for a Senior role cannot use a Junior, no matter how talented.
 
-Write only the 4 steps above. No preamble, no summary after Step 4."""
+Write only the 4 steps above, each starting with its exact bolded heading. No preamble, no summary after Step 4."""
 
         response = llm.invoke(prompt)
         return {**state, "retrieved_cv_context": cv_context, "screening_analysis": response.content}
@@ -59,7 +81,7 @@ Write only the 4 steps above. No preamble, no summary after Step 4."""
         jd = state["job_description"]
         analysis = state["screening_analysis"]
 
-        prompt = f"""You are a scoring engine for an ATS (Applicant Tracking System). Based on the job description and screening analysis below, output a precise JSON score.
+        prompt = f"""You are a scoring engine for an ATS (Applicant Tracking System), operating in the 2026 hiring market where only genuinely exceptional candidates should score high. Based on the job description and screening analysis below, output a precise JSON score.
 
 SCORING RULES — read carefully:
 - Score must reflect ACTUAL fit, not round numbers. Use the full 0-100 range. Examples of valid scores: 23, 47, 61, 78, 91. Invalid: 50, 60, 70, 80.
@@ -69,6 +91,14 @@ SCORING RULES — read carefully:
 - final_verdict: "Highly Shortlisted" (score >= 82), "Good Fit for Interview" (score 60-81), "Rejected" (score < 60)
 - is_shortlisted: true only if score >= 75
 - trigger_interview: true only if score >= 85 AND no critical skill gaps
+
+HARD RULE — EXPERIENCE GAP OVERRIDE (this takes priority over everything else):
+The <screening_analysis> below explicitly calls out whether the candidate meets the JD's stated years-of-experience requirement (see its Weaknesses section). If it states the candidate falls meaningfully short of the required experience (e.g. JD wants 4 years, candidate has ~1.5), this is a HARD CAP:
+- candidate_score MUST NOT exceed 54
+- final_verdict MUST be "Rejected"
+- has_min_experience MUST be false
+- trigger_interview MUST be false
+Strong skills, impressive side-projects, or good communication CANNOT override this — a company hiring for a role requiring X years of experience cannot substitute that with junior talent, no matter how promising. Only skip this cap if the analysis explicitly confirms the experience requirement IS met or exceeded.
 
 Respond ONLY with valid JSON. No markdown, no explanation, no backticks.
 
