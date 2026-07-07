@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 
@@ -7,12 +8,15 @@ from models.scan_history import ScanHistory
 from middleware.auth import get_current_user
 from schemas.screening import ScreeningRequest
 from core.graph import TalentIQGraph
+from core.redis_client import get_cached_screening, set_cached_screening, check_rate_limit
+from core.analytics import track
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/Rating", tags=["CV Screening"])
 
 FREE_SCANS = 3
 TRIAL_DAYS = 7
+SCREENING_TIMEOUT_SECONDS = 45
 
 
 async def check_screening_access(user: User):
@@ -60,6 +64,10 @@ async def screen_candidate(
 ):
     print(f"[Screen] User: {current_user.email} | Role: {current_user.role} | Scans: {current_user.scans_used}")
 
+    allowed, wait_seconds = check_rate_limit(f"scan:{current_user.id}", cooldown_seconds=5)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before scanning again.")
+
     await check_screening_access(current_user)
 
     if not payload.cv_text or not payload.cv_text.strip():
@@ -69,15 +77,36 @@ async def screen_candidate(
         )
 
     try:
-        # Fresh agent on every request — loads latest FAISS from default path
-        # (same path upload.py writes to: backend/data/faiss_index)
-        screening_agent = TalentIQGraph()
+        # Same CV + same JD scanned before? Skip the Groq LLM call entirely —
+        # it's by far the slowest and most expensive part of a scan.
+        cached = get_cached_screening(payload.cv_text, payload.job_description)
+        if cached:
+            print(f"[Screen] Cache HIT — skipping LLM call for {current_user.email}")
+            final_report = cached
+        else:
+            # Fresh agent scoped to THIS user's uploaded CV/FAISS index — never
+            # shares state with other users' concurrent scans.
+            screening_agent = TalentIQGraph(user_id=current_user.id)
 
-        final_report = screening_agent.run_screening(
-            job_description=payload.job_description
-        )
-        print(f"[Screen DEBUG] final_report keys: {list(final_report.keys()) if final_report else None}")
-        print(f"[Screen DEBUG] screening_analysis length: {len(final_report.get('screening_analysis', '') or '')}")
+            try:
+                # run_screening is a blocking call (LLM + retrieval) — run it in
+                # a worker thread with a hard timeout so a slow/hung Groq call
+                # can't hang the request (and the whole event loop) forever.
+                final_report = await asyncio.wait_for(
+                    asyncio.to_thread(screening_agent.run_screening, payload.job_description),
+                    timeout=SCREENING_TIMEOUT_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                raise HTTPException(
+                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                    detail="Screening is taking longer than expected. Please try again."
+                )
+
+            print(f"[Screen DEBUG] final_report keys: {list(final_report.keys()) if final_report else None}")
+            print(f"[Screen DEBUG] screening_analysis length: {len(final_report.get('screening_analysis', '') or '')}")
+
+            if final_report:
+                set_cached_screening(payload.cv_text, payload.job_description, final_report)
 
         if not final_report:
             raise HTTPException(
@@ -131,6 +160,13 @@ async def screen_candidate(
             # Never let history logging break the actual screening response
             print(f"[Screen WARNING] Failed to save scan history: {str(hist_err)}")
             db.rollback()
+
+        track(current_user.id, "scan_completed", {
+            "role": current_user.role,
+            "score": metrics["candidate_score"],
+            "verdict": metrics["final_verdict"],
+            "cache_hit": bool(cached),
+        })
 
         return {
             "status": "success",
