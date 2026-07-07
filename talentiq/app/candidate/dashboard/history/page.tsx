@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 
-const STEP_ICONS = ['🔧', '📊', '🎯', '✅']
+const STEP_ICONS = ['📋', '💪', '⚠️', '✅']
 const STEP_COLORS = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
 
 function AnalysisCarousel({ text }: { text: string }) {
@@ -37,7 +37,7 @@ function AnalysisCarousel({ text }: { text: string }) {
             transition: 'all .2s',
           }}>
             <span>{STEP_ICONS[i % STEP_ICONS.length]}</span>
-            Step {i + 1}
+            {s.heading}
           </button>
         ))}
       </div>
