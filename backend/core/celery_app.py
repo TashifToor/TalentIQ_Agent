@@ -12,7 +12,6 @@ celery_app = Celery(
     backend=REDIS_URL,
     include=["tasks.screening_task"],
 )
-
 celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",
@@ -28,3 +27,4 @@ celery_app.conf.update(
     task_soft_time_limit=540,     # 9 min pe graceful warning, cleanup ka mauka milta hai
     worker_max_tasks_per_child=50,  # memory leak se bachne ke liye worker process periodically restart hota hai
 )
+celery_app.conf.broker_connection_retry_on_startup = True
