@@ -239,7 +239,7 @@ async def bulk_screen(
             hr_email=current_user.email,
             hr_name=current_user.name or "HR Manager",
             job_title=job_title or "Screening",
-            job_description=job_description,
+            job_description_raw=job_description,
         )
 
         return {
