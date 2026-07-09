@@ -9,15 +9,16 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "14.2.3",
-    "next-auth": "^4.24.7",
-    "react": "^18",
-    "react-dom": "^18",
+    "@sentry/nextjs": "^10.64.0",
     "axios": "^1.7.2",
+    "clsx": "^2.1.1",
     "framer-motion": "^11.2.10",
     "lucide-react": "^0.383.0",
-    "clsx": "^2.1.1",
-    "posthog-js": "^1.194.4"
+    "next": "14.2.3",
+    "next-auth": "^4.24.7",
+    "posthog-js": "^1.194.4",
+    "react": "^18",
+    "react-dom": "^18"
   },
   "devDependencies": {
     "@types/node": "^20",
