@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.local
+data/pdf/*
+data/faiss_index/*
+data/hr_faiss_index/*
+data/bulk_tmp/*
+*.log
+.git/
+.pytest_cache/
+notebook/
