@@ -32,6 +32,7 @@ dependencies = [
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.29",
     "redis==5.0.1",
+    "reportlab==4.2.5",
     "sentence-transformers==3.4.1",
     "sentry-sdk[fastapi]==2.19.0",
     "sqlalchemy>=2.0.49",

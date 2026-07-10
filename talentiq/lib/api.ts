@@ -108,6 +108,26 @@ export const api = {
   deleteAccount: (password: string) =>
     apiFetch("/auth/me", { method: "DELETE", body: JSON.stringify({ password }) }),
 
+  exportMyData: async (): Promise<void> => {
+    const data = await apiFetch("/auth/export-data");
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `talentiq_my_data_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  // --- Team Workspace ---
+  createOrg: (name: string) => apiFetch("/org/create", { method: "POST", body: JSON.stringify({ name }) }),
+  getMyOrg: () => apiFetch("/org/me"),
+  inviteTeammate: (email: string) => apiFetch("/org/invite", { method: "POST", body: JSON.stringify({ email }) }),
+  removeMember: (memberId: number) => apiFetch(`/org/members/${memberId}`, { method: "DELETE" }),
+  checkInvite: (token: string) => apiFetch(`/org/invite/${token}`),
+
   getScanHistory: () => apiFetch("/scans/history"),
 
   // CV Management — returns extracted CV text as a string
@@ -213,4 +233,42 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, otp, new_password }),
     }),
-}; 
+
+  // --- CV Builder — works logged-out (anonymous, IP-limited) or logged-in ---
+  parseCVForBuilder: async (file: File): Promise<any> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE_URL}/cv-builder/parse`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Could not parse CV." }));
+      throw buildApiError(err);
+    }
+    return res.json();
+  },
+
+  generateCVBuilder: async (payload: {
+    cv_data: any;
+    template: "modern" | "classic";
+    job_description?: string;
+  }): Promise<Blob> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const res = await fetch(`${API_BASE_URL}/cv-builder/generate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Could not generate CV." }));
+      throw buildApiError(err);
+    }
+    return res.blob();
+  },
+};
