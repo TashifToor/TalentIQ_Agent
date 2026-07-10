@@ -19,10 +19,10 @@ TRIAL_DAYS = 7
 SCREENING_TIMEOUT_SECONDS = 45
 
 
-async def check_screening_access(user: User):
+async def check_screening_access(user: User, db: Session):
     """
     Candidate: 3 free scans, then must pay
-    HR: 7 day trial, then must pay
+    HR: 7 day trial, then must pay (or covered by their Team Workspace owner's paid plan)
     """
     now = datetime.now(timezone.utc)
 
@@ -37,6 +37,17 @@ async def check_screening_access(user: User):
     elif user.role == "hr":
         if user.subscription_status == "active":
             return
+
+        # Part of a Team Workspace and not the owner? Check if the workspace
+        # owner has a paid plan — teammates ride on the owner's subscription.
+        if user.organization_id and not user.is_org_owner:
+            from models.organization import Organization
+            org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+            if org:
+                owner = db.query(User).filter(User.id == org.owner_user_id).first()
+                if owner and owner.subscription_status == "active":
+                    return  # covered by team's paid plan
+
         if user.subscription_status == "trial" and user.trial_started_at:
             trial_start = user.trial_started_at
             if trial_start.tzinfo is None:
@@ -68,7 +79,7 @@ async def screen_candidate(
     if not allowed:
         raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before scanning again.")
 
-    await check_screening_access(current_user)
+    await check_screening_access(current_user, db)
 
     if not payload.cv_text or not payload.cv_text.strip():
         raise HTTPException(
