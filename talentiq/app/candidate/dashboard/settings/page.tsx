@@ -157,6 +157,17 @@ export default function CandidateSettings() {
           </div>
         </div>
 
+        {/* Data Export Section */}
+        <div className="fade-up" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Download My Data</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Get a copy of everything TalentIQ stores about your account — scan history, applications, and profile info.</div>
+          </div>
+          <button onClick={async () => { try { await api.exportMyData() } catch {} }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.15)', color: 'rgba(255,255,255,.8)', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Syne, sans-serif', whiteSpace: 'nowrap' }}>
+            Download JSON
+          </button>
+        </div>
+
         {/* Session Section */}
         <div className="fade-up" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
