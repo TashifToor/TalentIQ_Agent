@@ -37,7 +37,7 @@ function AnalysisCarousel({ text }: { text: string }) {
     <div>
       <div style={{ display:'flex', gap:5, marginBottom:10, flexWrap:'wrap' }}>
         {steps.map((s,i) => (
-          <button key={i} onClick={()=>setActive(i)} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:100, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'Syne,sans-serif', border:`1px solid ${active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.08)'}`, background:active===i?`${STEP_COLORS_C[i%4]}18`:'transparent', color:active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.3)', transition:'all .2s' }}>
+          <button key={i} onClick={(e)=>{e.stopPropagation(); setActive(i)}} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:100, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'Syne,sans-serif', border:`1px solid ${active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.08)'}`, background:active===i?`${STEP_COLORS_C[i%4]}18`:'transparent', color:active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.3)', transition:'all .2s' }}>
             <span>{STEP_ICONS[i%4]}</span> {s.heading}
           </button>
         ))}
@@ -47,7 +47,7 @@ function AnalysisCarousel({ text }: { text: string }) {
         <p style={{ fontSize:12, color:'rgba(255,255,255,.45)', lineHeight:1.8, margin:0, whiteSpace:'pre-wrap' }}>{steps[active]?.body}</p>
       </div>
       <div style={{ display:'flex', justifyContent:'center', gap:5, marginTop:10 }}>
-        {steps.map((_,i) => <div key={i} onClick={()=>setActive(i)} style={{ width:active===i?18:5, height:5, borderRadius:3, background:active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.1)', cursor:'pointer', transition:'all .3s' }} />)}
+        {steps.map((_,i) => <div key={i} onClick={(e)=>{e.stopPropagation(); setActive(i)}} style={{ width:active===i?18:5, height:5, borderRadius:3, background:active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.1)', cursor:'pointer', transition:'all .3s' }} />)}
       </div>
     </div>
   )
@@ -136,8 +136,12 @@ export default function HRDashboard() {
     }).catch(()=>{})
     setHistory(loadHistory())
     api.listPolicyDocs().then((r:any) => setPolicyDocs(r.documents || [])).catch(()=>{})
+
     setDbJobsLoading(true)
-    setDbJobs([])
+    api.getHRJobs()
+      .then((jobs:any) => setDbJobs(Array.isArray(jobs) ? jobs : []))
+      .catch(() => setDbJobs([]))
+      .finally(() => setDbJobsLoading(false))
   }, [])
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:'smooth' }) }, [messages, typing])
