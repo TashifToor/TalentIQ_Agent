@@ -71,15 +71,18 @@ def list_jobs(db: Session = Depends(get_db)):
     return result
 
 
-# ── GET /jobs/mine — HR apni jobs dekhe ───────────────────────────
+# ── GET /jobs/mine — HR apni jobs dekhe (ya team workspace ki sab jobs) ──
 @router.get("/mine", response_model=List[jobResponse])
 def my_jobs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     require_hr(current_user)
+    from core.org_scope import get_org_scoped_user_ids
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+
     jobs = db.query(Job).filter(
-        Job.hr_user_id == current_user.id
+        Job.hr_user_id.in_(scoped_ids)
     ).order_by(Job.created_at.desc()).all()
 
     result = []
@@ -98,7 +101,7 @@ def my_jobs(
     return result
 
 
-# ── DELETE /jobs/{job_id} — HR job delete kare ────────────────────
+# ── DELETE /jobs/{job_id} — HR job delete kare (team workspace: koi bhi teammate) ──
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_job(
     job_id: str,
@@ -106,9 +109,12 @@ def delete_job(
     current_user: User = Depends(get_current_user),
 ):
     require_hr(current_user)
+    from core.org_scope import get_org_scoped_user_ids
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+
     job = db.query(Job).filter(
         Job.id == job_id,
-        Job.hr_user_id == current_user.id
+        Job.hr_user_id.in_(scoped_ids)
     ).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
