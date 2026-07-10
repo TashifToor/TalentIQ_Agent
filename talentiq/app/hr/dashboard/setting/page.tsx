@@ -330,4 +330,4 @@ export default function CandidateSettings() {
       </div>
     </div>
   )
-}
+} 
