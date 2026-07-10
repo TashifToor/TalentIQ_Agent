@@ -75,11 +75,65 @@ def is_login_locked(email: str) -> tuple[bool, int]:
         return False, 0
 
 
+# ---------------------------------------------------------------------------
+# Team Workspace invites — short-lived token mapping to {org_id, email, org_name}
+# so an invited teammate's signup link can carry which org + email they were
+# invited as, without needing a DB table just for pending invites.
+# ---------------------------------------------------------------------------
 def clear_failed_logins(email: str):
     try:
         redis_client.delete(f"loginfail:{email}")
     except redis.exceptions.RedisError:
         pass
+
+
+def create_invite_token(token: str, org_id: str, email: str, org_name: str, ttl_seconds: int = 86400 * 7):
+    try:
+        redis_client.set(f"invite:{token}", json.dumps({"org_id": org_id, "email": email, "org_name": org_name}), ex=ttl_seconds)
+        return True
+    except redis.exceptions.RedisError:
+        return False
+
+
+def get_invite_token(token: str):
+    try:
+        val = redis_client.get(f"invite:{token}")
+        return json.loads(val) if val else None
+    except redis.exceptions.RedisError:
+        return None
+
+
+def delete_invite_token(token: str):
+    try:
+        redis_client.delete(f"invite:{token}")
+    except redis.exceptions.RedisError:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Anonymous IP-based free-tier counter — used by the public CV Builder page
+# so people can try it without signing up first, capped at a small number
+# of uses per IP before we require login.
+# ---------------------------------------------------------------------------
+def get_ip_usage_count(ip: str, feature: str) -> int:
+    try:
+        val = redis_client.get(f"ipfree:{feature}:{ip}")
+        return int(val) if val else 0
+    except redis.exceptions.RedisError:
+        return 0
+
+
+def increment_ip_usage(ip: str, feature: str, ttl_seconds: int = 86400 * 30):
+    """30-day window by default — long enough that clearing cookies/incognito
+    doesn't trivially reset it, short enough that dynamic IPs eventually free up."""
+    try:
+        key = f"ipfree:{feature}:{ip}"
+        count = redis_client.incr(key)
+        if count == 1:
+            redis_client.expire(key, ttl_seconds)
+        return count
+    except redis.exceptions.RedisError:
+        return 0
 
 
 # ---------------------------------------------------------------------------
