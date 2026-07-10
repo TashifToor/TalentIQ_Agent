@@ -48,4 +48,4 @@ class User(Base):
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True)
     is_org_owner = Column(Boolean, default=False)
 
-    chats = relationship("Chat", back_populates="user")
+    chats = relationship("Chat", back_populates="user") 
