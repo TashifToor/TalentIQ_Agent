@@ -239,7 +239,7 @@ async def bulk_screen(
             hr_email=current_user.email,
             hr_name=current_user.name or "HR Manager",
             job_title=job_title or "Screening",
-            job_description_raw=job_description,
+            job_description=job_description,
         )
 
         return {
@@ -286,9 +286,11 @@ def get_hr_jobs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """HR ke saare past screening jobs with results."""
+    """HR ke saare past screening jobs with results (team workspace: sab teammates ke jobs bhi)."""
     require_hr(current_user)
-    jobs = db.query(Job).filter(Job.hr_user_id == current_user.id).order_by(Job.created_at.desc()).all()
+    from core.org_scope import get_org_scoped_user_ids
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+    jobs = db.query(Job).filter(Job.hr_user_id.in_(scoped_ids)).order_by(Job.created_at.desc()).all()
     result = []
     for job in jobs:
         apps = db.query(Application).filter(Application.job_id == job.id).all()
@@ -315,4 +317,4 @@ def get_hr_jobs(
                 for a in sorted(apps, key=lambda x: x.ai_score, reverse=True)
             ]
         })
-    return result
+    return result 
