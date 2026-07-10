@@ -1,8 +1,16 @@
 import os
 import re
 import json
+import sys
 from celery import current_task
 from langchain_community.document_loaders import PyPDFLoader
+
+# See core/celery_app.py for why this is needed — without it, the deferred
+# `from models...` / `from routes...` imports below can fail with
+# "No module named 'models'/'routes'" depending on how celery was launched.
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 from core.celery_app import celery_app
 from core.chunker import TextChunker
@@ -157,7 +165,7 @@ def run_bulk_screening(
     return {
         "status": "done",
         "total_cvs_processed": total,
-        "job_id": job_id, 
+        "job_id": job_id,
         "top_candidates": ranked[:top_n],
         "all_results": ranked,
     }

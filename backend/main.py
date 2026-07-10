@@ -17,13 +17,13 @@ from routes.policy_docs_route import router as policy_docs_router
 from routes.scan import router as scan_router
 from routes.cv_builder import router as cv_builder_router
 from routes.organization import router as org_router
-
+from fastapi import APIRouter, Depends, HTTPException, status
 from models.user import User  
 from models.chat import Chat
 from models.job import Job
 from models.application import Application
 from models.database import Base, engine
-
+router=APIRouter()
 # Error monitoring — only activates if SENTRY_DSN is set in .env, so local
 # dev without a Sentry project configured just runs normally (no crash,
 # no noise). Get a free DSN at https://sentry.io (Python/FastAPI project).
