@@ -1,6 +1,22 @@
 import os
+import sys
 from celery import Celery
 from dotenv import load_dotenv
+
+# Guarantee the project root is importable no matter how/where `celery` was
+# launched from. When Celery is started via the plain `celery` command
+# (rather than `python -m celery`), Python does NOT automatically add the
+# current working directory to sys.path — only the celery script's own
+# install location gets added. That's harmless for `-A core.celery_app`
+# itself (Celery's own app-loader inserts cwd for that specific lookup),
+# but it silently breaks any LATER deferred `from models... import` /
+# `from routes... import` inside task functions with "No module named
+# 'models'" / "No module named 'routes'" — exactly the errors seen in
+# production logs. Inserting the root explicitly here removes the
+# ambiguity for good.
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 load_dotenv()
 
@@ -12,6 +28,7 @@ celery_app = Celery(
     backend=REDIS_URL,
     include=["tasks.screening_task"],
 )
+
 celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",
@@ -27,4 +44,3 @@ celery_app.conf.update(
     task_soft_time_limit=540,     # 9 min pe graceful warning, cleanup ka mauka milta hai
     worker_max_tasks_per_child=50,  # memory leak se bachne ke liye worker process periodically restart hota hai
 )
-celery_app.conf.broker_connection_retry_on_startup = True
