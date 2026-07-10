@@ -23,10 +23,7 @@ from models.chat import Chat
 from models.job import Job
 from models.application import Application
 from models.database import Base, engine
-router=APIRouter()
-# Error monitoring — only activates if SENTRY_DSN is set in .env, so local
-# dev without a Sentry project configured just runs normally (no crash,
-# no noise). Get a free DSN at https://sentry.io (Python/FastAPI project).
+
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 if SENTRY_DSN:
     sentry_sdk.init(
