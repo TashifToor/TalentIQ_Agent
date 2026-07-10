@@ -15,6 +15,7 @@ if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY is missing in environment variables!")
 
 Security=HTTPBearer()
+SecurityOptional=HTTPBearer(auto_error=False)
 
 async def create_access_token(user_id:int)->str:
     payload={
@@ -39,4 +40,30 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=401,detail="User not found")
     return user
-    
+
+
+async def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials = Depends(SecurityOptional),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """
+    Same as get_current_user, but returns None instead of raising when no
+    token is present — used for endpoints that work both logged-out
+    (anonymous, IP-limited) and logged-in (e.g. the public CV Builder page).
+    An invalid/expired token still raises, so a bad token doesn't silently
+    fall back to anonymous access.
+    """
+    if credentials is None:
+        return None
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="invalid Token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token expired or invalid")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
