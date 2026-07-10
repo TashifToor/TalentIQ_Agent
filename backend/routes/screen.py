@@ -1,168 +1,183 @@
-import os
-import re
-import json
-import sys
-from celery import current_task
-from langchain_community.document_loaders import PyPDFLoader
+import asyncio
+from fastapi import APIRouter, HTTPException, status, Depends
+from sqlalchemy.orm import Session
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
-from core.celery_app import celery_app
-from core.chunker import TextChunker
-from core.faiss import VectorStore
+from models.user import User
+from models.database import get_db
+from models.scan_history import ScanHistory
+from middleware.auth import get_current_user
+from schemas.screening import ScreeningRequest
 from core.graph import TalentIQGraph
+from core.redis_client import get_cached_screening, set_cached_screening, check_rate_limit
+from core.analytics import track
+from datetime import datetime, timezone
+
+router = APIRouter(prefix="/Rating", tags=["CV Screening"])
+
+FREE_SCANS = 3
+TRIAL_DAYS = 7
+SCREENING_TIMEOUT_SECONDS = 45
 
 
-def extract_name_from_text(cv_text: str, filename: str) -> str:
-    """Smart name extraction from CV text, fallback to filename."""
-    if cv_text:
-        lines = [l.strip() for l in cv_text[:400].split('\n') if l.strip()]
-        for line in lines[:6]:
-            if any(x in line.lower() for x in ['@', 'http', 'linkedin', 'github', 'phone', 'tel:', 'email', 'address', 'objective', 'summary']):
-                continue
-            words = line.split()
-            if 2 <= len(words) <= 4 and all(w[0].isupper() if w.isalpha() else True for w in words):
-                if sum(1 for w in words if w.isalpha() and w[0].isupper()) >= 2:
-                    return line
+async def check_screening_access(user: User):
+    """
+    Candidate: 3 free scans, then must pay
+    HR: 7 day trial, then must pay
+    """
+    now = datetime.now(timezone.utc)
 
-    # Fallback: parse filename
-    name = os.path.splitext(filename)[0]
-    name = re.sub(r'[_\-](cv|resume|application|updated|new|final|2024|2025|2026).*', '', name, flags=re.I)
-    name = re.sub(r'[_\-]', ' ', name).strip()
-    words = name.split()
-    if len(words) >= 2:
-        return ' '.join(w.capitalize() for w in words if w.isalpha())
-    return name.title() or filename
+    if user.role == "candidate":
+        if user.subscription_status == "active":
+            return  # paid — allow
+        if (user.scans_used or 0) >= FREE_SCANS:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"FREE_LIMIT_REACHED|You have used all {FREE_SCANS} free scans. Upgrade to Candidate Pro for unlimited screening."
+            )
+    elif user.role == "hr":
+        if user.subscription_status == "active":
+            return
+        if user.subscription_status == "trial" and user.trial_started_at:
+            trial_start = user.trial_started_at
+            if trial_start.tzinfo is None:
+                trial_start = trial_start.replace(tzinfo=timezone.utc)
+            days_elapsed = (now - trial_start).days
+            if days_elapsed < TRIAL_DAYS:
+                return  # still in trial — allow
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="TRIAL_EXPIRED|Your 7-day free trial has ended. Upgrade to HR Suite to continue."
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="TRIAL_EXPIRED|Your trial has ended. Upgrade to HR Suite to continue."
+            )
 
 
-@celery_app.task(bind=True, name="tasks.screening_task.run_bulk_screening")
-def run_bulk_screening(
-    self,
-    job_description: str,
-    top_n: int,
-    pdf_paths: list,
-    candidate_names: list,
-    hr_user_id: int = None,
-    hr_email: str = "",
-    hr_name: str = "HR Manager",
-    job_title: str = "Screening",
-    job_description_raw: str = "",
+@router.post("/screen")
+async def screen_candidate(
+    payload: ScreeningRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    total = len(pdf_paths)
-    results = []
-    agent = TalentIQGraph()
+    print(f"[Screen] User: {current_user.email} | Role: {current_user.role} | Scans: {current_user.scans_used}")
 
-    for i, (pdf_path, raw_name) in enumerate(zip(pdf_paths, candidate_names)):
-        self.update_state(
-            state="PROGRESS",
-            meta={
-                "current": i + 1, "total": total,
-                "current_name": raw_name,
-                "status": f"Screening {raw_name}... ({i+1}/{total})",
-                "results": results,
-            }
+    allowed, wait_seconds = check_rate_limit(f"scan:{current_user.id}", cooldown_seconds=5)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before scanning again.")
+
+    await check_screening_access(current_user)
+
+    if not payload.cv_text or not payload.cv_text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="cv_text is required. Upload a CV first."
         )
 
-        try:
-            loader = PyPDFLoader(pdf_path)
-            documents = loader.load()
-            if not documents:
-                results.append({"filename": raw_name, "candidate_name": raw_name, "ai_score": 0, "error": "Could not extract text."})
-                continue
+    try:
+        # Same CV + same JD scanned before? Skip the Groq LLM call entirely —
+        # it's by far the slowest and most expensive part of a scan.
+        cached = get_cached_screening(payload.cv_text, payload.job_description)
+        if cached:
+            print(f"[Screen] Cache HIT — skipping LLM call for {current_user.email}")
+            final_report = cached
+        else:
+            # Fresh agent scoped to THIS user's uploaded CV/FAISS index — never
+            # shares state with other users' concurrent scans.
+            screening_agent = TalentIQGraph(user_id=current_user.id)
 
-            cv_text = " ".join([d.page_content for d in documents])
-            candidate_name = extract_name_from_text(cv_text, raw_name)
-
-            chunker = TextChunker()
-            chunks = chunker.split_documents(documents)
-
-            vs = VectorStore()
-            faiss_index = vs.create_in_memory(chunks)
-            report = agent.run_screening_with_index(job_description=job_description, faiss_index=faiss_index)
-
-            results.append({
-                "filename": raw_name,
-                "candidate_name": candidate_name,
-                "ai_score": report.get("candidate_score", 0),
-                "matched_skills": report.get("matched_skills", []),
-                "missing_skills": report.get("missing_skills", []),
-                "final_verdict": report.get("final_verdict", "Reviewed"),
-                "deep_analysis": report.get("screening_analysis", ""),
-                "is_shortlisted": report.get("is_shortlisted", False),
-                "trigger_interview": report.get("trigger_interview", False),
-            })
-
-        except Exception as e:
-            print(f"[Task] Error on {raw_name}: {e}")
-            results.append({"filename": raw_name, "candidate_name": raw_name, "ai_score": 0, "error": str(e)})
-
-    ranked = sorted(results, key=lambda r: r.get("ai_score", 0), reverse=True)
-
-    # Save to DB
-    job_id = None
-    if hr_user_id:
-        try:
-            from models.database import session_local
-            from models.job import Job
-            from models.application import Application
-            from datetime import datetime
-
-            db = session_local()
-            job = Job(
-                hr_user_id=hr_user_id,
-                title=job_title or "Untitled Role",
-                description=job_description_raw or job_description,
-            )
-            db.add(job)
-            db.flush()
-            job_id = str(job.id)
-
-            for r in ranked:
-                app = Application(
-                    job_id=job.id,
-                    candidate_id=hr_user_id,
-                    cv_filename=r.get("filename", ""),
-                    ai_score=r.get("ai_score", 0),
-                    matched_skills=json.dumps(r.get("matched_skills", [])),
-                    missing_skills=json.dumps(r.get("missing_skills", [])),
-                    final_verdict=r.get("final_verdict", ""),
-                    deep_analysis=r.get("deep_analysis", ""),
-                    is_shortlisted="yes" if r.get("is_shortlisted") else "no",
-                    trigger_interview="yes" if r.get("trigger_interview") else "no",
-                    screened_at=datetime.utcnow(),
+            try:
+                # run_screening is a blocking call (LLM + retrieval) — run it in
+                # a worker thread with a hard timeout so a slow/hung Groq call
+                # can't hang the request (and the whole event loop) forever.
+                final_report = await asyncio.wait_for(
+                    asyncio.to_thread(screening_agent.run_screening, payload.job_description),
+                    timeout=SCREENING_TIMEOUT_SECONDS,
                 )
-                db.add(app)
+            except asyncio.TimeoutError:
+                raise HTTPException(
+                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                    detail="Screening is taking longer than expected. Please try again."
+                )
+
+            print(f"[Screen DEBUG] final_report keys: {list(final_report.keys()) if final_report else None}")
+            print(f"[Screen DEBUG] screening_analysis length: {len(final_report.get('screening_analysis', '') or '')}")
+
+            if final_report:
+                set_cached_screening(payload.cv_text, payload.job_description, final_report)
+
+        if not final_report:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Graph returned no result."
+            )
+        if current_user.role == "candidate":
+            current_user.scans_used = (current_user.scans_used or 0) + 1
+            db.add(current_user)
             db.commit()
-            db.close()
-            print(f"[Task] Saved job {job_id} with {len(ranked)} applications")
-        except Exception as e:
-            print(f"[Task] DB save failed: {e}")
+            print(f"[Screen] Updated scans_used for {current_user.email}: {current_user.scans_used}")
 
-    # Send email notification
-    if hr_email:
+        scans_remaining = None
+        if current_user.role == "candidate" and current_user.subscription_status != "active":
+            scans_remaining = max(0, FREE_SCANS - (current_user.scans_used or 0))
+
+        metrics = {
+            "candidate_score": final_report.get("candidate_score", 0),
+            "matched_skills": final_report.get("matched_skills", []),
+            "missing_skills": final_report.get("missing_skills", []),
+            "final_verdict": final_report.get("final_verdict", "Rejected"),
+        }
+        flags = {
+            "is_shortlisted": final_report.get("is_shortlisted", False),
+            "has_min_experience": final_report.get("has_min_experience",
+                                   final_report.get("has_minimum_qualifications", False)),
+            "trigger_interview": final_report.get("trigger_interview", False),
+        }
+        deep_analysis = final_report.get("screening_analysis", "")
+
+        # --- Persist this scan to history (so /scans/history can show it later) ---
         try:
-            from routes.bulk import send_screening_complete_email
-            send_screening_complete_email(hr_email, hr_name, job_title, total, ranked[:5])
-        except Exception as e:
-            print(f"[Task] Email failed: {e}")
+            jd = (payload.job_description or "").strip()
+            import re
+            title_match = re.search(r"Job\s*Title:\s*(.+)", jd, re.IGNORECASE)
+            role_title = (title_match.group(1).strip() if title_match else jd.split("\n")[0].strip())[:150]
+            history_entry = ScanHistory(
+                user_id=current_user.id,
+                role_title=role_title or "Untitled Role",
+                candidate_score=metrics["candidate_score"],
+                final_verdict=metrics["final_verdict"],
+                matched_skills=metrics["matched_skills"],
+                missing_skills=metrics["missing_skills"],
+                is_shortlisted=str(flags["is_shortlisted"]),
+                trigger_interview=str(flags["trigger_interview"]),
+                deep_analysis=deep_analysis,
+            )
+            db.add(history_entry)
+            db.commit()
+        except Exception as hist_err:
+            # Never let history logging break the actual screening response
+            print(f"[Screen WARNING] Failed to save scan history: {str(hist_err)}")
+            db.rollback()
 
-    if hr_user_id:
-        try:
-            from core.analytics import track
-            track(hr_user_id, "bulk_screening_completed", {
-                "total_cvs": total,
-                "job_id": job_id,
-                "shortlisted": sum(1 for r in ranked if r.get("is_shortlisted")),
-            })
-        except Exception as e:
-            print(f"[Task] Analytics tracking failed: {e}")
+        track(current_user.id, "scan_completed", {
+            "role": current_user.role,
+            "score": metrics["candidate_score"],
+            "verdict": metrics["final_verdict"],
+            "cache_hit": bool(cached),
+        })
 
-    return {
-        "status": "done",
-        "total_cvs_processed": total,
-        "job_id": job_id,
-        "top_candidates": ranked[:top_n],
-        "all_results": ranked,
-    }
+        return {
+            "status": "success",
+            "metrics": metrics,
+            "flags": flags,
+            "deep_analysis": deep_analysis,
+            "scans_remaining": scans_remaining,  # frontend shows warning
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[Screen ERROR] {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Screening failed: {str(e)}")
