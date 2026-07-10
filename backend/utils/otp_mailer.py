@@ -18,6 +18,45 @@ def generate_otp(length: int = OTP_LENGTH) -> str:
     return ''.join(random.choices("0123456789", k=length))
 
 
+def send_invite_email(to_email: str, org_name: str, inviter_name: str, invite_link: str):
+    if not MAIL_PASSWORD or MAIL_PASSWORD == "your_gmail_app_password_here":
+        print(f"[OTP Mailer] Email not configured. Invite link for {to_email}: {invite_link}")
+        return
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"You've been invited to join {org_name} on TalentIQ"
+    msg["From"] = MAIL_FROM
+    msg["To"] = to_email
+
+    html = f"""
+    <html>
+    <head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="margin:0;padding:0;background:#0a0a08;">
+    <div style="font-family:sans-serif;max-width:480px;width:100%;margin:0 auto;
+                padding:32px 20px;background:#0a0a08;color:#fff;border-radius:12px;
+                box-sizing:border-box;">
+      <div style="font-size:22px;font-weight:700;margin-bottom:8px;">TalentIQ</div>
+      <p style="color:rgba(255,255,255,.6);font-size:14px;">
+        <strong>{inviter_name}</strong> invited you to join <strong>{org_name}</strong>'s hiring team on TalentIQ.
+      </p>
+      <div style="text-align:center;margin:24px 0;">
+        <a href="{invite_link}" style="background:#e2b04a;color:#0a0a08;padding:12px 28px;border-radius:8px;
+           text-decoration:none;font-weight:700;font-size:14px;display:inline-block;">Accept Invite</a>
+      </div>
+      <p style="color:rgba(255,255,255,.4);font-size:12px;">This invite link expires in 7 days.</p>
+      <p style="color:rgba(255,255,255,.2);font-size:11px;margin-top:24px;">If you weren't expecting this, you can ignore this email.</p>
+    </div>
+    </body>
+    </html>
+    """
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
+        server.starttls()
+        server.login(MAIL_USERNAME, MAIL_PASSWORD)
+        server.sendmail(MAIL_FROM, to_email, msg.as_string())
+
+
 def send_otp_email(to_email: str, otp: str, user_name: str, purpose: str = "reset"):
     """
     purpose: "reset" (password reset code) or "verify" (signup email verification)
