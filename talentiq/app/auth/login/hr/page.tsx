@@ -1,7 +1,7 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
 
 function FontImports() {
@@ -18,8 +18,12 @@ const CANDIDATES = [
   { initials: 'SC', name: 'Sara Chen', role: 'Backend Engineer · 5 yrs', score: 79 },
 ]
 
-export default function HRLogin() {
+function HRLoginInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const [inviteToken, setInviteToken] = useState<string | null>(null)
+  const [inviteOrgName, setInviteOrgName] = useState('')
+  const [inviteError, setInviteError] = useState('')
   const [tab, setTab] = useState<'login' | 'signup'>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -159,11 +163,30 @@ export default function HRLogin() {
     }
   }
 
+  useEffect(() => {
+    const token = searchParams?.get('invite')
+    if (!token) return
+    setInviteToken(token)
+    setTab('signup')
+    api.checkInvite(token)
+      .then((data: any) => {
+        setInviteOrgName(data.org_name)
+        setEmail(data.email)
+      })
+      .catch((e: any) => setInviteError(e.message || 'This invite link is invalid or has expired.'))
+  }, [searchParams])
+
   const handleSignup = async () => {
     setError('')
     setLoading(true)
     try {
-      await api.signupHR({ name: `${firstName} ${lastName}`.trim(), email, password, company })
+      await api.signupHR({
+        name: `${firstName} ${lastName}`.trim(),
+        email,
+        password,
+        company: inviteToken ? inviteOrgName : company,
+        invite_token: inviteToken || undefined,
+      })
       setPendingEmail(email)
       setSignupStep('verify')
       setVerifyOtp(['', '', '', '', ''])
@@ -432,6 +455,17 @@ export default function HRLogin() {
                 14 days, full access. No card required.
               </p>
 
+              {inviteToken && inviteOrgName && (
+                <div style={{ background: '#eef5f0', border: '1px solid #cfe3d6', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 13, color: '#2d5a47' }}>
+                  You're joining <strong>{inviteOrgName}</strong>'s team on TalentIQ.
+                </div>
+              )}
+              {inviteError && (
+                <div style={{ background: '#fdeeee', border: '1px solid #f0caca', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 13, color: '#b91c1c' }}>
+                  {inviteError}
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 22 }}>
                 <LightField label="First name" type="text" value={firstName} onChange={setFirstName} placeholder="Ahmed"
                   focused={focused === 'first'} onFocus={() => setFocused('first')} onBlur={() => setFocused(null)} bare />
@@ -440,17 +474,24 @@ export default function HRLogin() {
               </div>
               <LightField label="Work email" type="email" value={email} onChange={setEmail} placeholder="you@company.com"
                 focused={focused === 'email'} onFocus={() => setFocused('email')} onBlur={() => setFocused(null)} />
-              <LightField label="Company" type="text" value={company} onChange={setCompany} placeholder="Your company"
-                focused={focused === 'company'} onFocus={() => setFocused('company')} onBlur={() => setFocused(null)} />
+              {!inviteToken && (
+                <LightField label="Company" type="text" value={company} onChange={setCompany} placeholder="Your company"
+                  focused={focused === 'company'} onFocus={() => setFocused('company')} onBlur={() => setFocused(null)} />
+              )}
               <LightField label="Password" type="password" value={password} onChange={setPassword} placeholder="Create a password"
                 focused={focused === 'password'} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} />
 
               <button onClick={handleSignup} disabled={loading} style={primaryBtnGreen}>
-                {loading ? 'Creating account…' : 'Start free trial'}
+                {loading ? 'Creating account…' : inviteToken ? 'Join workspace' : 'Start free trial'}
               </button>
 
-              <p style={{ textAlign: 'center', fontSize: 12, color: '#a3a092', marginTop: 18, fontWeight: 300 }}>
-                $49/month after trial · Cancel anytime
+              {!inviteToken && (
+                <p style={{ textAlign: 'center', fontSize: 12, color: '#a3a092', marginTop: 18, fontWeight: 300 }}>
+                  $49/month after trial · Cancel anytime
+                </p>
+              )}
+              <p style={{ textAlign: 'center', fontSize: 11.5, color: '#a3a092', marginTop: 6, fontWeight: 300 }}>
+                By continuing you agree to our <a href="/terms" style={{ color: '#2d5a47' }}>Terms</a> and <a href="/privacy" style={{ color: '#2d5a47' }}>Privacy Policy</a>
               </p>
             </div>
           )}
@@ -533,5 +574,13 @@ function GoogleIcon() {
       <path d="M3.94 9.89A4.8 4.8 0 013.69 8.5c0-.48.08-.94.25-1.39V4.98H1.2A8 8 0 000 8.5c0 1.29.3 2.5.84 3.52l3.1-2.13z" fill="#FBBC04" />
       <path d="M8.5 3.75c1.2 0 2.27.41 3.12 1.22l2.34-2.34A8 8 0 001.2 4.98l3.1 2.13C4.57 5.18 6.37 3.75 8.5 3.75z" fill="#EA4335" />
     </svg>
+  )
+}
+
+export default function HRLogin() {
+  return (
+    <Suspense fallback={null}>
+      <HRLoginInner />
+    </Suspense>
   )
 }
