@@ -22,6 +22,66 @@ export default function CandidateSettings() {
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteError, setDeleteError] = useState('')
 
+  // Team Workspace
+  const [org, setOrg] = useState<any>(null)
+  const [members, setMembers] = useState<any[]>([])
+  const [orgLoading, setOrgLoading] = useState(true)
+  const [newOrgName, setNewOrgName] = useState('')
+  const [creatingOrg, setCreatingOrg] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviting, setInviting] = useState(false)
+  const [orgMsg, setOrgMsg] = useState('')
+  const [orgError, setOrgError] = useState('')
+
+  const loadOrg = () => {
+    setOrgLoading(true)
+    api.getMyOrg().then((data: any) => {
+      setOrg(data.organization)
+      setMembers(data.members || [])
+    }).catch(() => {}).finally(() => setOrgLoading(false))
+  }
+
+  useEffect(() => { loadOrg() }, [])
+
+  const handleCreateOrg = async () => {
+    if (!newOrgName.trim()) return
+    setCreatingOrg(true)
+    setOrgError('')
+    try {
+      await api.createOrg(newOrgName.trim())
+      loadOrg()
+    } catch (e: any) {
+      setOrgError(e.message || 'Could not create workspace.')
+    } finally {
+      setCreatingOrg(false)
+    }
+  }
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) return
+    setInviting(true)
+    setOrgMsg('')
+    setOrgError('')
+    try {
+      const res: any = await api.inviteTeammate(inviteEmail.trim())
+      setOrgMsg(res.message)
+      setInviteEmail('')
+    } catch (e: any) {
+      setOrgError(e.message || 'Could not send invite.')
+    } finally {
+      setInviting(false)
+    }
+  }
+
+  const handleRemoveMember = async (memberId: number) => {
+    try {
+      await api.removeMember(memberId)
+      loadOrg()
+    } catch (e: any) {
+      setOrgError(e.message || 'Could not remove teammate.')
+    }
+  }
+
   useEffect(() => {
     api.me().then((u: any) => {
       setName(u?.name || u?.full_name || '')
@@ -156,6 +216,74 @@ export default function CandidateSettings() {
             </button>
             {pwMsg && <span style={{ fontSize: 12, color: '#13c28e' }}>{pwMsg}</span>}
           </div>
+        </div>
+
+        {/* Team Workspace Section */}
+        <div className="fade-up" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Team Workspace</div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginBottom: 18 }}>Invite up to 5 teammates to share jobs and screening results.</div>
+
+          {orgLoading ? (
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,.3)' }}>Loading…</div>
+          ) : !org ? (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <input
+                value={newOrgName}
+                onChange={e => setNewOrgName(e.target.value)}
+                placeholder="Workspace name (e.g. your company)"
+                style={{ ...inputStyle, flex: '1 1 220px', marginBottom: 0 }}
+              />
+              <button onClick={handleCreateOrg} disabled={creatingOrg} style={{ background: '#e2b04a', color: '#0a0a09', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif', whiteSpace: 'nowrap' }}>
+                {creatingOrg ? 'Creating…' : 'Create Workspace'}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{org.name}</div>
+              <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.3)', marginBottom: 14 }}>{org.seats_used} / {org.max_seats} seats used</div>
+
+              {members.map(m => (
+                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: '1px solid rgba(255,255,255,.06)' }}>
+                  <div>
+                    <span style={{ fontSize: 13 }}>{m.name}</span>
+                    <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,.3)', marginLeft: 8 }}>{m.email}</span>
+                    {m.is_owner && <span style={{ fontSize: 10, color: '#e2b04a', marginLeft: 8, fontWeight: 700 }}>OWNER</span>}
+                  </div>
+                  {org.is_owner && !m.is_owner && (
+                    <button onClick={() => handleRemoveMember(m.id)} style={{ fontSize: 11.5, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>Remove</button>
+                  )}
+                </div>
+              ))}
+
+              {org.is_owner && org.seats_used < org.max_seats && (
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
+                  <input
+                    value={inviteEmail}
+                    onChange={e => setInviteEmail(e.target.value)}
+                    placeholder="teammate@company.com"
+                    style={{ ...inputStyle, flex: '1 1 220px', marginBottom: 0 }}
+                  />
+                  <button onClick={handleInvite} disabled={inviting} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.15)', color: 'rgba(255,255,255,.85)', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Syne, sans-serif', whiteSpace: 'nowrap' }}>
+                    {inviting ? 'Sending…' : 'Send Invite'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {orgMsg && <div style={{ fontSize: 12, color: '#13c28e', marginTop: 12 }}>{orgMsg}</div>}
+          {orgError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{orgError}</div>}
+        </div>
+
+        {/* Data Export Section */}
+        <div className="fade-up" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Download My Data</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Get a copy of everything TalentIQ stores about your account — jobs posted, chats, and profile info.</div>
+          </div>
+          <button onClick={async () => { try { await api.exportMyData() } catch {} }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.15)', color: 'rgba(255,255,255,.8)', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Syne, sans-serif', whiteSpace: 'nowrap' }}>
+            Download JSON
+          </button>
         </div>
 
         {/* Session Section */}
