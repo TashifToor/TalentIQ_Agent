@@ -10,10 +10,10 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from utils.email_utils import normalize_email
 from utils.otp_mailer import generate_otp, send_otp_email, OTP_EXPIRY_MINUTES
-from core.redis_client import check_rate_limit, record_failed_login, is_login_locked, clear_failed_logins
+from core.redis_client import check_rate_limit, record_failed_login, is_login_locked, clear_failed_logins, get_invite_token, delete_invite_token
 from core.analytics import track, identify
 
-FREE_SCANS = 3 
+FREE_SCANS = 3
 TRIAL_DAYS = 7
 
 
@@ -103,6 +103,17 @@ async def signup(body: RegisterRequest, db: Session = Depends(get_db)):
     if body.role not in ["candidate", "hr"]:
         raise HTTPException(status_code=400, detail="Role must be 'candidate' or 'hr'")
 
+    # Team Workspace invite acceptance — validate the token matches this exact
+    # email before silently joining someone to an org they weren't invited to.
+    org_id_to_join = None
+    if body.invite_token:
+        invite_data = get_invite_token(body.invite_token)
+        if not invite_data:
+            raise HTTPException(status_code=400, detail="This invite link is invalid or has expired.")
+        if invite_data["email"] != clean_email:
+            raise HTTPException(status_code=400, detail=f"This invite was sent to {invite_data['email']}. Please sign up with that email address.")
+        org_id_to_join = invite_data["org_id"]
+
     otp = generate_otp()
     user = User(
         name=body.name,
@@ -113,10 +124,15 @@ async def signup(body: RegisterRequest, db: Session = Depends(get_db)):
         is_active=False,  # not verified yet
         reset_otp_hash=pwd_context.hash(otp),
         reset_otp_expires_at=datetime.utcnow() + timedelta(minutes=OTP_EXPIRY_MINUTES),
+        organization_id=org_id_to_join,
+        is_org_owner=False,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    if body.invite_token:
+        delete_invite_token(body.invite_token)
 
     try:
         send_otp_email(user.email, otp, user.name or "there", purpose="verify")
@@ -278,6 +294,76 @@ async def change_password(
     db.add(current_user)
     db.commit()
     return {"status": "success", "message": "Password updated successfully."}
+
+
+@router.get("/export-data")
+async def export_my_data(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    GDPR-style 'right to access' — returns everything TalentIQ stores about
+    this user as a single JSON payload they can download.
+    """
+    from models.scan_history import ScanHistory
+    from models.chat import Chat
+    from models.application import Application
+    from models.job import Job
+
+    data = {
+        "exported_at": datetime.utcnow().isoformat(),
+        "account": {
+            "id": current_user.id,
+            "name": current_user.name,
+            "email": current_user.email,
+            "role": current_user.role,
+            "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+            "subscription_status": current_user.subscription_status,
+        },
+        "scan_history": [],
+        "chat_messages": [],
+    }
+
+    scans = db.query(ScanHistory).filter(ScanHistory.user_id == current_user.id).all()
+    data["scan_history"] = [
+        {
+            "id": s.id,
+            "role_title": s.role_title,
+            "candidate_score": s.candidate_score,
+            "final_verdict": s.final_verdict,
+            "matched_skills": s.matched_skills,
+            "missing_skills": s.missing_skills,
+            "is_shortlisted": s.is_shortlisted,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        }
+        for s in scans
+    ]
+
+    chats = db.query(Chat).filter(Chat.user_id == current_user.id).all()
+    data["chat_messages"] = [
+        {"query": c.query, "answer": c.answer, "created_at": c.created_at.isoformat() if c.created_at else None}
+        for c in chats
+    ]
+
+    if current_user.role == "candidate":
+        applications = db.query(Application).filter(Application.candidate_id == current_user.id).all()
+        data["applications"] = [
+            {
+                "job_id": str(a.job_id),
+                "final_verdict": a.final_verdict,
+                "is_shortlisted": a.is_shortlisted,
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+            }
+            for a in applications
+        ]
+    elif current_user.role == "hr":
+        jobs = db.query(Job).filter(Job.hr_user_id == current_user.id).all()
+        data["jobs_posted"] = [
+            {"id": str(j.id), "title": j.title, "company": j.company, "created_at": j.created_at.isoformat() if j.created_at else None}
+            for j in jobs
+        ]
+
+    return data
 
 
 @router.delete("/me")
