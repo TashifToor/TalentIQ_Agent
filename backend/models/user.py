@@ -1,5 +1,6 @@
 from sqlalchemy.orm import relationship
-from sqlalchemy import Integer,String,Column,Boolean,DateTime
+from sqlalchemy import Integer,String,Column,Boolean,DateTime,ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from models.database import Base
 from datetime import datetime
 
@@ -38,5 +39,13 @@ class User(Base):
     # Forgot-password OTP flow
     reset_otp_hash = Column(String, nullable=True)
     reset_otp_expires_at = Column(DateTime, nullable=True)
+
+    # CV Builder — separate free-tier counter from scans_used (scanning vs building are different features)
+    cv_builds_used = Column(Integer, default=0)
+
+    # Team Workspace (HR only) — nullable so solo HR users are unaffected.
+    # is_org_owner distinguishes the billing-holder/inviter from invited teammates.
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True)
+    is_org_owner = Column(Boolean, default=False)
 
     chats = relationship("Chat", back_populates="user")
