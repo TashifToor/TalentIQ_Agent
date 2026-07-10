@@ -8,6 +8,7 @@ class RegisterRequest(BaseModel):
     password: str
     role:     str = "candidate"  # "candidate" | "hr"
     company:  Optional[str] = None  # HR only
+    invite_token: Optional[str] = None  # Team Workspace invite acceptance
 
     @field_validator("role")
     @classmethod
@@ -39,6 +40,6 @@ class UserResponse(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type:   str
-    role:         str
+    role:         str 
 
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = {"arbitrary_types_allowed": True}  
