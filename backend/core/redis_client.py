@@ -163,4 +163,4 @@ def set_cached_screening(cv_text: str, job_description: str, result: dict, ttl_s
         key = _screening_cache_key(cv_text, job_description)
         redis_client.set(key, json.dumps(result), ex=ttl_seconds)
     except redis.exceptions.RedisError:
-        pass
+        pass 
