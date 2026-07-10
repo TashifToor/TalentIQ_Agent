@@ -78,7 +78,7 @@ export const api = {
 
   signupHR: (data: object) =>
     apiFetch("/auth/signup", {
-       method: "POST",
+      method: "POST",
       body: JSON.stringify({ ...data, role: "hr" }),
     }),
 
