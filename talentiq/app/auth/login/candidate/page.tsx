@@ -523,7 +523,7 @@ export default function CandidateLogin() {
               </button>
 
               <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(245,242,235,.3)', marginTop: 20, fontWeight: 300 }}>
-                By continuing you agree to our <a href="#" style={{ color: '#d4af6d' }}>Terms</a> and <a href="#" style={{ color: '#d4af6d' }}>Privacy Policy</a>
+                By continuing you agree to our <a href="/terms" style={{ color: '#d4af6d' }}>Terms</a> and <a href="/privacy" style={{ color: '#d4af6d' }}>Privacy Policy</a>
               </p>
             </div>
           )}
