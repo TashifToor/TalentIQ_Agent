@@ -96,7 +96,7 @@ function HRLoginInner() {
   const [verifyMsg, setVerifyMsg] = useState('')
   const [verifyLoading, setVerifyLoading] = useState(false)
   const verifyRefs = useRef<(HTMLInputElement | null)[]>([])
-
+ 
   const handleVerifyOtpChange = (i: number, v: string) => {
     if (v && !/^[0-9]$/.test(v)) return
     const next = [...verifyOtp]
