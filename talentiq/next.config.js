@@ -15,4 +15,4 @@ module.exports = withSentryConfig(nextConfig, {
   widenClientFileUpload: true,
   hideSourceMaps: true,
   disableLogger: true,
-})
+}) 
