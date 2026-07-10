@@ -18,6 +18,7 @@ from models.chat import Chat
 from models.job import Job
 from models.application import Application
 from models.scan_history import ScanHistory
+from models.organization import Organization
 
 config = context.config
 
