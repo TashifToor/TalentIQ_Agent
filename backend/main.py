@@ -17,13 +17,16 @@ from routes.policy_docs_route import router as policy_docs_router
 from routes.scan import router as scan_router
 from routes.cv_builder import router as cv_builder_router
 from routes.organization import router as org_router
-from fastapi import APIRouter, Depends, HTTPException, status
+
 from models.user import User  
 from models.chat import Chat
 from models.job import Job
 from models.application import Application
 from models.database import Base, engine
 
+# Error monitoring — only activates if SENTRY_DSN is set in .env, so local
+# dev without a Sentry project configured just runs normally (no crash,
+# no noise). Get a free DSN at https://sentry.io (Python/FastAPI project).
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 if SENTRY_DSN:
     sentry_sdk.init(
@@ -42,12 +45,14 @@ app = FastAPI(title="TalentIQ Backend", version="2.0.0")
 
 @app.on_event("startup")
 def create_tables():
-    # Schema is now managed by Alembic (see alembic/ directory) — run
-    # `alembic upgrade head` to apply migrations instead of relying on
-    # create_all(), which can't handle column changes/renames and was
-    # causing manual ALTER TABLE drift in dev. Left as a safety net only.
-    Base.metadata.create_all(bind=engine)
-    print("[DB] Tables verified (schema managed by Alembic — run 'alembic upgrade head' for migrations)")
+    # Schema is fully managed by Alembic now (see alembic/ directory).
+    # create_all() used to run here as a "safety net", but it actively
+    # caused a migration conflict: it silently created new tables (like
+    # `organizations`) outside Alembic's tracking before a real migration
+    # could, leaving columns on existing tables missing and Alembic
+    # confused about what state the DB was actually in. Run
+    # `alembic upgrade head` to apply schema changes instead.
+    print("[DB] Startup — schema is managed by Alembic. Run 'alembic upgrade head' to apply migrations.")
 
 
 from fastapi.middleware.cors import CORSMiddleware
