@@ -41,3 +41,4 @@ fastapi-mail==1.4.1
 sentry-sdk[fastapi]==2.19.0
 alembic==1.14.0
 posthog==3.7.4
+reportlab==4.2.5
