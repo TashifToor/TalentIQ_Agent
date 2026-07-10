@@ -407,4 +407,4 @@ async def delete_account(
     track(user_id, "account_deleted", {"role": role})
 
     print(f"[Account] Deleted account and all associated data for user_id={user_id} ({role})")
-    return {"status": "success", "message": "Your account and all associated data have been permanently deleted."}
+    return {"status": "success", "message": "Your account and all associated data have been permanently deleted."} 
