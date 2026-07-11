@@ -3,7 +3,9 @@ from core.llm import llm
 from schemas.cv_builder import CVData
 
 
-EXTRACTION_PROMPT_TEMPLATE = """You are a CV parsing engine. Extract structured information from the raw CV text below into EXACT JSON matching this schema. If a field isn't present in the CV, use an empty string "" or empty list [] — never invent information that isn't there.
+EXTRACTION_PROMPT_TEMPLATE = """You are a CV parsing engine. Extract structured information from the raw CV text below into EXACT JSON matching this schema.
+
+HARD RULE: Only extract what is ACTUALLY present in the text below. If a field isn't present, use an empty string "" or empty list [] — never invent, guess, or add a placeholder/example entry (e.g. do NOT add a generic "Role — Company" experience entry if the CV only lists one job). Every experience/education/project entry in your output must correspond to a real entry you can point to in the source text.
 
 Respond ONLY with valid JSON. No markdown, no explanation, no backticks.
 
@@ -46,4 +48,4 @@ def extract_cv_data(cv_text: str) -> CVData:
         print(f"[CVExtractor] JSON parse failed: {e} | raw: {clean[:300]}")
         parsed = {}
 
-    return CVData(**parsed)
+    return CVData(**parsed) 
