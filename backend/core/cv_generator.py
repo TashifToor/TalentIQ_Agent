@@ -3,44 +3,93 @@ from core.llm import llm
 from schemas.cv_builder import CVData
 
 
-OPTIMIZE_PROMPT_TEMPLATE = """You are an ATS resume optimization engine. Rewrite the CV content below so it is better aligned with the target job description — improved phrasing, action verbs, and keyword alignment WHERE TRUTHFULLY APPLICABLE.
+OPTIMIZE_PROMPT_TEMPLATE = """You are an ATS resume optimization engine. You will rewrite ONLY the wording of the CV content below to better align with the target job description — improved phrasing, action verbs, and keyword alignment WHERE TRUTHFULLY APPLICABLE.
 
-HARD RULE — INTEGRITY: You may only rephrase, reorder, and emphasize what already exists in the CV data. You must NEVER:
-- invent new skills, tools, employers, titles, dates, or years of experience
+HARD RULE — INTEGRITY: You may only rephrase what already exists. You must NEVER:
+- invent new employers, job titles, skills, or projects
 - exaggerate scope (e.g. turning "helped with" into "led")
 - add quantified metrics that aren't present or reasonably implied by the original text
-If the CV genuinely lacks something the JD wants, leave it out — do not fabricate it to look like a match. This tool helps people present real experience well; it does not help them lie.
+If the CV genuinely lacks something the JD wants, leave it out.
 
-Return the SAME JSON structure as the input, with these fields improved:
-- "summary": rewritten to speak directly to what this JD wants, using only real information from the CV
-- "skills": same underlying skills, reordered to put JD-relevant ones first (do not add skills not in the original list)
-- "experience[].bullets": rephrased with stronger action verbs and clearer impact — same underlying facts, better wording
+You are given a numbered list of the candidate's ACTUAL experience entries below. You must return EXACTLY the same number of entries, in the same order, rewriting ONLY the bullet text for each — do not add, remove, merge, or reorder entries, and do not invent an entry that isn't in the input list.
 
-Respond ONLY with valid JSON matching the exact schema of the input. No markdown, no explanation, no backticks.
+Respond ONLY with valid JSON in this EXACT shape. No markdown, no explanation, no backticks.
+
+{{
+    "summary": "<rewritten 2-3 sentence summary, based only on real information below>",
+    "skills_reordered": ["<same skills as input, just reordered so JD-relevant ones come first — do not add or remove any>"],
+    "experience_bullets": [
+        ["<rewritten bullet 1 for experience entry 0>", "<rewritten bullet 2>"],
+        ["<rewritten bullets for experience entry 1>"]
+    ]
+}}
 
 <job_description>
 {job_description}
 </job_description>
 
-<current_cv_json>
-{cv_json}
-</current_cv_json>"""
+<candidate_summary>
+{summary}
+</candidate_summary>
+
+<candidate_skills>
+{skills}
+</candidate_skills>
+
+<candidate_experience_entries_numbered>
+{experience_entries}
+</candidate_experience_entries_numbered>"""
 
 
 def optimize_cv_for_jd(cv_data: CVData, job_description: str) -> CVData:
+    experience_entries_text = "\n\n".join(
+        f"[{i}] {exp.title} at {exp.company}\nBullets:\n" + "\n".join(f"- {b}" for b in exp.bullets)
+        for i, exp in enumerate(cv_data.experience)
+    ) or "(no experience entries)"
+
     prompt = OPTIMIZE_PROMPT_TEMPLATE.format(
         job_description=job_description[:4000],
-        cv_json=cv_data.model_dump_json(),
+        summary=cv_data.summary or "(none provided)",
+        skills=", ".join(cv_data.skills) or "(none provided)",
+        experience_entries=experience_entries_text,
     )
-    response = llm.invoke(prompt)
-
-    clean = response.content.strip()
-    if clean.startswith("```"):
-        clean = clean.replace("```json", "").replace("```", "").strip()
 
     try:
-        parsed = json.loads(clean)
-        return CVData(**parsed)
-    except (json.JSONDecodeError, Exception) as e:
-        print(f"[CVGenerator] Optimization failed, returning original CV: {e}")
+        response = llm.invoke(prompt)
+        clean = response.content.strip()
+        if clean.startswith("```"):
+            clean = clean.replace("```json", "").replace("```", "").strip()
+        result = json.loads(clean)
+    except Exception as e:
+        print(f"[CVGenerator] Optimization failed, returning original CV unchanged: {e}")
         return cv_data
+
+    # Rebuild CVData programmatically — this is what actually prevents
+    # hallucination, not the prompt wording alone. The LLM's output is only
+    # ever used to fill in text fields on the EXACT structure we already
+    # had; it can never add, remove, or rename an experience entry, and it
+    # can never introduce a skill that wasn't already in the original list.
+    new_cv = cv_data.model_copy(deep=True)
+
+    if isinstance(result.get("summary"), str) and result["summary"].strip():
+        new_cv.summary = result["summary"].strip()
+
+    reordered = result.get("skills_reordered")
+    if isinstance(reordered, list):
+        original_set = set(cv_data.skills)
+        # Only accept the reordering if it's the same set of skills — any
+        # skill the model added or dropped gets silently discarded here.
+        safe_reordered = [s for s in reordered if s in original_set]
+        safe_reordered += [s for s in cv_data.skills if s not in safe_reordered]
+        if safe_reordered:
+            new_cv.skills = safe_reordered
+
+    bullets_by_entry = result.get("experience_bullets")
+    if isinstance(bullets_by_entry, list) and len(bullets_by_entry) == len(new_cv.experience):
+        for i, bullets in enumerate(bullets_by_entry):
+            if isinstance(bullets, list) and all(isinstance(b, str) for b in bullets) and bullets:
+                new_cv.experience[i].bullets = bullets
+            # if the model returned something malformed for this entry, the
+            # original bullets for that entry are left untouched
+
+    return new_cv
