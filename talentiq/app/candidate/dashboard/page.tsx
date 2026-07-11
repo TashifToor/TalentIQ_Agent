@@ -112,9 +112,11 @@ export default function CandidateDashboard() {
       if (typeof data.scans_remaining === 'number') setScansLeft(data.scans_remaining)
       else setScansLeft(s => Math.max(0, s - 1))
       const score = data?.metrics?.candidate_score ?? 0
+      const aiTitle = (data?.metrics?.job_title || '').trim()
+      const fallbackTitle = (jd.match(/Job Title:\s*(.+)/i)?.[1] || jd.split('\n')[0])?.trim()
       setHistory(h => [{
         score,
-        role: (jd.match(/Job Title:\s*(.+)/i)?.[1] || jd.split('\n')[0])?.trim().slice(0, 60) || 'Untitled Role',
+        role: (aiTitle || fallbackTitle || 'Untitled Role').slice(0, 60),
         skills: (data?.metrics?.matched_skills || []).slice(0, 3).join(', '),
         date: 'Just now',
         color: score >= 80 ? '#13c28e' : score >= 50 ? '#e2b04a' : '#ef4444',
