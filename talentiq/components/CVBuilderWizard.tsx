@@ -189,7 +189,7 @@ export default function CVBuilderWizard() {
             value={cv.summary} onChange={e => updateField('summary', e.target.value)} />
 
           <label style={labelStyle}>Skills (comma-separated)</label>
-          <input style={inputStyle} value={cv.skills.join(', ')}
+          <input style={inputStyle} value={cv.skills.join(', ')} autoComplete="off" autoCorrect="off" spellCheck={false}
             onChange={e => updateField('skills', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
 
           {/* Experience */}
@@ -221,6 +221,25 @@ export default function CVBuilderWizard() {
                 <button onClick={() => updateField('experience', cv.experience.filter((_, idx) => idx !== i))}
                   style={{ fontSize: 11, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>remove role</button>
               </div>
+            </div>
+          ))}
+
+          {/* Projects */}
+          <div style={{ marginTop: 20, marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>Projects</span>
+            <button onClick={() => updateField('projects', [...cv.projects, emptyProject()])}
+              style={{ fontSize: 11.5, color: gold, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>+ Add project</button>
+          </div>
+          {cv.projects.map((proj, i) => (
+            <div key={i} style={{ background: panel, border: `1px solid ${border}`, borderRadius: 10, padding: 12, marginBottom: 10 }}>
+              <input style={inputStyle} placeholder="Project name" value={proj.name}
+                onChange={e => { const next = [...cv.projects]; next[i] = { ...proj, name: e.target.value }; updateField('projects', next) }} />
+              <input style={inputStyle} placeholder="Tech stack (e.g. FastAPI, React, PostgreSQL)" value={proj.tech_stack}
+                onChange={e => { const next = [...cv.projects]; next[i] = { ...proj, tech_stack: e.target.value }; updateField('projects', next) }} />
+              <textarea style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }} placeholder="What did it do, what did you build/achieve?" value={proj.description}
+                onChange={e => { const next = [...cv.projects]; next[i] = { ...proj, description: e.target.value }; updateField('projects', next) }} />
+              <button onClick={() => updateField('projects', cv.projects.filter((_, idx) => idx !== i))}
+                style={{ fontSize: 11, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>remove</button>
             </div>
           ))}
 
