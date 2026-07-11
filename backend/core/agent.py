@@ -103,6 +103,7 @@ Strong skills, impressive side-projects, or good communication CANNOT override t
 Respond ONLY with valid JSON. No markdown, no explanation, no backticks.
 
 {{
+    "job_title": "<the actual job title/role name for this position, extracted from the JD — e.g. 'Senior Backend Engineer'. Ignore boilerplate lines like 'Apply At', company taglines, or headers — find the real title even if it's not the first line.>",
     "candidate_score": <integer 0-100, NOT a multiple of 10>,
     "matched_skills": ["skill1", "skill2"],
     "missing_skills": ["skill1", "skill2"],
@@ -157,6 +158,6 @@ Respond ONLY with valid JSON. No markdown, no explanation, no backticks.
             "missing_skills": metrics.get("missing_skills", []),
             "final_verdict": metrics.get("final_verdict", "Rejected"),
             "is_shortlisted": metrics.get("is_shortlisted", False),
-            "has_min_experience": metrics.get("has_min_experience", False),
+            "has_min_experience": metrics.get("has_min_experience", False), 
             "trigger_interview": metrics.get("trigger_interview", False),
-        } 
+        }
