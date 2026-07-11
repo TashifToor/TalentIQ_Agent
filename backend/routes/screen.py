@@ -19,10 +19,10 @@ TRIAL_DAYS = 7
 SCREENING_TIMEOUT_SECONDS = 45
 
 
-async def check_screening_access(user: User, db: Session):
+async def check_screening_access(user: User):
     """
     Candidate: 3 free scans, then must pay
-    HR: 7 day trial, then must pay (or covered by their Team Workspace owner's paid plan)
+    HR: 7 day trial, then must pay
     """
     now = datetime.now(timezone.utc)
 
@@ -37,17 +37,6 @@ async def check_screening_access(user: User, db: Session):
     elif user.role == "hr":
         if user.subscription_status == "active":
             return
-
-        # Part of a Team Workspace and not the owner? Check if the workspace
-        # owner has a paid plan — teammates ride on the owner's subscription.
-        if user.organization_id and not user.is_org_owner:
-            from models.organization import Organization
-            org = db.query(Organization).filter(Organization.id == user.organization_id).first()
-            if org:
-                owner = db.query(User).filter(User.id == org.owner_user_id).first()
-                if owner and owner.subscription_status == "active":
-                    return  # covered by team's paid plan
-
         if user.subscription_status == "trial" and user.trial_started_at:
             trial_start = user.trial_started_at
             if trial_start.tzinfo is None:
@@ -79,7 +68,7 @@ async def screen_candidate(
     if not allowed:
         raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before scanning again.")
 
-    await check_screening_access(current_user, db)
+    await check_screening_access(current_user)
 
     if not payload.cv_text or not payload.cv_text.strip():
         raise HTTPException(
@@ -151,9 +140,15 @@ async def screen_candidate(
         # --- Persist this scan to history (so /scans/history can show it later) ---
         try:
             jd = (payload.job_description or "").strip()
-            import re
-            title_match = re.search(r"Job\s*Title:\s*(.+)", jd, re.IGNORECASE)
-            role_title = (title_match.group(1).strip() if title_match else jd.split("\n")[0].strip())[:150]
+            # Prefer the AI-extracted title (it actually reads the JD and skips
+            # boilerplate like "Apply At ..."); fall back to the old regex
+            # heuristic only if the model didn't return one.
+            role_title = (metrics.get("job_title") or "").strip()
+            if not role_title:
+                import re
+                title_match = re.search(r"Job\s*Title:\s*(.+)", jd, re.IGNORECASE)
+                role_title = (title_match.group(1).strip() if title_match else jd.split("\n")[0].strip())
+            role_title = role_title[:150]
             history_entry = ScanHistory(
                 user_id=current_user.id,
                 role_title=role_title or "Untitled Role",
