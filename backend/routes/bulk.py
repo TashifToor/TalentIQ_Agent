@@ -239,8 +239,8 @@ async def bulk_screen(
             hr_email=current_user.email,
             hr_name=current_user.name or "HR Manager",
             job_title=job_title or "Screening",
-            job_description_raw=job_description,   # fixed
-)
+            job_description_raw=job_description,
+        )
 
         return {
             "task_id": task.id,
@@ -317,4 +317,4 @@ def get_hr_jobs(
                 for a in sorted(apps, key=lambda x: x.ai_score, reverse=True)
             ]
         })
-    return result 
+    return result
