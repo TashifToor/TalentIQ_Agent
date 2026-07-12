@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from models.database import get_db
 from models.user import User
 from middleware.auth import get_current_user_optional
-from schemas.cv_builder import CVData, GenerateCVRequest
+from schemas.cv_builder import CVData, GenerateCVRequest, ALL_TEMPLATES
 from core.loader import CvLoader
 from core.cv_extractor import extract_cv_data
 from core.cv_generator import optimize_cv_for_jd
@@ -132,8 +132,8 @@ async def generate_cv(
 
     _check_and_consume_quota(request, db, current_user)
 
-    if body.template not in ("modern", "classic"):
-        raise HTTPException(status_code=400, detail="template must be 'modern' or 'classic'.")
+    if body.template not in ALL_TEMPLATES:
+        raise HTTPException(status_code=400, detail=f"Invalid template. Choose one of: {', '.join(sorted(ALL_TEMPLATES))}")
 
     cv_data = body.cv_data
     if body.job_description and body.job_description.strip():
