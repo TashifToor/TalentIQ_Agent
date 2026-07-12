@@ -36,9 +36,15 @@ class CVData(BaseModel):
     education: List[EducationEntry] = []
     experience: List[ExperienceEntry] = []
     projects: List[ProjectEntry] = []
+    photo_base64: Optional[str] = None  # data URL or raw base64 — only used by "with photo" templates
+
+
+TEMPLATES_WITH_PHOTO = {"executive", "visual-sidebar", "visual-decorative"}  # photo optional on all, but these are designed around it
+ALL_TEMPLATES = {"modern", "classic", "minimal", "banded", "elegant", "bold", "compact", "executive", "visual-sidebar", "visual-decorative"}
+ATS_SAFE_TEMPLATES = {"modern", "classic", "minimal", "banded", "elegant", "bold", "compact", "executive"}
 
 
 class GenerateCVRequest(BaseModel):
     cv_data: CVData
-    template: str = "modern"          # "modern" | "classic"
+    template: str = "modern"          # one of ALL_TEMPLATES
     job_description: Optional[str] = None   # if provided, content gets rewritten for ATS fit
