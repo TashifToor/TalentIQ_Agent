@@ -1,0 +1,15 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Docker env
+.env.docker
+
+# Python
+backend/.venv/
+backend/__pycache__/
+
+# Node
+frontend/node_modules/
+frontend/.next/
