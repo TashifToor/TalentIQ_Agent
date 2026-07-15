@@ -707,7 +707,7 @@ export default function HRDashboard() {
 
   return (
     <div style={s(base, { display:'flex', height:'100vh', overflow:'hidden' })}>
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-4px)}}`}</style>
+      <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-4px)}}` }} />
       {/* SIDEBAR */}
       <div style={{ width:224, flexShrink:0, background:'#0c0c0b', borderRight:'1px solid rgba(255,255,255,.05)', display:'flex', flexDirection:'column' }}>
         <Link href="/" style={{ padding:'22px 20px', borderBottom:'1px solid rgba(255,255,255,.05)', display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
