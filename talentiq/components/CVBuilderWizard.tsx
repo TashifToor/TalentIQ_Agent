@@ -65,7 +65,7 @@ export default function CVBuilderWizard() {
   const [step, setStep] = useState(0) // 0=input, 1=template gallery, 2=edit+preview, 3=JD+generate
   const [cv, setCv] = useState<CVData>(EMPTY_CV)
   const [parsing, setParsing] = useState(false)
-  const [template, setTemplate] = useState<keyof typeof TEMPLATES>('modern')
+  const [template, setTemplate] = useState<string>('professional') // centered name by default — matches common ATS resume convention
   const [accentColor, setAccentColor] = useState<string | null>(null)
   const [jd, setJd] = useState('')
   const [generating, setGenerating] = useState(false)
@@ -110,7 +110,7 @@ export default function CVBuilderWizard() {
     setLimitMsg('')
     try {
       const cleanCv = { ...cv, achievements: cv.achievements.map(a => a.trim()).filter(Boolean) }
-      const blob = await api.generateCVBuilder({ cv_data: cleanCv, template: template as 'modern' | 'classic', job_description: jd.trim() || undefined })
+      const blob = await api.generateCVBuilder({ cv_data: cleanCv, template, accent_color: accentColor || undefined, job_description: jd.trim() || undefined })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -409,7 +409,7 @@ export default function CVBuilderWizard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
             <button onClick={() => setStep(2)} style={{ fontSize: 13, color: textDim, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Back</button>
             <button onClick={handleGenerate} disabled={generating} style={{ fontSize: 13, fontWeight: 700, padding: '10px 22px', borderRadius: 8, border: 'none', background: gold, color: '#0a0a08', cursor: 'pointer', fontFamily: 'inherit' }}>
-              {generating ? 'Generating…' : 'Generate & Download PDF'}
+              {generating ? 'Generating…' : jd.trim() ? 'Optimize for JD & Download' : 'Skip & Download PDF'}
             </button>
           </div>
         </div>
