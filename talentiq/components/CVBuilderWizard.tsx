@@ -53,11 +53,20 @@ const TEMPLATES: Record<string, { label: string; font: string; accent: string; a
 }
 const TEMPLATE_ORDER = Object.keys(TEMPLATES)
 
+// Mirrors schemas/cv_builder.py BASIC_COLORS
+const BASIC_COLORS: Record<string, string> = {
+  black: '#1a1a1a', gray: '#555555', red: '#c0392b', orange: '#d2691e',
+  yellow: '#c98a0a', green: '#2e7d32', teal: '#147a72', blue: '#2f5d8a',
+  navy: '#1a2f5c', purple: '#6c3fa0', pink: '#c2185b', brown: '#6b4226',
+}
+const COLOR_ORDER = Object.keys(BASIC_COLORS)
+
 export default function CVBuilderWizard() {
   const [step, setStep] = useState(0) // 0=input, 1=template gallery, 2=edit+preview, 3=JD+generate
   const [cv, setCv] = useState<CVData>(EMPTY_CV)
   const [parsing, setParsing] = useState(false)
   const [template, setTemplate] = useState<string>('modern')
+  const [accentColor, setAccentColor] = useState<string | null>(null)
   const [jd, setJd] = useState('')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
@@ -101,7 +110,7 @@ export default function CVBuilderWizard() {
     setLimitMsg('')
     try {
       const cleanCv = { ...cv, achievements: cv.achievements.map(a => a.trim()).filter(Boolean) }
-      const blob = await api.generateCVBuilder({ cv_data: cleanCv, template: template as any, job_description: jd.trim() || undefined })
+      const blob = await api.generateCVBuilder({ cv_data: cleanCv, template, accent_color: accentColor || undefined, job_description: jd.trim() || undefined })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -186,6 +195,25 @@ export default function CVBuilderWizard() {
               )
             })}
           </div>
+
+          {TEMPLATES[template].atsSafe && (
+            <div style={{ marginTop: 20 }}>
+              <label style={labelStyle}>Accent color (optional — overrides this template's default color)</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button onClick={() => setAccentColor(null)} style={{
+                  width: 30, height: 30, borderRadius: '50%', cursor: 'pointer',
+                  border: accentColor === null ? `2px solid ${gold}` : '2px solid transparent',
+                  background: 'repeating-conic-gradient(#999 0% 25%, #ccc 0% 50%)', backgroundSize: '10px 10px',
+                }} title="Default" />
+                {COLOR_ORDER.map(key => (
+                  <button key={key} onClick={() => setAccentColor(key)} title={key} style={{
+                    width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', background: BASIC_COLORS[key],
+                    border: accentColor === key ? `2px solid ${gold}` : '2px solid transparent',
+                  }} />
+                ))}
+              </div>
+            </div>
+          )}
 
           <div style={{ marginTop: 20 }}>
             <label style={labelStyle}>Photo (optional)</label>
@@ -356,7 +384,7 @@ export default function CVBuilderWizard() {
           {/* Right: LIVE PREVIEW — updates instantly as cv state changes, no API call */}
           <div style={{ flex: '1 1 380px', minWidth: 320, position: 'sticky', top: 16 }}>
             <div style={{ fontSize: 11, color: textDim, marginBottom: 8 }}>Live preview — {tCfg.label} {!tCfg.atsSafe && '(visual only)'}</div>
-            <LivePreview cv={cv} template={template} />
+            <LivePreview cv={cv} template={template} accentColor={accentColor} />
           </div>
         </div>
       )}
@@ -396,8 +424,9 @@ export default function CVBuilderWizard() {
 // (no backend call). The actual downloaded PDF is still rendered server-side
 // for pixel-accurate, ATS-safe text output.
 // ---------------------------------------------------------------------------
-function LivePreview({ cv, template }: { cv: CVData; template: string }) {
-  const cfg = TEMPLATES[template]
+function LivePreview({ cv, template, accentColor }: { cv: CVData; template: string; accentColor: string | null }) {
+  const baseCfg = TEMPLATES[template]
+  const cfg = accentColor ? { ...baseCfg, accent: BASIC_COLORS[accentColor] || baseCfg.accent } : baseCfg
   const wrap: React.CSSProperties = {
     background: '#fff', color: '#222', fontFamily: cfg.font, fontSize: 11.5, lineHeight: 1.5,
     borderRadius: 8, padding: 24, minHeight: 500, maxHeight: 640, overflowY: 'auto',
@@ -421,6 +450,7 @@ function LivePreview({ cv, template }: { cv: CVData; template: string }) {
   const Body = () => (
     <>
       {cv.summary && <><Heading>Summary</Heading><p style={{ margin: 0 }}>{cv.summary}</p></>}
+      {(cv.skills.length > 0 || cv.skill_groups.length > 0) && <><Heading>Skills</Heading><SkillsBlock /></>}
       {cv.experience.length > 0 && (
         <>
           <Heading>Experience</Heading>
@@ -473,10 +503,9 @@ function LivePreview({ cv, template }: { cv: CVData; template: string }) {
           <div>
             <div style={{ fontWeight: 700, fontSize: 20, color: cfg.accent }}>{cv.full_name || 'Your Name'}</div>
             {cv.role_title && <div style={{ fontSize: 11.5, color: '#555' }}>{cv.role_title}</div>}
-            <div style={{ fontSize: 10, color: '#555' }}>{[cv.email, cv.phone, cv.location].filter(Boolean).join(' | ')}</div>
+            <div style={{ fontSize: 10, color: '#555' }}>{[cv.email, cv.phone, cv.location, cv.linkedin, cv.github].filter(Boolean).join(' | ')}</div>
           </div>
         </div>
-        {(cv.skills.length > 0 || cv.skill_groups.length > 0) && <><Heading>Skills</Heading><SkillsBlock /></>}
         <Body />
       </div>
     )
