@@ -57,7 +57,17 @@ ALL_TEMPLATES = {"modern", "classic", "minimal", "banded", "elegant", "bold", "c
 ATS_SAFE_TEMPLATES = {"modern", "classic", "minimal", "banded", "elegant", "bold", "compact", "executive", "professional"}
 
 
+# 12 basic colors offered as an accent-color override for any ATS-safe
+# template — independent of the template's own default accent.
+BASIC_COLORS = {
+    "black": "#1a1a1a", "gray": "#555555", "red": "#c0392b", "orange": "#d2691e",
+    "yellow": "#c98a0a", "green": "#2e7d32", "teal": "#147a72", "blue": "#2f5d8a",
+    "navy": "#1a2f5c", "purple": "#6c3fa0", "pink": "#c2185b", "brown": "#6b4226",
+}
+
+
 class GenerateCVRequest(BaseModel):
     cv_data: CVData
     template: str = "modern"          # one of ALL_TEMPLATES
-    job_description: Optional[str] = None   # if provided, content gets rewritten for ATS fit 
+    accent_color: Optional[str] = None  # hex string, or one of BASIC_COLORS keys — overrides the template's default accent
+    job_description: Optional[str] = None   # if provided, content gets rewritten for ATS fit
