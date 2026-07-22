@@ -143,7 +143,7 @@ async def generate_cv(
             print(f"[CVBuilder] JD optimization failed, using original content: {e}")
 
     try:
-        pdf_bytes = render_cv_pdf(cv_data, template=body.template)
+        pdf_bytes = render_cv_pdf(cv_data, template=body.template, accent_color=body.accent_color)
     except Exception as e:
         print(f"[CVBuilder] PDF render failed: {e}")
         raise HTTPException(status_code=500, detail="Could not generate PDF. Please try again.")
