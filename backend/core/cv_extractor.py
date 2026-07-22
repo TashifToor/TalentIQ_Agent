@@ -7,10 +7,13 @@ EXTRACTION_PROMPT_TEMPLATE = """You are a CV parsing engine. Extract structured 
 
 HARD RULE: Only extract what is ACTUALLY present in the text below. If a field isn't present, use an empty string "" or empty list [] — never invent, guess, or add a placeholder/example entry (e.g. do NOT add a generic "Role — Company" experience entry if the CV only lists one job). Every experience/education/project entry in your output must correspond to a real entry you can point to in the source text.
 
+For skills: if the CV groups skills under labeled categories (e.g. "Languages & Frameworks:", "AI/ML:", "Databases:"), populate "skill_groups" with those categories and leave "skills" empty. If skills are just a flat unlabeled list, populate "skills" and leave "skill_groups" empty. Never populate both.
+
 Respond ONLY with valid JSON. No markdown, no explanation, no backticks.
 
 {{
     "full_name": "",
+    "role_title": "<the professional headline/title under the name, e.g. 'Python Developer | AI & Backend Engineer' — only if actually present>",
     "email": "",
     "phone": "",
     "location": "",
@@ -18,6 +21,9 @@ Respond ONLY with valid JSON. No markdown, no explanation, no backticks.
     "github": "",
     "summary": "<2-3 sentence professional summary — write one if the CV lacks an explicit summary, based only on the actual content below>",
     "skills": ["skill1", "skill2"],
+    "skill_groups": [
+        {{"category": "Languages & Frameworks", "items": ["Python", "Django"]}}
+    ],
     "education": [
         {{"degree": "", "institution": "", "start_year": "", "end_year": "", "details": ""}}
     ],
@@ -26,7 +32,8 @@ Respond ONLY with valid JSON. No markdown, no explanation, no backticks.
     ],
     "projects": [
         {{"name": "", "description": "", "tech_stack": ""}}
-    ]
+    ],
+    "achievements": ["<certifications, awards, publications — one per line, only if present>"]
 }}
 
 <raw_cv_text>
@@ -48,4 +55,4 @@ def extract_cv_data(cv_text: str) -> CVData:
         print(f"[CVExtractor] JSON parse failed: {e} | raw: {clean[:300]}")
         parsed = {}
 
-    return CVData(**parsed) 
+    return CVData(**parsed)
