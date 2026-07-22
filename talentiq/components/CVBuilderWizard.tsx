@@ -65,7 +65,7 @@ export default function CVBuilderWizard() {
   const [step, setStep] = useState(0) // 0=input, 1=template gallery, 2=edit+preview, 3=JD+generate
   const [cv, setCv] = useState<CVData>(EMPTY_CV)
   const [parsing, setParsing] = useState(false)
-  const [template, setTemplate] = useState<string>('modern')
+  const [template, setTemplate] = useState<keyof typeof TEMPLATES>('modern')
   const [accentColor, setAccentColor] = useState<string | null>(null)
   const [jd, setJd] = useState('')
   const [generating, setGenerating] = useState(false)
@@ -110,7 +110,7 @@ export default function CVBuilderWizard() {
     setLimitMsg('')
     try {
       const cleanCv = { ...cv, achievements: cv.achievements.map(a => a.trim()).filter(Boolean) }
-      const blob = await api.generateCVBuilder({ cv_data: cleanCv, template, accent_color: accentColor || undefined, job_description: jd.trim() || undefined })
+      const blob = await api.generateCVBuilder({ cv_data: cleanCv, template: template as 'modern' | 'classic', job_description: jd.trim() || undefined })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
