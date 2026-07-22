@@ -15,7 +15,7 @@ const li: React.CSSProperties = { fontSize: 14, marginBottom: 6, color: 'rgba(24
 export default function PrivacyPolicyPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a08' }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Syne:wght@400;500;600;700&display=swap');`}</style>
+      <style dangerouslySetInnerHTML={{ __html: `@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Syne:wght@400;500;600;700&display=swap');` }} />
       <div style={wrap}>
         <Link href="/" style={{ fontSize: 12, color: '#d4af6d', textDecoration: 'none' }}>← TalentIQ</Link>
         <h1 style={h1}>Privacy Policy</h1>
