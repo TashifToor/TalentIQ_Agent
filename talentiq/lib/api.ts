@@ -253,7 +253,8 @@ export const api = {
 
   generateCVBuilder: async (payload: {
     cv_data: any;
-    template: "modern" | "classic";
+    template: string;
+    accent_color?: string;
     job_description?: string;
   }): Promise<Blob> => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
