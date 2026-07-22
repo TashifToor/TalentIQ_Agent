@@ -75,7 +75,7 @@ export default function CVOptimizer() {
             <div style={{ width: 60, height: 60, border: '4px solid rgba(226,176,74,.2)', borderTopColor: '#e2b04a', borderRadius: '50%', animation: 'spin .8s linear infinite', margin: '0 auto 24px' }} />
             <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, marginBottom: 8 }}>Analyzing your CV...</h3>
             <p style={{ fontSize: 14, color: 'rgba(255,255,255,.35)' }}>Comparing against the job description. Finding gaps and opportunities.</p>
-            <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+            <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { to { transform: rotate(360deg) } }` }} />
           </div>
         )}
 
