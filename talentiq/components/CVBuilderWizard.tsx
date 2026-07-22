@@ -6,16 +6,17 @@ import { api } from '@/lib/api'
 type Education = { degree: string; institution: string; start_year: string; end_year: string; details: string }
 type Experience = { title: string; company: string; start_date: string; end_date: string; bullets: string[] }
 type Project = { name: string; description: string; tech_stack: string }
+type SkillGroup = { category: string; items: string[] }
 type CVData = {
-  full_name: string; email: string; phone: string; location: string; linkedin: string; github: string
-  summary: string; skills: string[]
-  education: Education[]; experience: Experience[]; projects: Project[]
+  full_name: string; role_title: string; email: string; phone: string; location: string; linkedin: string; github: string
+  summary: string; skills: string[]; skill_groups: SkillGroup[]
+  education: Education[]; experience: Experience[]; projects: Project[]; achievements: string[]
   photo_base64?: string | null
 }
 
 const EMPTY_CV: CVData = {
-  full_name: '', email: '', phone: '', location: '', linkedin: '', github: '',
-  summary: '', skills: [], education: [], experience: [], projects: [], photo_base64: null,
+  full_name: '', role_title: '', email: '', phone: '', location: '', linkedin: '', github: '',
+  summary: '', skills: [], skill_groups: [], education: [], experience: [], projects: [], achievements: [], photo_base64: null,
 }
 
 const emptyEducation = (): Education => ({ degree: '', institution: '', start_year: '', end_year: '', details: '' })
@@ -46,6 +47,7 @@ const TEMPLATES: Record<string, { label: string; font: string; accent: string; a
   bold: { label: 'Bold', font: "'Helvetica', Arial, sans-serif", accent: '#000000', atsSafe: true, layout: 'single' },
   compact: { label: 'Compact', font: "'Helvetica', Arial, sans-serif", accent: '#2f5d8a', atsSafe: true, layout: 'single' },
   executive: { label: 'Executive', font: "'Helvetica', Arial, sans-serif", accent: '#1a2332', atsSafe: true, layout: 'single' },
+  professional: { label: 'Professional', font: "'Georgia', serif", accent: '#1a1a1a', atsSafe: true, layout: 'single' },
   'visual-sidebar': { label: 'Visual — Sidebar', font: "'Helvetica', Arial, sans-serif", accent: '#a97155', atsSafe: false, layout: 'sidebar' },
   'visual-decorative': { label: 'Visual — Elegant Portrait', font: "'Georgia', serif", accent: '#2a2a2a', atsSafe: false, layout: 'decorative' },
 }
@@ -60,7 +62,7 @@ export default function CVBuilderWizard() {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
   const [limitMsg, setLimitMsg] = useState('')
-  const [activeTab, setActiveTab] = useState<'info' | 'summary' | 'experience' | 'education' | 'projects' | 'skills' | 'photo'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'summary' | 'experience' | 'education' | 'projects' | 'skills' | 'achievements' | 'photo'>('info')
   const fileRef = useRef<HTMLInputElement>(null)
   const photoRef = useRef<HTMLInputElement>(null)
 
@@ -98,7 +100,8 @@ export default function CVBuilderWizard() {
     setError('')
     setLimitMsg('')
     try {
-      const blob = await api.generateCVBuilder({ cv_data: cv, template: template as any, job_description: jd.trim() || undefined })
+      const cleanCv = { ...cv, achievements: cv.achievements.map(a => a.trim()).filter(Boolean) }
+      const blob = await api.generateCVBuilder({ cv_data: cleanCv, template: template as any, job_description: jd.trim() || undefined })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -107,6 +110,7 @@ export default function CVBuilderWizard() {
       a.click()
       a.remove()
       window.URL.revokeObjectURL(url)
+      setJd('') // clear the JD field after a successful download — next generate starts fresh
     } catch (e: any) {
       if (e.code === 'ANON_LIMIT_REACHED' || e.code === 'FREE_LIMIT_REACHED') {
         setLimitMsg(e.message)
@@ -207,7 +211,7 @@ export default function CVBuilderWizard() {
           {/* Left: section-tabbed form */}
           <div style={{ flex: '1 1 380px', minWidth: 320 }}>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-              {(['info', 'summary', 'experience', 'education', 'projects', 'skills', 'photo'] as const).map(tab => (
+              {(['info', 'summary', 'experience', 'education', 'projects', 'skills', 'achievements', 'photo'] as const).map(tab => (
                 <button key={tab} onClick={() => setActiveTab(tab)} style={{
                   fontSize: 11, padding: '6px 12px', borderRadius: 100, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize',
                   border: `1px solid ${activeTab === tab ? gold : border}`, background: activeTab === tab ? `${gold}18` : 'transparent',
@@ -218,6 +222,7 @@ export default function CVBuilderWizard() {
 
             {activeTab === 'info' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Professional headline (e.g. "Python Developer | AI & Backend Engineer")</label><input style={inputStyle} value={cv.role_title} onChange={e => updateField('role_title', e.target.value)} /></div>
                 <div><label style={labelStyle}>Full name</label><input style={inputStyle} value={cv.full_name} onChange={e => updateField('full_name', e.target.value)} /></div>
                 <div><label style={labelStyle}>Email</label><input style={inputStyle} value={cv.email} onChange={e => updateField('email', e.target.value)} /></div>
                 <div><label style={labelStyle}>Phone</label><input style={inputStyle} value={cv.phone} onChange={e => updateField('phone', e.target.value)} /></div>
@@ -250,9 +255,41 @@ export default function CVBuilderWizard() {
 
             {activeTab === 'skills' && (
               <div>
-                <label style={labelStyle}>Skills (comma-separated)</label>
-                <input style={inputStyle} value={cv.skills.join(', ')} autoComplete="off" autoCorrect="off" spellCheck={false}
-                  onChange={e => updateField('skills', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <button onClick={() => updateField('skill_groups', [])} style={{ fontSize: 11, padding: '5px 10px', borderRadius: 100, cursor: 'pointer', fontFamily: 'inherit', border: `1px solid ${cv.skill_groups.length === 0 ? gold : border}`, background: cv.skill_groups.length === 0 ? `${gold}18` : 'transparent', color: cv.skill_groups.length === 0 ? gold : textDim }}>Simple list</button>
+                  <button onClick={() => cv.skill_groups.length === 0 && updateField('skill_groups', [{ category: '', items: [] }])} style={{ fontSize: 11, padding: '5px 10px', borderRadius: 100, cursor: 'pointer', fontFamily: 'inherit', border: `1px solid ${cv.skill_groups.length > 0 ? gold : border}`, background: cv.skill_groups.length > 0 ? `${gold}18` : 'transparent', color: cv.skill_groups.length > 0 ? gold : textDim }}>Categorized (e.g. Languages, Databases)</button>
+                </div>
+
+                {cv.skill_groups.length === 0 ? (
+                  <div>
+                    <label style={labelStyle}>Skills (comma-separated)</label>
+                    <input style={inputStyle} value={cv.skills.join(', ')} autoComplete="off" autoCorrect="off" spellCheck={false}
+                      onChange={e => updateField('skills', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+                  </div>
+                ) : (
+                  <div>
+                    {cv.skill_groups.map((g, i) => (
+                      <div key={i} style={{ background: panel, border: `1px solid ${border}`, borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                        <input style={inputStyle} placeholder="Category (e.g. Languages & Frameworks)" value={g.category}
+                          onChange={e => { const next = [...cv.skill_groups]; next[i] = { ...g, category: e.target.value }; updateField('skill_groups', next) }} />
+                        <input style={inputStyle} placeholder="Items (comma-separated)" value={g.items.join(', ')} autoComplete="off"
+                          onChange={e => { const next = [...cv.skill_groups]; next[i] = { ...g, items: e.target.value.split(',').map(s => s.trim()).filter(Boolean) }; updateField('skill_groups', next) }} />
+                        <button onClick={() => updateField('skill_groups', cv.skill_groups.filter((_, idx) => idx !== i))} style={{ fontSize: 11, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>remove category</button>
+                      </div>
+                    ))}
+                    <button onClick={() => updateField('skill_groups', [...cv.skill_groups, { category: '', items: [] }])} style={{ fontSize: 11.5, color: gold, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>+ Add category</button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'achievements' && (
+              <div>
+                <label style={labelStyle}>Achievements, certifications, awards (one per line)</label>
+                <textarea style={{ ...inputStyle, minHeight: 100, resize: 'vertical' }}
+                  value={cv.achievements.join('\n')}
+                  onChange={e => updateField('achievements', e.target.value.split('\n'))}
+                  placeholder={"Web Developer Certification — CodeCelix, Nov 2025\nTop Performer Award — NCEAC Cohort 3"} />
               </div>
             )}
 
@@ -371,6 +408,16 @@ function LivePreview({ cv, template }: { cv: CVData; template: string }) {
     <div style={{ fontWeight: 700, fontSize: 12.5, color: cfg.accent, marginTop: 14, marginBottom: 4, borderBottom: `1px solid ${cfg.accent}55`, paddingBottom: 2 }}>{children}</div>
   )
 
+  const SkillsBlock = ({ bodyFontSize = 10.5 }: { bodyFontSize?: number }) => {
+    if (cv.skill_groups.length > 0) {
+      return <>{cv.skill_groups.filter(g => g.items.length).map((g, i) => (
+        <div key={i} style={{ fontSize: bodyFontSize, marginBottom: 2 }}><b>{g.category}:</b> {g.items.join(', ')}</div>
+      ))}</>
+    }
+    if (cv.skills.length > 0) return <div style={{ fontSize: bodyFontSize }}>{cv.skills.join(', ')}</div>
+    return null
+  }
+
   const Body = () => (
     <>
       {cv.summary && <><Heading>Summary</Heading><p style={{ margin: 0 }}>{cv.summary}</p></>}
@@ -409,20 +456,27 @@ function LivePreview({ cv, template }: { cv: CVData; template: string }) {
           ))}
         </>
       )}
+      {cv.achievements.filter(Boolean).length > 0 && (
+        <>
+          <Heading>Achievements</Heading>
+          {cv.achievements.filter(Boolean).map((a, i) => <div key={i} style={{ fontSize: 10.5 }}>• {a}</div>)}
+        </>
+      )}
     </>
   )
 
   if (cfg.layout === 'single') {
     return (
       <div style={wrap}>
-        <div style={{ textAlign: template === 'classic' ? 'center' : 'left', display: 'flex', alignItems: 'center', gap: 12, flexDirection: template === 'classic' ? 'column' : 'row' }}>
+        <div style={{ textAlign: template === 'classic' || template === 'professional' ? 'center' : 'left', display: 'flex', alignItems: 'center', gap: 12, flexDirection: (template === 'classic' || template === 'professional') ? 'column' : 'row' }}>
           {cv.photo_base64 && <img src={cv.photo_base64} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover' }} />}
           <div>
             <div style={{ fontWeight: 700, fontSize: 20, color: cfg.accent }}>{cv.full_name || 'Your Name'}</div>
+            {cv.role_title && <div style={{ fontSize: 11.5, color: '#555' }}>{cv.role_title}</div>}
             <div style={{ fontSize: 10, color: '#555' }}>{[cv.email, cv.phone, cv.location].filter(Boolean).join(' | ')}</div>
           </div>
         </div>
-        {cv.skills.length > 0 && <><Heading>Skills</Heading><div style={{ fontSize: 10.5 }}>{cv.skills.join(', ')}</div></>}
+        {(cv.skills.length > 0 || cv.skill_groups.length > 0) && <><Heading>Skills</Heading><SkillsBlock /></>}
         <Body />
       </div>
     )
@@ -433,6 +487,7 @@ function LivePreview({ cv, template }: { cv: CVData; template: string }) {
       <div style={{ textAlign: template === 'visual-decorative' ? 'center' : 'left', marginBottom: 10 }}>
         {cv.photo_base64 && <img src={cv.photo_base64} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', marginBottom: 6 }} />}
         <div style={{ fontWeight: 700, fontSize: 22, color: cfg.accent }}>{cv.full_name || 'Your Name'}</div>
+        {cv.role_title && <div style={{ fontSize: 12, color: '#666' }}>{cv.role_title}</div>}
       </div>
       <div style={{ display: 'flex', gap: 16 }}>
         <div style={{ flex: '0 0 32%' }}>
@@ -440,10 +495,16 @@ function LivePreview({ cv, template }: { cv: CVData; template: string }) {
           <div style={{ fontSize: 10 }}>{cv.email}</div>
           <div style={{ fontSize: 10 }}>{cv.phone}</div>
           <div style={{ fontSize: 10 }}>{cv.location}</div>
-          {cv.skills.length > 0 && (
+          {(cv.skills.length > 0 || cv.skill_groups.length > 0) && (
             <>
               <Heading>Skills</Heading>
-              {cv.skills.map((s, i) => <div key={i} style={{ fontSize: 10 }}>• {s}</div>)}
+              <SkillsBlock bodyFontSize={10} />
+            </>
+          )}
+          {cv.achievements.filter(Boolean).length > 0 && (
+            <>
+              <Heading>Certifications</Heading>
+              {cv.achievements.filter(Boolean).map((a, i) => <div key={i} style={{ fontSize: 10 }}>• {a}</div>)}
             </>
           )}
         </div>
