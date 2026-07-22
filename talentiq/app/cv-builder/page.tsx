@@ -16,9 +16,9 @@ export const metadata: Metadata = {
 export default function PublicCVBuilderPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a08' }}>
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Syne:wght@400;500;600;700&display=swap');
-      `}</style>
+      ` }} />
 
       {/* Header / hero — real on-page content for SEO, not just meta tags */}
       <header style={{ maxWidth: 900, margin: '0 auto', padding: '40px 16px 8px', textAlign: 'center', fontFamily: 'Syne, sans-serif' }}>
@@ -44,4 +44,4 @@ export default function PublicCVBuilderPage() {
       </footer>
     </div>
   )
-} 
+}
