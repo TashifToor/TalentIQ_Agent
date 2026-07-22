@@ -156,8 +156,15 @@ SECTION_TITLES = {
 }
 
 
-def render_ats_safe_pdf(cv: CVData, template: str) -> bytes:
+def render_ats_safe_pdf(cv: CVData, template: str, accent_color: str = None) -> bytes:
     cfg = _style_config(template)
+    if accent_color:
+        from schemas.cv_builder import BASIC_COLORS
+        resolved = BASIC_COLORS.get(accent_color.lower(), accent_color)
+        cfg = {**cfg, "accent": resolved}
+        # dark_header templates use accent as a background fill — a light
+        # accent color there would make white header text unreadable, so
+        # only let the override apply where it stays visually safe.
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.6 * inch, bottomMargin=0.55 * inch,
                              leftMargin=0.75 * inch, rightMargin=0.75 * inch)
@@ -404,9 +411,9 @@ def render_visual_decorative_pdf(cv: CVData) -> bytes:
     return buffer.read()
 
 
-def render_cv_pdf(cv: CVData, template: str = "modern") -> bytes:
+def render_cv_pdf(cv: CVData, template: str = "modern", accent_color: str = None) -> bytes:
     if template == "visual-sidebar":
         return render_visual_sidebar_pdf(cv)
     if template == "visual-decorative":
         return render_visual_decorative_pdf(cv)
-    return render_ats_safe_pdf(cv, template if template in ATS_SAFE_TEMPLATES else "modern")
+    return render_ats_safe_pdf(cv, template if template in ATS_SAFE_TEMPLATES else "modern", accent_color=accent_color)
