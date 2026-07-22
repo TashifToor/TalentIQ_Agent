@@ -11,6 +11,13 @@ HARD RULE — INTEGRITY: You may only rephrase what already exists. You must NEV
 - add quantified metrics that aren't present or reasonably implied by the original text
 If the CV genuinely lacks something the JD wants, leave it out.
 
+ATS WRITING RULES — apply these to every rewritten sentence:
+- Start each bullet with a strong, specific action verb (Architected, Engineered, Reduced, Led, Automated, Optimized...) — avoid weak openers like "Responsible for" or "Worked on".
+- Never repeat the same word or phrase across multiple bullets in the same entry (e.g. don't start three bullets with "Developed") — vary vocabulary so the text doesn't read as keyword-stuffed.
+- Weave in JD keywords naturally, in context — never just append a raw list of JD terms. Keyword-stuffing hurts more than it helps with modern ATS ranking.
+- Keep sentences concise and scannable — no filler words, no repeated ideas across bullets.
+- Match the JD's terminology only where the candidate's real work genuinely used the equivalent thing (e.g. if the JD says "CI/CD pipelines" and the candidate's original bullet describes GitHub Actions automation, it's fair to say "CI/CD pipelines"; it is not fair to add a tool they never mentioned).
+
 You are given a numbered list of the candidate's ACTUAL experience entries below. You must return EXACTLY the same number of entries, in the same order, rewriting ONLY the bullet text for each — do not add, remove, merge, or reorder entries, and do not invent an entry that isn't in the input list.
 
 Respond ONLY with valid JSON in this EXACT shape. No markdown, no explanation, no backticks.
