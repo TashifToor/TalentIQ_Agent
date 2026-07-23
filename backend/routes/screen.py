@@ -24,6 +24,10 @@ async def check_screening_access(user: User):
     Candidate: 3 free scans, then must pay
     HR: 7 day trial, then must pay
     """
+    from core.unlimited_access import has_unlimited_access
+    if has_unlimited_access(user.email):
+        return  # allowlisted account — unlimited, no expiry, any role
+
     now = datetime.now(timezone.utc)
 
     if user.role == "candidate":
