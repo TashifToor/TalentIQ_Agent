@@ -116,6 +116,22 @@ export default function HRDashboard() {
   const [dbJobsLoading, setDbJobsLoading] = useState(false)
   const [selectedJob, setSelectedJob] = useState<any>(null)
 
+  // AI Interviewer state
+  const [interviewPostings, setInterviewPostings] = useState<any[]>([])
+  const [interviewPostingsLoading, setInterviewPostingsLoading] = useState(false)
+  const [selectedPosting, setSelectedPosting] = useState<any>(null)
+  const [interviewCandidates, setInterviewCandidates] = useState<any[]>([])
+  const [interviewCandidatesLoading, setInterviewCandidatesLoading] = useState(false)
+  const [selectedReport, setSelectedReport] = useState<any>(null)
+  const [showInterviewForm, setShowInterviewForm] = useState(false)
+  const [iTitle, setITitle] = useState('')
+  const [iCompany, setICompany] = useState('')
+  const [iJD, setIJD] = useState('')
+  const [iExtraQuestions, setIExtraQuestions] = useState('')
+  const [iSaving, setISaving] = useState(false)
+  const [iError, setIError] = useState('')
+  const [copiedSlug, setCopiedSlug] = useState('')
+
   // Policy docs state
   const [policyDocs, setPolicyDocs] = useState<{filename:string, size_kb:number}[]>([])
   const [policyUploading, setPolicyUploading] = useState(false)
@@ -128,6 +144,107 @@ export default function HRDashboard() {
   const [chatInput, setChatInput] = useState('')
   const [typing, setTyping] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
+
+  // Team Workspace state
+  const [org, setOrg] = useState<any>(null)
+  const [orgMembers, setOrgMembers] = useState<any[]>([])
+  const [orgLoading, setOrgLoading] = useState(true)
+  const [newOrgName, setNewOrgName] = useState('')
+  const [creatingOrg, setCreatingOrg] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviting, setInviting] = useState(false)
+  const [orgMsg, setOrgMsg] = useState('')
+  const [orgError, setOrgError] = useState('')
+
+  const loadOrg = () => {
+    setOrgLoading(true)
+    api.getMyOrg().then((data: any) => {
+      setOrg(data.organization)
+      setOrgMembers(data.members || [])
+    }).catch(() => {}).finally(() => setOrgLoading(false))
+  }
+
+  const handleCreateOrg = async () => {
+    if (!newOrgName.trim()) return
+    setCreatingOrg(true)
+    setOrgError('')
+    try {
+      await api.createOrg(newOrgName.trim())
+      loadOrg()
+    } catch (e: any) {
+      setOrgError(e.message || 'Could not create workspace.')
+    } finally {
+      setCreatingOrg(false)
+    }
+  }
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) return
+    setInviting(true)
+    setOrgMsg('')
+    setOrgError('')
+    try {
+      const res: any = await api.inviteTeammate(inviteEmail.trim())
+      setOrgMsg(res.message)
+      setInviteEmail('')
+    } catch (e: any) {
+      setOrgError(e.message || 'Could not send invite.')
+    } finally {
+      setInviting(false)
+    }
+  }
+
+  const handleRemoveMember = async (memberId: number) => {
+    try {
+      await api.removeMember(memberId)
+      loadOrg()
+    } catch (e: any) {
+      setOrgError(e.message || 'Could not remove teammate.')
+    }
+  }
+
+  const loadInterviewPostings = () => {
+    setInterviewPostingsLoading(true)
+    api.getInterviewPostings()
+      .then((r:any) => setInterviewPostings(Array.isArray(r) ? r : []))
+      .catch(() => setInterviewPostings([]))
+      .finally(() => setInterviewPostingsLoading(false))
+  }
+
+  const openPosting = (posting:any) => {
+    setSelectedPosting(posting)
+    setSelectedReport(null)
+    setInterviewCandidatesLoading(true)
+    api.getInterviewCandidates(posting.id)
+      .then((r:any) => setInterviewCandidates(Array.isArray(r) ? r : []))
+      .catch(() => setInterviewCandidates([]))
+      .finally(() => setInterviewCandidatesLoading(false))
+  }
+
+  const createInterviewPosting = async () => {
+    if (!iTitle.trim() || !iJD.trim()) { setIError('Role title and job description are required.'); return }
+    setISaving(true)
+    setIError('')
+    try {
+      const extra = iExtraQuestions.split('\n').map(q=>q.trim()).filter(Boolean)
+      const posting = await api.createInterviewPosting({ title: iTitle.trim(), company: iCompany.trim() || undefined, job_description: iJD.trim(), extra_questions: extra })
+      setShowInterviewForm(false)
+      setITitle(''); setICompany(''); setIJD(''); setIExtraQuestions('')
+      loadInterviewPostings()
+      openPosting(posting)
+    } catch (e:any) {
+      setIError(e?.message || 'Could not create interview posting.')
+    } finally {
+      setISaving(false)
+    }
+  }
+
+  const copyInterviewLink = (link:string, slug:string) => {
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedSlug(slug)
+      setTimeout(()=>setCopiedSlug(''), 1800)
+    })
+  }
 
   useEffect(() => {
     api.me().then((u:any) => {
@@ -142,6 +259,9 @@ export default function HRDashboard() {
       .then((jobs:any) => setDbJobs(Array.isArray(jobs) ? jobs : []))
       .catch(() => setDbJobs([]))
       .finally(() => setDbJobsLoading(false))
+
+    loadInterviewPostings()
+    loadOrg()
   }, [])
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:'smooth' }) }, [messages, typing])
@@ -272,7 +392,7 @@ export default function HRDashboard() {
     { id:'dashboard', icon:'', label:'Dashboard' },
     { id:'candidates', icon:'', label:'All Candidates', badge: candidates.length||undefined },
     { id:'bulk', icon:'', label:'Bulk Screen' },
-    { id:'open-roles', icon:'', label:'Open Roles', badge: dbJobs.length||undefined },
+    { id:'open-roles', icon:'', label:'AI Interviewer', badge: interviewPostings.length||undefined },
     { id:'shortlist', icon:'', label:'Shortlist', badge: shortlistedList.length||undefined },
     { id:'chatbot', icon:'', label:'Policy Chatbot' },
     { id:'history', icon:'', label:'History', badge: history.length||undefined },
@@ -590,6 +710,51 @@ export default function HRDashboard() {
         <input defaultValue={userEmail} disabled style={s(inputSt, { opacity:.5, cursor:'not-allowed', marginBottom:10 })} />
         <button style={{ fontSize:12, fontWeight:600, background:'#13c28e', color:'#fff', border:'none', borderRadius:8, padding:'9px 18px', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>Save Changes</button>
       </div>
+      <div style={s(card, { marginBottom:12 })}>
+        <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>Team Workspace</div>
+        <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:14 }}>Invite up to 5 teammates to share jobs and screening results.</div>
+        {orgLoading ? (
+          <div style={{ fontSize:13, color:'rgba(255,255,255,.3)' }}>Loading...</div>
+        ) : !org ? (
+          <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+            <input value={newOrgName} onChange={e=>setNewOrgName(e.target.value)} placeholder="Workspace name (e.g. your company)"
+              style={s(inputSt, { flex:'1 1 220px', marginBottom:0 })} />
+            <button onClick={handleCreateOrg} disabled={creatingOrg}
+              style={{ background:'#e2b04a', color:'#0a0a09', fontSize:13, fontWeight:700, padding:'9px 18px', borderRadius:8, border:'none', cursor:'pointer', fontFamily:'Syne,sans-serif', whiteSpace:'nowrap' }}>
+              {creatingOrg ? 'Creating...' : 'Create Workspace'}
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>{org.name}</div>
+            <div style={{ fontSize:11.5, color:'rgba(255,255,255,.3)', marginBottom:14 }}>{org.seats_used} / {org.max_seats} seats used</div>
+            {orgMembers.map((m:any) => (
+              <div key={m.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderTop:'1px solid rgba(255,255,255,.06)' }}>
+                <div>
+                  <span style={{ fontSize:13 }}>{m.name}</span>
+                  <span style={{ fontSize:11.5, color:'rgba(255,255,255,.3)', marginLeft:8 }}>{m.email}</span>
+                  {m.is_owner && <span style={{ fontSize:10, color:'#e2b04a', marginLeft:8, fontWeight:700 }}>OWNER</span>}
+                </div>
+                {org.is_owner && !m.is_owner && (
+                  <button onClick={()=>handleRemoveMember(m.id)} style={{ fontSize:11.5, color:'#ef4444', background:'none', border:'none', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>Remove</button>
+                )}
+              </div>
+            ))}
+            {org.is_owner && org.seats_used < org.max_seats && (
+              <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginTop:16 }}>
+                <input value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="teammate@company.com"
+                  style={s(inputSt, { flex:'1 1 220px', marginBottom:0 })} />
+                <button onClick={handleInvite} disabled={inviting}
+                  style={{ background:'transparent', border:'1px solid rgba(255,255,255,.15)', color:'rgba(255,255,255,.85)', fontSize:13, fontWeight:600, padding:'9px 18px', borderRadius:8, cursor:'pointer', fontFamily:'Syne,sans-serif', whiteSpace:'nowrap' }}>
+                  {inviting ? 'Sending...' : 'Send Invite'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {orgMsg && <div style={{ fontSize:12, color:'#13c28e', marginTop:12 }}>{orgMsg}</div>}
+        {orgError && <div style={{ fontSize:12, color:'#ef4444', marginTop:12 }}>{orgError}</div>}
+      </div>
       <div style={card}>
         <div style={{ fontSize:13, fontWeight:600, marginBottom:12 }}>Danger Zone</div>
         <button onClick={handleLogout} style={{ fontSize:12, fontWeight:600, background:'rgba(239,68,68,.1)', color:'#ef4444', border:'1px solid rgba(239,68,68,.2)', borderRadius:8, padding:'9px 18px', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>Logout</button>
@@ -624,69 +789,155 @@ export default function HRDashboard() {
     </div>
   )
 
-  const renderOpenRoles = () => (
+  const renderInterviewer = () => (
     <div style={{ padding:28, overflowY:'auto', height:'100%' }}>
-      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:600, marginBottom:4 }}>Past Screenings</div>
-      <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:24 }}>All screening jobs saved from bulk runs</div>
-      {dbJobsLoading && <div style={{ fontSize:13, color:'rgba(255,255,255,.3)' }}>Loading...</div>}
-      {!dbJobsLoading && dbJobs.length === 0 && (
-        <div style={s(card, { textAlign:'center', padding:40, color:'rgba(255,255,255,.3)' })}>
-          No past screenings yet. Run a bulk screen to see results saved here.
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
+        <div>
+          <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:600, marginBottom:4 }}>AI Interviewer</div>
+          <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>Paste a JD, get a shareable link, let candidates interview themselves</div>
+        </div>
+        <button onClick={()=>{ setShowInterviewForm(v=>!v); setIError('') }}
+          style={{ padding:'10px 18px', borderRadius:8, border:'none', background:'#e2b04a', color:'#0a0a08', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+          {showInterviewForm ? 'Cancel' : '+ New Interview Link'}
+        </button>
+      </div>
+
+      {showInterviewForm && (
+        <div style={s(card, { marginTop:20, marginBottom:24 })}>
+          <div style={{ fontSize:13, fontWeight:600, marginBottom:14 }}>New AI Interview</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+            <input placeholder="Role title (e.g. Backend Engineer)" value={iTitle} onChange={e=>setITitle(e.target.value)} style={inputSt} />
+            <input placeholder="Company (optional)" value={iCompany} onChange={e=>setICompany(e.target.value)} style={inputSt} />
+          </div>
+          <textarea placeholder="Paste the full job description here..." value={iJD} onChange={e=>setIJD(e.target.value)}
+            style={s(inputSt, { minHeight:130, resize:'vertical', marginBottom:10, fontFamily:'Syne,sans-serif' })} />
+          <textarea placeholder={"Extra questions HR wants covered (optional, one per line)\ne.g. Are you willing to relocate to Lahore?\nWhat's your notice period?"}
+            value={iExtraQuestions} onChange={e=>setIExtraQuestions(e.target.value)}
+            style={s(inputSt, { minHeight:70, resize:'vertical', marginBottom:10, fontFamily:'Syne,sans-serif' })} />
+          {iError && <div style={{ fontSize:12, color:'#ef4444', marginBottom:10 }}>{iError}</div>}
+          <button onClick={createInterviewPosting} disabled={iSaving}
+            style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#13c28e', color:'#0a0a08', fontSize:13, fontWeight:700, cursor: iSaving?'default':'pointer', opacity: iSaving ? 0.6 : 1, fontFamily:'Syne,sans-serif' }}>
+            {iSaving ? 'Creating...' : 'Continue → Generate Link'}
+          </button>
         </div>
       )}
-      <div style={{ display:'flex', gap:20, height: dbJobs.length ? 'calc(100% - 80px)' : 'auto', overflow:'hidden' }}>
-        {/* Job list */}
-        <div style={{ width:280, flexShrink:0, overflowY:'auto' }}>
-          {dbJobs.map((job:any) => (
-            <div key={job.id} onClick={()=>setSelectedJob(job)}
-              style={s(card, { marginBottom:8, cursor:'pointer',
-                border:`1px solid ${selectedJob?.id===job.id?'rgba(255,255,255,.15)':'rgba(255,255,255,.06)'}`,
-                background: selectedJob?.id===job.id?'#161614':'#111110' })}>
-              <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>{job.title}</div>
-              <div style={{ display:'flex', gap:12, fontSize:11, color:'rgba(255,255,255,.3)' }}>
-                <span>{job.total_candidates} CVs</span>
-                <span>{job.shortlisted} shortlisted</span>
-                <span>Top: {job.top_score}</span>
-              </div>
-              <div style={{ fontSize:10, color:'rgba(255,255,255,.2)', marginTop:4 }}>
-                {job.created_at ? new Date(job.created_at).toLocaleDateString() : ''}
-              </div>
-            </div>
-          ))}
+
+      {interviewPostingsLoading && <div style={{ fontSize:13, color:'rgba(255,255,255,.3)', marginTop:20 }}>Loading...</div>}
+      {!interviewPostingsLoading && interviewPostings.length === 0 && !showInterviewForm && (
+        <div style={s(card, { textAlign:'center', padding:40, color:'rgba(255,255,255,.3)', marginTop:20 })}>
+          No interview links yet. Create one to start screening candidates conversationally.
         </div>
-        {/* Job detail */}
-        <div style={{ flex:1, overflowY:'auto' }}>
-          {!selectedJob ? (
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'rgba(255,255,255,.2)', fontSize:13 }}>
-              Select a screening run to view candidates
-            </div>
-          ) : (
-            <>
-              <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>{selectedJob.title}</div>
-              <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:20 }}>{selectedJob.total_candidates} candidates screened</div>
-              {(selectedJob.candidates || []).map((c:any, i:number) => (
-                <div key={i} style={s(card, { marginBottom:8 })}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-                    <div style={{ width:30, height:30, borderRadius:'50%', background:'linear-gradient(135deg,#0b7c5e,#13c28e)', display:'grid', placeItems:'center', fontSize:11, fontWeight:700, color:'#fff' }}>
-                      {initials(c.filename)}
-                    </div>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:13, fontWeight:600 }}>{c.filename}</div>
-                      <div style={{ fontSize:11, color:'rgba(255,255,255,.3)' }}>{c.final_verdict}</div>
-                    </div>
-                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, color: c.ai_score>=80?'#13c28e':c.ai_score>=60?'#e2b04a':'#ef4444' }}>{c.ai_score}</div>
-                  </div>
-                  <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
-                    {(c.matched_skills||[]).slice(0,4).map((sk:string) => (
-                      <span key={sk} style={{ fontSize:10, padding:'2px 8px', borderRadius:100, background:'rgba(19,194,142,.1)', color:'#13c28e', border:'1px solid rgba(19,194,142,.15)' }}>{sk}</span>
-                    ))}
-                  </div>
+      )}
+
+      {interviewPostings.length > 0 && (
+        <div style={{ display:'flex', gap:20, height:'calc(100% - 100px)', overflow:'hidden', marginTop: showInterviewForm ? 0 : 12 }}>
+          {/* Posting list */}
+          <div style={{ width:300, flexShrink:0, overflowY:'auto' }}>
+            {interviewPostings.map((p:any) => (
+              <div key={p.id} onClick={()=>openPosting(p)}
+                style={s(card, { marginBottom:8, cursor:'pointer',
+                  border:`1px solid ${selectedPosting?.id===p.id?'rgba(255,255,255,.15)':'rgba(255,255,255,.06)'}`,
+                  background: selectedPosting?.id===p.id?'#161614':'#111110' })}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                  <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>{p.title}</div>
+                  <span style={{ fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:100,
+                    background: p.is_active ? 'rgba(19,194,142,.12)' : 'rgba(255,255,255,.06)',
+                    color: p.is_active ? '#13c28e' : 'rgba(255,255,255,.35)' }}>{p.is_active ? 'ACTIVE' : 'PAUSED'}</span>
                 </div>
-              ))}
-            </>
-          )}
+                {p.company && <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:6 }}>{p.company}</div>}
+                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:8 }}>{p.candidate_count} candidate{p.candidate_count===1?'':'s'} interviewed</div>
+                <button onClick={(e)=>{e.stopPropagation(); copyInterviewLink(p.public_link, p.public_slug)}}
+                  style={{ width:'100%', padding:'6px 10px', borderRadius:6, border:'1px solid rgba(255,255,255,.1)', background:'transparent', color:'rgba(255,255,255,.6)', fontSize:11, cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+                  {copiedSlug===p.public_slug ? '✓ Copied' : 'Copy Public Link'}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Candidates / report */}
+          <div style={{ flex:1, overflowY:'auto' }}>
+            {!selectedPosting ? (
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'rgba(255,255,255,.2)', fontSize:13 }}>
+                Select an interview link to see candidates
+              </div>
+            ) : selectedReport ? (
+              <div>
+                <button onClick={()=>setSelectedReport(null)} style={{ background:'none', border:'none', color:'rgba(255,255,255,.4)', fontSize:12, cursor:'pointer', marginBottom:14, padding:0, fontFamily:'Syne,sans-serif' }}>← Back to candidates</button>
+                <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:16 }}>
+                  <div>
+                    <div style={{ fontSize:18, fontWeight:600 }}>{selectedReport.candidate_name}</div>
+                    <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>{selectedReport.candidate_email}</div>
+                  </div>
+                  {selectedReport.ai_score != null && (
+                    <div style={{ marginLeft:'auto', fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:600,
+                      color: selectedReport.ai_score>=80?'#13c28e':selectedReport.ai_score>=60?'#e2b04a':'#ef4444' }}>{selectedReport.ai_score}</div>
+                  )}
+                </div>
+                {selectedReport.final_verdict && (
+                  <div style={{ display:'inline-block', fontSize:11, fontWeight:700, padding:'4px 12px', borderRadius:100, marginBottom:16,
+                    background:'rgba(255,255,255,.06)', color:'rgba(255,255,255,.7)' }}>{selectedReport.final_verdict}</div>
+                )}
+                {selectedReport.status !== 'completed' && (
+                  <div style={s(card, { marginBottom:14, color:'#e2b04a', fontSize:12 })}>Interview still in progress — candidate hasn't finished yet.</div>
+                )}
+                {selectedReport.experience_assessment && (
+                  <div style={s(card, { marginBottom:14 })}>
+                    <div style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,.4)', marginBottom:6 }}>Experience Assessment</div>
+                    <div style={{ fontSize:13, color:'rgba(255,255,255,.6)', lineHeight:1.7 }}>{selectedReport.experience_assessment}</div>
+                  </div>
+                )}
+                {selectedReport.deep_analysis && (
+                  <div style={s(card, { marginBottom:14 })}>
+                    <div style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,.4)', marginBottom:6 }}>Deep Analysis</div>
+                    <div style={{ fontSize:13, color:'rgba(255,255,255,.6)', lineHeight:1.7 }}>{selectedReport.deep_analysis}</div>
+                  </div>
+                )}
+                <div style={s(card, {})}>
+                  <div style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,.4)', marginBottom:10 }}>Full Transcript</div>
+                  {(selectedReport.transcript || []).map((t:any, i:number) => (
+                    <div key={i} style={{ marginBottom:10 }}>
+                      <div style={{ fontSize:10, fontWeight:700, color: t.role==='assistant' ? '#e2b04a' : '#13c28e', marginBottom:2 }}>
+                        {t.role==='assistant' ? 'AI Interviewer' : selectedReport.candidate_name}
+                      </div>
+                      <div style={{ fontSize:12, color:'rgba(255,255,255,.6)', lineHeight:1.6 }}>{t.content}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize:18, fontWeight:600, marginBottom:4 }}>{selectedPosting.title}</div>
+                <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:20 }}>{selectedPosting.public_link}</div>
+                {interviewCandidatesLoading && <div style={{ fontSize:13, color:'rgba(255,255,255,.3)' }}>Loading...</div>}
+                {!interviewCandidatesLoading && interviewCandidates.length === 0 && (
+                  <div style={s(card, { textAlign:'center', padding:30, color:'rgba(255,255,255,.3)' })}>
+                    No candidates yet. Share the public link to start getting interviews.
+                  </div>
+                )}
+                {interviewCandidates.map((c:any) => (
+                  <div key={c.id} onClick={()=>{ if (c.status==='completed') api.getInterviewSessionReport(c.id).then(setSelectedReport) }}
+                    style={s(card, { marginBottom:8, cursor: c.status==='completed' ? 'pointer' : 'default' })}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                      <div style={{ width:30, height:30, borderRadius:'50%', background:'linear-gradient(135deg,#0b7c5e,#13c28e)', display:'grid', placeItems:'center', fontSize:11, fontWeight:700, color:'#fff' }}>
+                        {initials(c.candidate_name)}
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:13, fontWeight:600 }}>{c.candidate_name}</div>
+                        <div style={{ fontSize:11, color:'rgba(255,255,255,.3)' }}>
+                          {c.status==='completed' ? (c.final_verdict || 'Completed') : 'In progress...'}
+                        </div>
+                      </div>
+                      {c.ai_score != null && (
+                        <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, color: c.ai_score>=80?'#13c28e':c.ai_score>=60?'#e2b04a':'#ef4444' }}>{c.ai_score}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 
@@ -698,7 +949,7 @@ export default function HRDashboard() {
       case 'shortlist': return renderCandidates(shortlistedList, 'Shortlisted', 'No candidates shortlisted yet. Go to All Candidates and shortlist the ones you like.')
       case 'chatbot': return renderChatbot()
       case 'history': return renderHistory()
-      case 'open-roles': return renderOpenRoles()
+      case 'open-roles': return renderInterviewer()
       case 'settings': return renderSettings()
       case 'profile': return renderProfile()
       default: return renderDashboard()
