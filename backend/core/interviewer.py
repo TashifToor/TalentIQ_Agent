@@ -66,25 +66,25 @@ def get_next_turn(job_description: str, extra_questions: list[str], transcript: 
         {"message": str, "action": "continue" | "conclude"}
     """
     if turn_count == 0:
-        prompt = f"""{_system_context(job_description, extra_questions)}
+        # Hardcoded, not LLM-generated — guarantees every interview always
+        # opens with a self-introduction ask, no dependence on the model
+        # reliably following the "don't jump to skills/projects yet" rule.
+        return {
+            "message": "Hi, thanks for joining — excited to chat with you today. Before we get into specifics, I'd love a quick introduction. Could you tell me a bit about your background — your current role or education, and a brief overview of what you do?",
+            "action": "continue",
+        }
+    history = _format_transcript(transcript)
+    force_conclude = turn_count >= MAX_TURNS
+    force_continue = turn_count < MIN_TURNS
 
-This is the very start of the interview. Greet the candidate briefly and professionally, then ask them to introduce themselves — their background, current role/education, and a quick overview of what they do. This is just the opening warm-up question; do not ask about specific skills or projects yet.
-
-Respond ONLY with valid JSON, no markdown, no backticks:
-{{"message": "<your opening greeting + request for a brief self-introduction>", "action": "continue"}}"""
+    if force_conclude:
+        guidance = "You MUST conclude now — this is the final turn regardless of coverage. Thank the candidate and let them know the interview is complete."
+    elif force_continue:
+        guidance = f"You must continue — at least {MIN_TURNS} candidate answers are required before the interview can end, and you're not there yet. Do not conclude no matter how the conversation is going."
     else:
-        history = _format_transcript(transcript)
-        force_conclude = turn_count >= MAX_TURNS
-        force_continue = turn_count < MIN_TURNS
+        guidance = "Decide whether you have enough substantive coverage of the JD's key requirements (and the HR extra questions, if any) to conclude, or whether there are still important gaps to probe. Only conclude once genuinely satisfied, not just because a few questions were asked."
 
-        if force_conclude:
-            guidance = "You MUST conclude now — this is the final turn regardless of coverage. Thank the candidate and let them know the interview is complete."
-        elif force_continue:
-            guidance = f"You must continue — at least {MIN_TURNS} candidate answers are required before the interview can end, and you're not there yet. Do not conclude no matter how the conversation is going."
-        else:
-            guidance = "Decide whether you have enough substantive coverage of the JD's key requirements (and the HR extra questions, if any) to conclude, or whether there are still important gaps to probe. Only conclude once genuinely satisfied, not just because a few questions were asked."
-
-        prompt = f"""{_system_context(job_description, extra_questions)}
+    prompt = f"""{_system_context(job_description, extra_questions)}
 
 <conversation_so_far>
 {history}
