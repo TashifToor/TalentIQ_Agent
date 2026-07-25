@@ -272,4 +272,32 @@ export const api = {
     }
     return res.blob();
   },
+
+  // --- AI Chatbot Interviewer — HR side (authenticated) ---
+  createInterviewPosting: (payload: { title: string; company?: string; job_description: string; extra_questions: string[] }) =>
+    apiFetch("/interview/postings", { method: "POST", body: JSON.stringify(payload) }),
+
+  getInterviewPostings: () => apiFetch("/interview/postings"),
+
+  toggleInterviewPosting: (postingId: string) =>
+    apiFetch(`/interview/postings/${postingId}/toggle`, { method: "PATCH" }),
+
+  getInterviewCandidates: (postingId: string) => apiFetch(`/interview/postings/${postingId}/candidates`),
+
+  getInterviewSessionReport: (sessionId: string) => apiFetch(`/interview/sessions/${sessionId}`),
+
+  // --- AI Chatbot Interviewer — public candidate side (no login) ---
+  getPublicInterviewPosting: (slug: string) => apiFetch(`/interview/public/${slug}`),
+
+  startPublicInterview: (slug: string, candidate_name: string, candidate_email: string) =>
+    apiFetch(`/interview/public/${slug}/start`, {
+      method: "POST",
+      body: JSON.stringify({ candidate_name, candidate_email }),
+    }),
+
+  sendPublicInterviewMessage: (slug: string, sessionId: string, message: string) =>
+    apiFetch(`/interview/public/${slug}/${sessionId}/message`, {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    }),
 };
