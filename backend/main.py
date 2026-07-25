@@ -17,7 +17,9 @@ from routes.policy_docs_route import router as policy_docs_router
 from routes.scan import router as scan_router
 from routes.cv_builder import router as cv_builder_router
 from routes.organization import router as org_router
-
+from routes.interview import router as interview_router
+from routes.interview_public import router as interview_public_router
+from models.interview import InterviewPosting, InterviewSession
 from models.user import User  
 from models.chat import Chat
 from models.job import Job
@@ -79,7 +81,8 @@ app.include_router(forgot_password_router)
 app.include_router(policy_docs_router)
 app.include_router(cv_builder_router)
 app.include_router(org_router)
-
+app.include_router(interview_router)
+app.include_router(interview_public_router)
 
 @app.get("/")
 def root():
