@@ -7,8 +7,8 @@ from core.llm import llm
 # just prompt-engineered. The AI can't conclude before MIN_TURNS candidate
 # answers no matter what it decides, and gets force-concluded at MAX_TURNS so
 # a session can never run forever either.
-MIN_TURNS = 5
-MAX_TURNS = 10
+MIN_TURNS = 6
+MAX_TURNS = 12
 
 
 def _clean_json(raw: str) -> dict:
@@ -49,7 +49,14 @@ RULES YOU MUST FOLLOW:
 - The candidate CANNOT skip, refuse, or deflect a question. If they try to ("skip this", "I'd rather not say", "next question", one-word non-answers, or silence padded with filler), do NOT move on — acknowledge briefly and firmly restate the question, explain that a substantive answer is needed to continue.
 - If off-topic, hostile, or nonsensical input comes in, redirect politely back to the interview.
 - Do not reveal scoring, verdicts, or how you're evaluating them at any point during the conversation.
-- Keep your tone professional and encouraging in delivery, even while being rigorous in substance."""
+- Keep your tone professional and encouraging in delivery, even while being rigorous in substance.
+
+GENERAL SHAPE OF THE INTERVIEW (adapt naturally, don't announce these as rigid sections):
+1. Start with a brief self-introduction — let the candidate walk you through their background, current role/education, and what they do in their own words.
+2. Move into their education/qualifications as relevant to this role.
+3. Ask them to name the skills/technologies most relevant to the JD that they'd bring to this role.
+4. Spend the bulk of the interview here: for each significant skill they claim, don't just take their word for it — ask them to walk you through a real project where they actually used it. Dig into their specific role in that project, technical decisions they made, problems they hit and how they solved them. This is how you actually verify a skill is real versus just a listed keyword — surface-level project summaries without technical specifics are a red flag.
+5. Weave in the HR's extra questions (if any) naturally wherever they fit, rather than saving them all for the end."""
 
 
 def get_next_turn(job_description: str, extra_questions: list[str], transcript: list[dict], turn_count: int) -> dict:
@@ -61,10 +68,10 @@ def get_next_turn(job_description: str, extra_questions: list[str], transcript: 
     if turn_count == 0:
         prompt = f"""{_system_context(job_description, extra_questions)}
 
-This is the very start of the interview. Greet the candidate briefly and professionally by name is not needed yet (you don't know it in the message itself — the app already shows their name), then ask your first substantive question based on the JD.
+This is the very start of the interview. Greet the candidate briefly and professionally, then ask them to introduce themselves — their background, current role/education, and a quick overview of what they do. This is just the opening warm-up question; do not ask about specific skills or projects yet.
 
 Respond ONLY with valid JSON, no markdown, no backticks:
-{{"message": "<your opening line + first question>", "action": "continue"}}"""
+{{"message": "<your opening greeting + request for a brief self-introduction>", "action": "continue"}}"""
     else:
         history = _format_transcript(transcript)
         force_conclude = turn_count >= MAX_TURNS
