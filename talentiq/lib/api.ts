@@ -274,13 +274,16 @@ export const api = {
   },
 
   // --- AI Chatbot Interviewer — HR side (authenticated) ---
-  createInterviewPosting: (payload: { title: string; company?: string; job_description: string; extra_questions: string[] }) =>
+  createInterviewPosting: (payload: { title: string; company?: string; job_description: string; extra_questions: string[]; interviewer_name?: string }) =>
     apiFetch("/interview/postings", { method: "POST", body: JSON.stringify(payload) }),
 
   getInterviewPostings: () => apiFetch("/interview/postings"),
 
   toggleInterviewPosting: (postingId: string) =>
     apiFetch(`/interview/postings/${postingId}/toggle`, { method: "PATCH" }),
+
+  deleteInterviewPosting: (postingId: string) =>
+    apiFetch(`/interview/postings/${postingId}`, { method: "DELETE" }),
 
   getInterviewCandidates: (postingId: string) => apiFetch(`/interview/postings/${postingId}/candidates`),
 
@@ -300,4 +303,21 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ message }),
     }),
+
+  uploadPublicInterviewCV: async (slug: string, sessionId: string, file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE_URL}/interview/public/${slug}/${sessionId}/upload-cv`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Could not upload CV." }));
+      throw buildApiError(err);
+    }
+    return res.json();
+  },
+
+  skipPublicInterviewCV: (slug: string, sessionId: string) =>
+    apiFetch(`/interview/public/${slug}/${sessionId}/skip-cv`, { method: "POST" }),
 };
