@@ -10,6 +10,7 @@ class InterviewPostingCreate(BaseModel):
     company: Optional[str] = None
     job_description: str
     extra_questions: List[str] = []
+    interviewer_name: Optional[str] = None
 
 
 class InterviewPostingResponse(BaseModel):
@@ -18,6 +19,7 @@ class InterviewPostingResponse(BaseModel):
     company: Optional[str] = None
     job_description: str
     extra_questions: List[str]
+    interviewer_name: str
     public_slug: str
     public_link: str
     is_active: bool
@@ -55,6 +57,7 @@ class InterviewSessionReport(BaseModel):
 class PublicPostingInfo(BaseModel):
     title: str
     company: Optional[str] = None
+    interviewer_name: str
     is_active: bool
 
 
@@ -81,3 +84,4 @@ class InterviewMessageResponse(BaseModel):
     message: Optional[str] = None      # AI's next question/follow-up (null once concluded)
     status: str                        # "in_progress" | "completed"
     turn_count: int
+    awaiting_cv: bool = False          # true when the UI should show a CV upload control instead of the text box
