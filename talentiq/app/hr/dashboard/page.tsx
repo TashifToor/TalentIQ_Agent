@@ -128,6 +128,7 @@ export default function HRDashboard() {
   const [iCompany, setICompany] = useState('')
   const [iJD, setIJD] = useState('')
   const [iExtraQuestions, setIExtraQuestions] = useState('')
+  const [iInterviewerName, setIInterviewerName] = useState('')
   const [iSaving, setISaving] = useState(false)
   const [iError, setIError] = useState('')
   const [copiedSlug, setCopiedSlug] = useState('')
@@ -227,15 +228,26 @@ export default function HRDashboard() {
     setIError('')
     try {
       const extra = iExtraQuestions.split('\n').map(q=>q.trim()).filter(Boolean)
-      const posting = await api.createInterviewPosting({ title: iTitle.trim(), company: iCompany.trim() || undefined, job_description: iJD.trim(), extra_questions: extra })
+      const posting = await api.createInterviewPosting({ title: iTitle.trim(), company: iCompany.trim() || undefined, job_description: iJD.trim(), extra_questions: extra, interviewer_name: iInterviewerName.trim() || undefined })
       setShowInterviewForm(false)
-      setITitle(''); setICompany(''); setIJD(''); setIExtraQuestions('')
+      setITitle(''); setICompany(''); setIJD(''); setIExtraQuestions(''); setIInterviewerName('')
       loadInterviewPostings()
       openPosting(posting)
     } catch (e:any) {
       setIError(e?.message || 'Could not create interview posting.')
     } finally {
       setISaving(false)
+    }
+  }
+
+  const deleteInterviewPosting = async (postingId:string) => {
+    if (!confirm('Delete this interview link permanently? All candidate transcripts and reports for it will be lost too.')) return
+    try {
+      await api.deleteInterviewPosting(postingId)
+      if (selectedPosting?.id === postingId) { setSelectedPosting(null); setSelectedReport(null) }
+      loadInterviewPostings()
+    } catch (e:any) {
+      setIError(e?.message || 'Could not delete interview link.')
     }
   }
 
@@ -809,6 +821,8 @@ export default function HRDashboard() {
             <input placeholder="Role title (e.g. Backend Engineer)" value={iTitle} onChange={e=>setITitle(e.target.value)} style={inputSt} />
             <input placeholder="Company (optional)" value={iCompany} onChange={e=>setICompany(e.target.value)} style={inputSt} />
           </div>
+          <input placeholder="Interviewer name (optional — e.g. Kelly, Alex). Leave blank for a random one."
+            value={iInterviewerName} onChange={e=>setIInterviewerName(e.target.value)} style={s(inputSt, { marginBottom:10 })} />
           <textarea placeholder="Paste the full job description here..." value={iJD} onChange={e=>setIJD(e.target.value)}
             style={s(inputSt, { minHeight:130, resize:'vertical', marginBottom:10, fontFamily:'Syne,sans-serif' })} />
           <textarea placeholder={"Extra questions HR wants covered (optional, one per line)\ne.g. Are you willing to relocate to Lahore?\nWhat's your notice period?"}
@@ -844,12 +858,18 @@ export default function HRDashboard() {
                     background: p.is_active ? 'rgba(19,194,142,.12)' : 'rgba(255,255,255,.06)',
                     color: p.is_active ? '#13c28e' : 'rgba(255,255,255,.35)' }}>{p.is_active ? 'ACTIVE' : 'PAUSED'}</span>
                 </div>
-                {p.company && <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:6 }}>{p.company}</div>}
-                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:8 }}>{p.candidate_count} candidate{p.candidate_count===1?'':'s'} interviewed</div>
-                <button onClick={(e)=>{e.stopPropagation(); copyInterviewLink(p.public_link, p.public_slug)}}
-                  style={{ width:'100%', padding:'6px 10px', borderRadius:6, border:'1px solid rgba(255,255,255,.1)', background:'transparent', color:'rgba(255,255,255,.6)', fontSize:11, cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
-                  {copiedSlug===p.public_slug ? '✓ Copied' : 'Copy Public Link'}
-                </button>
+                {p.company && <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:2 }}>{p.company}</div>}
+                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:8 }}>Interviewer: {p.interviewer_name} · {p.candidate_count} candidate{p.candidate_count===1?'':'s'} interviewed</div>
+                <div style={{ display:'flex', gap:6 }}>
+                  <button onClick={(e)=>{e.stopPropagation(); copyInterviewLink(p.public_link, p.public_slug)}}
+                    style={{ flex:1, padding:'6px 10px', borderRadius:6, border:'1px solid rgba(255,255,255,.1)', background:'transparent', color:'rgba(255,255,255,.6)', fontSize:11, cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+                    {copiedSlug===p.public_slug ? '✓ Copied' : 'Copy Public Link'}
+                  </button>
+                  <button onClick={(e)=>{e.stopPropagation(); deleteInterviewPosting(p.id)}}
+                    style={{ padding:'6px 10px', borderRadius:6, border:'1px solid rgba(239,68,68,.2)', background:'rgba(239,68,68,.06)', color:'#ef4444', fontSize:11, cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>
