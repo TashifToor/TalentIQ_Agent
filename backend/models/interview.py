@@ -25,6 +25,7 @@ class InterviewPosting(Base):
     company =          Column(String, nullable=True)
     job_description =  Column(Text, nullable=False)
     extra_questions =  Column(Text, default="[]")   # JSON list[str] — HR's must-ask questions
+    interviewer_name = Column(String, default="Kelly")  # human name the AI interviewer goes by in chat
     public_slug =      Column(String, unique=True, index=True, nullable=False, default=generate_slug)
     is_active =        Column(Boolean, default=True)
     created_at =       Column(DateTime(timezone=True), server_default=func.now())
@@ -46,6 +47,8 @@ class InterviewSession(Base):
     transcript =              Column(Text, default="[]")   # JSON list[{role, content}]
     turn_count =               Column(Integer, default=0)   # number of candidate answers so far
     status =                   Column(String, default="in_progress")  # in_progress | completed
+    awaiting_cv =              Column(Boolean, default=False)  # AI has asked for CV, waiting on upload/skip
+    cv_text =                  Column(Text, nullable=True)     # extracted text from uploaded CV, if any
 
     ai_score =                 Column(Integer, nullable=True)
     final_verdict =            Column(String, nullable=True)
