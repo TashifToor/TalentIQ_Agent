@@ -1,5 +1,6 @@
 import json
 import os
+import random
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -16,6 +17,7 @@ from schemas.interview import (
 router = APIRouter(prefix="/interview", tags=["AI Interviewer"])
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+DEFAULT_INTERVIEWER_NAMES = ["Kelly", "Alex", "Sarah", "Sam", "Emma", "Jordan"]
 
 
 def require_hr(current_user: User):
@@ -31,6 +33,7 @@ def _posting_to_response(posting: InterviewPosting, candidate_count: int) -> dic
         "company": posting.company,
         "job_description": posting.job_description,
         "extra_questions": json.loads(posting.extra_questions or "[]"),
+        "interviewer_name": posting.interviewer_name or "Kelly",
         "public_slug": posting.public_slug,
         "public_link": f"{FRONTEND_URL}/interview/{posting.public_slug}",
         "is_active": posting.is_active,
@@ -57,12 +60,36 @@ def create_posting(
         company=payload.company,
         job_description=payload.job_description.strip(),
         extra_questions=json.dumps([q.strip() for q in payload.extra_questions if q.strip()]),
+        interviewer_name=(payload.interviewer_name.strip() if payload.interviewer_name and payload.interviewer_name.strip() else random.choice(DEFAULT_INTERVIEWER_NAMES)),
     )
     db.add(posting)
     db.commit()
     db.refresh(posting)
 
     return _posting_to_response(posting, candidate_count=0)
+
+
+# ── DELETE /interview/postings/{id} — permanently delete a posting + all its candidate sessions ──
+@router.delete("/postings/{posting_id}")
+def delete_posting(
+    posting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+
+    posting = db.query(InterviewPosting).filter(
+        InterviewPosting.id == posting_id,
+        InterviewPosting.hr_user_id.in_(scoped_ids),
+    ).first()
+    if not posting:
+        raise HTTPException(status_code=404, detail="Posting not found.")
+
+    db.query(InterviewSession).filter(InterviewSession.posting_id == posting.id).delete()
+    db.delete(posting)
+    db.commit()
+    return {"deleted": True}
 
 
 # ── GET /interview/postings — HR lists their (org-scoped) postings ──────
