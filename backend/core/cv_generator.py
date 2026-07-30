@@ -54,10 +54,15 @@ def optimize_cv_for_jd(cv_data: CVData, job_description: str) -> CVData:
         for i, exp in enumerate(cv_data.experience)
     ) or "(no experience entries)"
 
+    if cv_data.skill_groups:
+        skills_text = "\n".join(f"{g.category}: {', '.join(g.items)}" for g in cv_data.skill_groups if g.items) or "(none provided)"
+    else:
+        skills_text = ", ".join(cv_data.skills) or "(none provided)"
+
     prompt = OPTIMIZE_PROMPT_TEMPLATE.format(
         job_description=job_description[:4000],
         summary=cv_data.summary or "(none provided)",
-        skills=", ".join(cv_data.skills) or "(none provided)",
+        skills=skills_text,
         experience_entries=experience_entries_text,
     )
 
@@ -82,14 +87,21 @@ def optimize_cv_for_jd(cv_data: CVData, job_description: str) -> CVData:
         new_cv.summary = result["summary"].strip()
 
     reordered = result.get("skills_reordered")
-    if isinstance(reordered, list):
-        original_set = set(cv_data.skills)
-        # Only accept the reordering if it's the same set of skills — any
-        # skill the model added or dropped gets silently discarded here.
-        safe_reordered = [s for s in reordered if s in original_set]
-        safe_reordered += [s for s in cv_data.skills if s not in safe_reordered]
-        if safe_reordered:
-            new_cv.skills = safe_reordered
+    if isinstance(reordered, list) and reordered:
+        priority = {s: i for i, s in enumerate(reordered)}
+        if cv_data.skill_groups:
+            # Reorder items WITHIN each group by the model's JD-relevance
+            # ranking — never move an item across groups or drop/add one.
+            for group in new_cv.skill_groups:
+                group.items = sorted(group.items, key=lambda s: priority.get(s, len(priority)))
+        elif cv_data.skills:
+            original_set = set(cv_data.skills)
+            # Only accept items that were actually in the original list —
+            # anything the model added or dropped gets silently discarded.
+            safe_reordered = [s for s in reordered if s in original_set]
+            safe_reordered += [s for s in cv_data.skills if s not in safe_reordered]
+            if safe_reordered:
+                new_cv.skills = safe_reordered
 
     bullets_by_entry = result.get("experience_bullets")
     if isinstance(bullets_by_entry, list) and len(bullets_by_entry) == len(new_cv.experience):
