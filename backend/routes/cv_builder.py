@@ -1,193 +1,163 @@
-import asyncio
-from fastapi import APIRouter, HTTPException, status, Depends
+import os
+import tempfile
+import shutil
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, status, Request
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from models.user import User
 from models.database import get_db
-from models.scan_history import ScanHistory
-from middleware.auth import get_current_user
-from schemas.screening import ScreeningRequest
-from core.graph import TalentIQGraph
-from core.redis_client import get_cached_screening, set_cached_screening, check_rate_limit
+from models.user import User
+from middleware.auth import get_current_user_optional
+from schemas.cv_builder import CVData, GenerateCVRequest, ALL_TEMPLATES
+from core.loader import CvLoader
+from core.cv_extractor import extract_cv_data
+from core.cv_generator import optimize_cv_for_jd
+from core.cv_pdf_renderer import render_cv_pdf
+from core.redis_client import get_ip_usage_count, increment_ip_usage, check_rate_limit
 from core.analytics import track
-from datetime import datetime, timezone
 
-router = APIRouter(prefix="/Rating", tags=["CV Screening"])
+router = APIRouter(prefix="/cv-builder", tags=["CV Builder"])
 
-FREE_SCANS = 3
-TRIAL_DAYS = 7
-SCREENING_TIMEOUT_SECONDS = 45
+ANON_FREE_LIMIT = 2
+CANDIDATE_FREE_LIMIT = 3
+MAX_PDF_SIZE_MB = 8
+MAX_PDF_SIZE_BYTES = MAX_PDF_SIZE_MB * 1024 * 1024
+PDF_MAGIC_BYTES = b"%PDF-"
 
 
-async def check_screening_access(user: User):
+def _client_ip(request: Request) -> str:
+    # Respect a reverse proxy's forwarded header if present (e.g. behind
+    # nginx/Render/Railway), falling back to the direct connection IP.
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _check_and_consume_quota(request: Request, db: Session, user: User | None):
     """
-    Candidate: 3 free scans, then must pay
-    HR: 7 day trial, then must pay
+    Enforces the free-tier limit BEFORE doing any expensive work, and only
+    increments usage on the way in — a failed generation shouldn't cost
+    the user a free credit twice, but we also don't want people to build
+    successfully and then not have it counted.
     """
-    from core.unlimited_access import has_unlimited_access
-    if has_unlimited_access(user.email):
-        return  # allowlisted account — unlimited, no expiry, any role
-
-    now = datetime.now(timezone.utc)
-
-    if user.role == "candidate":
-        if user.subscription_status == "active":
-            return  # paid — allow
-        if (user.scans_used or 0) >= FREE_SCANS:
+    if user is None:
+        ip = _client_ip(request)
+        used = get_ip_usage_count(ip, "cvbuilder")
+        if used >= ANON_FREE_LIMIT:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"FREE_LIMIT_REACHED|You have used all {FREE_SCANS} free scans. Upgrade to Candidate Pro for unlimited screening."
+                detail=f"ANON_LIMIT_REACHED|You've used your {ANON_FREE_LIMIT} free CV builds. Sign up (it's free) to keep going."
             )
-    elif user.role == "hr":
-        if user.subscription_status == "active":
-            return
-        if user.subscription_status == "trial" and user.trial_started_at:
-            trial_start = user.trial_started_at
-            if trial_start.tzinfo is None:
-                trial_start = trial_start.replace(tzinfo=timezone.utc)
-            days_elapsed = (now - trial_start).days
-            if days_elapsed < TRIAL_DAYS:
-                return  # still in trial — allow
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="TRIAL_EXPIRED|Your 7-day free trial has ended. Upgrade to HR Suite to continue."
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="TRIAL_EXPIRED|Your trial has ended. Upgrade to HR Suite to continue."
-            )
+        return  # actual increment happens after successful generation, see below
 
+    if user.role != "candidate":
+        # HR / other roles: CV Builder is a candidate-facing feature only (by design).
+        raise HTTPException(status_code=403, detail="CV Builder is available for candidate accounts.")
 
-@router.post("/screen")
-async def screen_candidate(
-    payload: ScreeningRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    print(f"[Screen] User: {current_user.email} | Role: {current_user.role} | Scans: {current_user.scans_used}")
+    if user.subscription_status == "active":
+        return  # paid — unlimited
 
-    allowed, wait_seconds = check_rate_limit(f"scan:{current_user.id}", cooldown_seconds=5)
-    if not allowed:
-        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before scanning again.")
-
-    await check_screening_access(current_user)
-
-    if not payload.cv_text or not payload.cv_text.strip():
+    if (user.cv_builds_used or 0) >= CANDIDATE_FREE_LIMIT:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="cv_text is required. Upload a CV first."
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"FREE_LIMIT_REACHED|You've used all {CANDIDATE_FREE_LIMIT} free CV builds. Upgrade to Candidate Pro for unlimited access."
         )
 
+
+def _consume_quota(request: Request, db: Session, user: User | None):
+    """Called only after a successful generation."""
+    if user is None:
+        increment_ip_usage(_client_ip(request), "cvbuilder")
+    else:
+        user.cv_builds_used = (user.cv_builds_used or 0) + 1
+        db.add(user)
+        db.commit()
+
+
+@router.post("/parse")
+async def parse_cv(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """Upload an existing CV (PDF) and get back structured, editable fields."""
+    ip = _client_ip(request)
+    allowed, wait_seconds = check_rate_limit(f"cvbuilder-parse:{current_user.id if current_user else ip}", cooldown_seconds=5)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s and try again.")
+
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+
+    contents = await file.read()
+    if len(contents) > MAX_PDF_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {MAX_PDF_SIZE_MB}MB.")
+    if not contents.startswith(PDF_MAGIC_BYTES):
+        raise HTTPException(status_code=400, detail="File is not a valid PDF.")
+
+    tmp_dir = tempfile.mkdtemp()
     try:
-        # Same CV + same JD scanned before? Skip the Groq LLM call entirely —
-        # it's by far the slowest and most expensive part of a scan.
-        cached = get_cached_screening(payload.cv_text, payload.job_description)
-        if cached:
-            print(f"[Screen] Cache HIT — skipping LLM call for {current_user.email}")
-            final_report = cached
-        else:
-            # Fresh agent scoped to THIS user's uploaded CV/FAISS index — never
-            # shares state with other users' concurrent scans.
-            screening_agent = TalentIQGraph(user_id=current_user.id)
+        tmp_path = os.path.join(tmp_dir, "upload.pdf")
+        with open(tmp_path, "wb") as f:
+            f.write(contents)
 
-            try:
-                # run_screening is a blocking call (LLM + retrieval) — run it in
-                # a worker thread with a hard timeout so a slow/hung Groq call
-                # can't hang the request (and the whole event loop) forever.
-                final_report = await asyncio.wait_for(
-                    asyncio.to_thread(screening_agent.run_screening, payload.job_description),
-                    timeout=SCREENING_TIMEOUT_SECONDS,
-                )
-            except asyncio.TimeoutError:
-                raise HTTPException(
-                    status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                    detail="Screening is taking longer than expected. Please try again."
-                )
+        loader = CvLoader(data_path=tmp_dir)
+        documents = loader.load()
+        if not documents:
+            raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
 
-            print(f"[Screen DEBUG] final_report keys: {list(final_report.keys()) if final_report else None}")
-            print(f"[Screen DEBUG] screening_analysis length: {len(final_report.get('screening_analysis', '') or '')}")
+        full_text = "\n\n".join([d.page_content for d in documents])
+        cv_data = extract_cv_data(full_text)
+        return cv_data.model_dump()
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
-            if final_report:
-                set_cached_screening(payload.cv_text, payload.job_description, final_report)
 
-        if not final_report:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Graph returned no result."
-            )
-        if current_user.role == "candidate":
-            current_user.scans_used = (current_user.scans_used or 0) + 1
-            db.add(current_user)
-            db.commit()
-            print(f"[Screen] Updated scans_used for {current_user.email}: {current_user.scans_used}")
+@router.post("/generate")
+async def generate_cv(
+    request: Request,
+    body: GenerateCVRequest,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """Generate a downloadable, ATS-friendly PDF from structured CV data,
+    optionally rewritten to better match a target job description."""
 
-        scans_remaining = None
-        if current_user.role == "candidate" and current_user.subscription_status != "active":
-            scans_remaining = max(0, FREE_SCANS - (current_user.scans_used or 0))
+    ip = _client_ip(request)
+    allowed, wait_seconds = check_rate_limit(f"cvbuilder-gen:{current_user.id if current_user else ip}", cooldown_seconds=5)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s and try again.")
 
-        metrics = {
-            "candidate_score": final_report.get("candidate_score", 0),
-            "matched_skills": final_report.get("matched_skills", []),
-            "missing_skills": final_report.get("missing_skills", []),
-            "final_verdict": final_report.get("final_verdict", "Rejected"),
-        }
-        flags = {
-            "is_shortlisted": final_report.get("is_shortlisted", False),
-            "has_min_experience": final_report.get("has_min_experience",
-                                   final_report.get("has_minimum_qualifications", False)),
-            "trigger_interview": final_report.get("trigger_interview", False),
-        }
-        deep_analysis = final_report.get("screening_analysis", "")
+    _check_and_consume_quota(request, db, current_user)
 
-        # --- Persist this scan to history (so /scans/history can show it later) ---
+    if body.template not in ALL_TEMPLATES:
+        raise HTTPException(status_code=400, detail=f"Invalid template. Choose one of: {', '.join(sorted(ALL_TEMPLATES))}")
+
+    cv_data = body.cv_data
+    if body.job_description and body.job_description.strip():
         try:
-            jd = (payload.job_description or "").strip()
-            # Prefer the AI-extracted title (it actually reads the JD and skips
-            # boilerplate like "Apply At ..."); fall back to the old regex
-            # heuristic only if the model didn't return one.
-            role_title = (metrics.get("job_title") or "").strip()
-            if not role_title:
-                import re
-                title_match = re.search(r"Job\s*Title:\s*(.+)", jd, re.IGNORECASE)
-                role_title = (title_match.group(1).strip() if title_match else jd.split("\n")[0].strip())
-            role_title = role_title[:150]
-            history_entry = ScanHistory(
-                user_id=current_user.id,
-                role_title=role_title or "Untitled Role",
-                candidate_score=metrics["candidate_score"],
-                final_verdict=metrics["final_verdict"],
-                matched_skills=metrics["matched_skills"],
-                missing_skills=metrics["missing_skills"],
-                is_shortlisted=str(flags["is_shortlisted"]),
-                trigger_interview=str(flags["trigger_interview"]),
-                deep_analysis=deep_analysis,
-            )
-            db.add(history_entry)
-            db.commit()
-        except Exception as hist_err:
-            # Never let history logging break the actual screening response
-            print(f"[Screen WARNING] Failed to save scan history: {str(hist_err)}")
-            db.rollback()
+            cv_data = optimize_cv_for_jd(cv_data, body.job_description.strip())
+        except Exception as e:
+            print(f"[CVBuilder] JD optimization failed, using original content: {e}")
 
-        track(current_user.id, "scan_completed", {
-            "role": current_user.role,
-            "score": metrics["candidate_score"],
-            "verdict": metrics["final_verdict"],
-            "cache_hit": bool(cached),
-        })
-
-        return {
-            "status": "success",
-            "metrics": metrics,
-            "flags": flags,
-            "deep_analysis": deep_analysis,
-            "scans_remaining": scans_remaining,  # frontend shows warning
-        }
-
-    except HTTPException:
-        raise
+    try:
+        pdf_bytes = render_cv_pdf(cv_data, template=body.template, accent_color=body.accent_color)
     except Exception as e:
-        print(f"[Screen ERROR] {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Screening failed: {str(e)}")
+        print(f"[CVBuilder] PDF render failed: {e}")
+        raise HTTPException(status_code=500, detail="Could not generate PDF. Please try again.")
+
+    _consume_quota(request, db, current_user)
+    track(current_user.id if current_user else f"anon:{ip}", "cv_built", {
+        "template": body.template,
+        "jd_optimized": bool(body.job_description),
+        "anonymous": current_user is None,
+    })
+
+    filename = f"{(cv_data.full_name or 'resume').replace(' ', '_')}_CV.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
