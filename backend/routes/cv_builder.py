@@ -41,6 +41,10 @@ def _check_and_consume_quota(request: Request, db: Session, user: User | None):
     the user a free credit twice, but we also don't want people to build
     successfully and then not have it counted.
     """
+    from core.unlimited_access import has_unlimited_access
+    if user is not None and has_unlimited_access(user.email):
+        return  # allowlisted account — unlimited, no expiry, any role (candidate or HR)
+
     if user is None:
         ip = _client_ip(request)
         used = get_ip_usage_count(ip, "cvbuilder")
