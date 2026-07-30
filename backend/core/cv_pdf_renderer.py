@@ -104,9 +104,9 @@ def _build_styles(cfg):
     styles = getSampleStyleSheet()
     name_color = colors.white if cfg.get("dark_header") else accent
 
-    styles.add(ParagraphStyle(name="CVName", fontName=cfg["font_b"], fontSize=cfg["name_size"], textColor=name_color, alignment=cfg["name_align"], spaceAfter=2))
-    styles.add(ParagraphStyle(name="CVRole", fontName=cfg["font"], fontSize=11.5, textColor=colors.white if cfg.get("dark_header") else colors.HexColor("#555555"), alignment=cfg["name_align"], spaceAfter=4))
-    styles.add(ParagraphStyle(name="CVContact", fontName=cfg["font"], fontSize=9.5, textColor=colors.white if cfg.get("dark_header") else colors.HexColor("#444444"), alignment=cfg["name_align"], spaceAfter=10))
+    styles.add(ParagraphStyle(name="CVName", fontName=cfg["font_b"], fontSize=cfg["name_size"], leading=cfg["name_size"] * 1.15, textColor=name_color, alignment=cfg["name_align"], spaceAfter=4))
+    styles.add(ParagraphStyle(name="CVRole", fontName=cfg["font"], fontSize=11.5, leading=15, textColor=colors.white if cfg.get("dark_header") else colors.HexColor("#555555"), alignment=cfg["name_align"], spaceAfter=4))
+    styles.add(ParagraphStyle(name="CVContact", fontName=cfg["font"], fontSize=9.5, leading=13, textColor=colors.white if cfg.get("dark_header") else colors.HexColor("#444444"), alignment=cfg["name_align"], spaceAfter=10))
 
     if cfg["heading_style"] in ("underline", "underline-bold"):
         heading_size, heading_color = (12, ink) if cfg["heading_style"] == "underline-bold" else (11.5, ink)
@@ -121,10 +121,10 @@ def _build_styles(cfg):
     else:
         heading_size, heading_color = 12, accent
 
-    styles.add(ParagraphStyle(name="CVSectionHeading", fontName=cfg["font_b"], fontSize=heading_size, textColor=heading_color, spaceBefore=13, spaceAfter=6))
+    styles.add(ParagraphStyle(name="CVSectionHeading", fontName=cfg["font_b"], fontSize=heading_size, leading=heading_size * 1.25, textColor=heading_color, spaceBefore=13, spaceAfter=6))
     styles.add(ParagraphStyle(name="CVBody", fontName=cfg["font"], fontSize=10, leading=14, textColor=ink))
-    styles.add(ParagraphStyle(name="CVEntryTitle", fontName=cfg["font_b"], fontSize=10.5, textColor=ink, spaceBefore=7))
-    styles.add(ParagraphStyle(name="CVEntrySub", fontName=cfg["font_i"], fontSize=9.5, textColor=colors.HexColor("#555555"), spaceAfter=4))
+    styles.add(ParagraphStyle(name="CVEntryTitle", fontName=cfg["font_b"], fontSize=10.5, leading=13.5, textColor=ink, spaceBefore=7))
+    styles.add(ParagraphStyle(name="CVEntrySub", fontName=cfg["font_i"], fontSize=9.5, leading=12.5, textColor=colors.HexColor("#555555"), spaceAfter=4))
     styles.add(ParagraphStyle(name="CVBullet", fontName=cfg["font"], fontSize=9.5, leading=13, leftIndent=12, textColor=ink))
     return styles, accent, ink
 
