@@ -14,7 +14,7 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div style={{ background: 'var(--paper)', color: 'var(--ink)', fontFamily: 'Syne, sans-serif' }}>
+    <div style={{ background: 'var(--paper)', color: 'var(--ink)', fontFamily: 'Inter, sans-serif' }}>
 
       {/* NAV */}
       <nav style={{
