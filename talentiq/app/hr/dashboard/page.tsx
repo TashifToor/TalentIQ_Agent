@@ -37,7 +37,7 @@ function AnalysisCarousel({ text }: { text: string }) {
     <div>
       <div style={{ display:'flex', gap:5, marginBottom:10, flexWrap:'wrap' }}>
         {steps.map((s,i) => (
-          <button key={i} onClick={(e)=>{e.stopPropagation(); setActive(i)}} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:100, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'Syne,sans-serif', border:`1px solid ${active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.08)'}`, background:active===i?`${STEP_COLORS_C[i%4]}18`:'transparent', color:active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.3)', transition:'all .2s' }}>
+          <button key={i} onClick={(e)=>{e.stopPropagation(); setActive(i)}} style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 10px', borderRadius:100, fontSize:11, fontWeight:600, cursor:'pointer', fontFamily:'Inter,sans-serif', border:`1px solid ${active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.08)'}`, background:active===i?`${STEP_COLORS_C[i%4]}18`:'transparent', color:active===i?STEP_COLORS_C[i%4]:'rgba(255,255,255,.3)', transition:'all .2s' }}>
             <span>{STEP_ICONS[i%4]}</span> {s.heading}
           </button>
         ))}
@@ -110,6 +110,13 @@ export default function HRDashboard() {
   // History (persisted)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [historySelected, setHistorySelected] = useState<HistoryEntry | null>(null)
+  const [historyTab, setHistoryTab] = useState<'screenings'|'interviews'|'actions'>('screenings')
+  const [scanHistory, setScanHistory] = useState<any[]>([])
+  const [scanHistoryLoading, setScanHistoryLoading] = useState(false)
+  const [interviewHistory, setInterviewHistory] = useState<any[]>([])
+  const [interviewHistoryLoading, setInterviewHistoryLoading] = useState(false)
+  const [scanHistorySelected, setScanHistorySelected] = useState<any>(null)
+  const [interviewHistorySelected, setInterviewHistorySelected] = useState<any>(null)
 
   // DB jobs state
   const [dbJobs, setDbJobs] = useState<any[]>([])
@@ -274,6 +281,18 @@ export default function HRDashboard() {
 
     loadInterviewPostings()
     loadOrg()
+
+    setScanHistoryLoading(true)
+    api.getScanHistory()
+      .then((r:any) => setScanHistory(Array.isArray(r) ? r : []))
+      .catch(() => setScanHistory([]))
+      .finally(() => setScanHistoryLoading(false))
+
+    setInterviewHistoryLoading(true)
+    api.getAllInterviewCandidates()
+      .then((r:any) => setInterviewHistory(Array.isArray(r) ? r.filter((c:any) => c.status === 'completed') : []))
+      .catch(() => setInterviewHistory([]))
+      .finally(() => setInterviewHistoryLoading(false))
   }, [])
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:'smooth' }) }, [messages, typing])
@@ -395,9 +414,9 @@ export default function HRDashboard() {
   const avgScore = candidates.length ? Math.round(candidates.reduce((s,c)=>s+(c.ai_score||0),0)/candidates.length) : 0
 
   // ── Styles ──
-  const base = { background:'#0a0a08', fontFamily:'Syne, sans-serif', color:'rgba(255,255,255,.88)' }
+  const base = { background:'#0a0a08', fontFamily:'Inter, sans-serif', color:'rgba(255,255,255,.88)' }
   const card = { background:'#111110', border:'1px solid rgba(255,255,255,.06)', borderRadius:8, padding:16 }
-  const inputSt = { background:'#111110', border:'1px solid rgba(255,255,255,.06)', borderRadius:8, padding:'10px 12px', fontSize:13, fontFamily:'Syne, sans-serif', color:'rgba(255,255,255,.8)', outline:'none', width:'100%' }
+  const inputSt = { background:'#111110', border:'1px solid rgba(255,255,255,.06)', borderRadius:8, padding:'10px 12px', fontSize:13, fontFamily:'Inter, sans-serif', color:'rgba(255,255,255,.8)', outline:'none', width:'100%' }
 
   // ── Nav ──
   const NAV = [
@@ -436,13 +455,13 @@ export default function HRDashboard() {
         {c.error && <div style={{ fontSize:11, color:'#ef4444', marginBottom:8 }}>{c.error}</div>}
         {showActions && !c.status || c.status==='active' ? (
           <div style={{ display:'flex', gap:6 }}>
-            <button onClick={e=>{e.stopPropagation();markCandidate(idx,'shortlisted')}} style={{ flex:1, fontSize:11, fontWeight:600, fontFamily:'Syne,sans-serif', padding:7, borderRadius:6, cursor:'pointer', background:'rgba(19,194,142,.12)', color:'#13c28e', border:'1px solid rgba(19,194,142,.2)' }}>✓ Shortlist</button>
-            <button onClick={e=>{e.stopPropagation();markCandidate(idx,'rejected')}} style={{ flex:1, fontSize:11, fontWeight:600, fontFamily:'Syne,sans-serif', padding:7, borderRadius:6, cursor:'pointer', background:'rgba(239,68,68,.08)', color:'#ef4444', border:'1px solid rgba(239,68,68,.15)' }}>✗ Reject</button>
+            <button onClick={e=>{e.stopPropagation();markCandidate(idx,'shortlisted')}} style={{ flex:1, fontSize:11, fontWeight:600, fontFamily:'Inter,sans-serif', padding:7, borderRadius:6, cursor:'pointer', background:'rgba(19,194,142,.12)', color:'#13c28e', border:'1px solid rgba(19,194,142,.2)' }}>✓ Shortlist</button>
+            <button onClick={e=>{e.stopPropagation();markCandidate(idx,'rejected')}} style={{ flex:1, fontSize:11, fontWeight:600, fontFamily:'Inter,sans-serif', padding:7, borderRadius:6, cursor:'pointer', background:'rgba(239,68,68,.08)', color:'#ef4444', border:'1px solid rgba(239,68,68,.15)' }}>✗ Reject</button>
           </div>
         ) : showActions ? (
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <span style={{ fontSize:11, fontWeight:600, color: c.status==='shortlisted'?'#13c28e':'#ef4444' }}>{c.status==='shortlisted'?'✓ Shortlisted':'✗ Rejected'}</span>
-            <button onClick={e=>{e.stopPropagation();undoMark(idx)}} style={{ fontSize:10, color:'rgba(255,255,255,.3)', background:'transparent', border:'1px solid rgba(255,255,255,.08)', borderRadius:6, padding:'4px 8px', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>Undo</button>
+            <button onClick={e=>{e.stopPropagation();undoMark(idx)}} style={{ fontSize:10, color:'rgba(255,255,255,.3)', background:'transparent', border:'1px solid rgba(255,255,255,.08)', borderRadius:6, padding:'4px 8px', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Undo</button>
           </div>
         ) : null}
         {selectedKey===c.filename && c.deep_analysis && (
@@ -462,7 +481,7 @@ export default function HRDashboard() {
           <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>Overview of your latest screening session</div>
         </div>
         {candidates.length > 0 && (
-          <button onClick={exportCSV} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, padding:'8px 16px', borderRadius:8, border:'1px solid rgba(19,194,142,.2)', background:'rgba(19,194,142,.08)', color:'#13c28e', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+          <button onClick={exportCSV} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, padding:'8px 16px', borderRadius:8, border:'1px solid rgba(19,194,142,.2)', background:'rgba(19,194,142,.08)', color:'#13c28e', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
             ⬇ Export CSV
           </button>
         )}
@@ -501,7 +520,7 @@ export default function HRDashboard() {
           </div>
           <div style={{ fontSize:13, fontWeight:600, marginBottom:12 }}>Top Candidates</div>
           {candidates.slice(0,3).map((c,i)=><CandidateCard key={i} c={c} idx={i} />)}
-          <button onClick={()=>setSection('candidates')} style={{ fontSize:12, color:'#13c28e', background:'transparent', border:'1px solid rgba(19,194,142,.2)', borderRadius:8, padding:'8px 16px', cursor:'pointer', fontFamily:'Syne,sans-serif', marginTop:4 }}>View all {candidates.length} candidates →</button>
+          <button onClick={()=>setSection('candidates')} style={{ fontSize:12, color:'#13c28e', background:'transparent', border:'1px solid rgba(19,194,142,.2)', borderRadius:8, padding:'8px 16px', cursor:'pointer', fontFamily:'Inter,sans-serif', marginTop:4 }}>View all {candidates.length} candidates →</button>
         </>
       )}
       {candidates.length===0 && (
@@ -509,7 +528,7 @@ export default function HRDashboard() {
           
           <div style={{ fontSize:14, fontWeight:600, marginBottom:6 }}>No screenings yet</div>
           <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:16 }}>Upload a ZIP of CVs to get started</div>
-          <button onClick={()=>setSection('bulk')} style={{ fontSize:13, fontWeight:700, background:'#13c28e', color:'#fff', border:'none', borderRadius:8, padding:'10px 20px', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>Run Bulk Screening</button>
+          <button onClick={()=>setSection('bulk')} style={{ fontSize:13, fontWeight:700, background:'#13c28e', color:'#fff', border:'none', borderRadius:8, padding:'10px 20px', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Run Bulk Screening</button>
         </div>
       )}
     </div>
@@ -529,7 +548,7 @@ export default function HRDashboard() {
       <textarea value={jobDescription} onChange={e=>setJobDescription(e.target.value)} placeholder="Paste job description or requirements…" style={s(inputSt, { resize:'none', height:100, lineHeight:1.6, marginBottom:10 } as any)} />
       <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
         <span style={{ fontSize:12, color:'rgba(255,255,255,.4)' }}>Top candidates needed:</span>
-        <input type="number" min={1} max={25} value={topN} onChange={e=>setTopN(Number(e.target.value)||1)} style={{ width:60, background:'#161614', border:'1px solid rgba(255,255,255,.07)', borderRadius:6, padding:'7px 10px', fontSize:13, color:'rgba(255,255,255,.8)', outline:'none', fontFamily:'Syne,sans-serif' }} />
+        <input type="number" min={1} max={25} value={topN} onChange={e=>setTopN(Number(e.target.value)||1)} style={{ width:60, background:'#161614', border:'1px solid rgba(255,255,255,.07)', borderRadius:6, padding:'7px 10px', fontSize:13, color:'rgba(255,255,255,.8)', outline:'none', fontFamily:'Inter,sans-serif' }} />
       </div>
       {bulkError && <div style={{ fontSize:12, color:'#ef4444', marginBottom:10 }}>{bulkError}</div>}
 
@@ -567,11 +586,11 @@ export default function HRDashboard() {
         </div>
       )}
 
-      <button onClick={runBulk} disabled={loading} style={{ width:'100%', background: loading?'rgba(19,194,142,.3)':'#13c28e', color:'#fff', fontSize:13, fontWeight:700, fontFamily:'Syne,sans-serif', padding:12, borderRadius:8, border:'none', cursor: loading?'default':'pointer', letterSpacing:'.04em', opacity: loading ? 0.7 : 1 }}>
+      <button onClick={runBulk} disabled={loading} style={{ width:'100%', background: loading?'rgba(19,194,142,.3)':'#13c28e', color:'#fff', fontSize:13, fontWeight:700, fontFamily:'Inter,sans-serif', padding:12, borderRadius:8, border:'none', cursor: loading?'default':'pointer', letterSpacing:'.04em', opacity: loading ? 0.7 : 1 }}>
         {loading ? 'Screening in progress…' : bulkStatus ? bulkStatus : 'Run Bulk Screening'}
       </button>
       {bulkStatus && candidates.length>0 && (
-        <button onClick={()=>setSection('candidates')} style={{ width:'100%', marginTop:10, fontSize:12, fontWeight:600, color:'#13c28e', background:'transparent', border:'1px solid rgba(19,194,142,.2)', borderRadius:8, padding:10, cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+        <button onClick={()=>setSection('candidates')} style={{ width:'100%', marginTop:10, fontSize:12, fontWeight:600, color:'#13c28e', background:'transparent', border:'1px solid rgba(19,194,142,.2)', borderRadius:8, padding:10, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
           View {candidates.length} Ranked Candidates →
         </button>
       )}
@@ -593,55 +612,176 @@ export default function HRDashboard() {
   const renderHistory = () => (
     <div style={{ display:'flex', height:'100%', overflow:'hidden' }}>
       <div style={{ width:320, borderRight:'1px solid rgba(255,255,255,.07)', overflowY:'auto', padding:20 }}>
-        <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:4 }}>History</div>
-        <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:16 }}>{history.length} entries saved locally</div>
-        {history.length===0 ? (
-          <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', textAlign:'center', padding:'40px 0' }}>No history yet. Shortlist or reject candidates to save them here.</div>
-        ) : history.map((h,i)=>(
-          <div key={i} onClick={()=>setHistorySelected(h)} style={s(card, { cursor:'pointer', marginBottom:8, border:`1px solid ${historySelected===h?'rgba(19,194,142,.25)':'rgba(255,255,255,.07)'}` })}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-              <span style={{ fontSize:11, fontWeight:600, color: h.status==='shortlisted'?'#13c28e':'#ef4444' }}>{h.status==='shortlisted'?'✓ Shortlisted':'✗ Rejected'}</span>
-              <span style={{ marginLeft:'auto', fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:600, color: h.ai_score>=80?'#13c28e':h.ai_score>=60?'#e2b04a':'#ef4444' }}>{h.ai_score}</span>
-            </div>
-            <div style={{ fontSize:13, fontWeight:600 }}>{h.filename}</div>
-            <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:2 }}>{h.jobTitle}</div>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,.2)', marginTop:3 }}>{h.screenedAt}</div>
-          </div>
-        ))}
-        {history.length>0 && (
-          <button onClick={()=>{if(confirm('Clear all history?')){setHistory([]);saveHistory([])}}} style={{ width:'100%', marginTop:8, fontSize:11, color:'#ef4444', background:'transparent', border:'1px solid rgba(239,68,68,.15)', borderRadius:8, padding:'8px', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>Clear History</button>
-        )}
-      </div>
-      <div style={{ flex:1, overflowY:'auto', padding:28 }}>
-        {!historySelected ? (
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'rgba(255,255,255,.2)', fontSize:13 }}>Select a candidate from history to view details</div>
-        ) : (
+        <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:12 }}>History</div>
+        <div style={{ display:'flex', gap:6, marginBottom:16, flexWrap:'wrap' }}>
+          {([['screenings','Screenings'],['interviews','AI Interviews'],['actions','My Actions']] as const).map(([id,label]) => (
+            <button key={id} onClick={()=>setHistoryTab(id)}
+              style={{ fontSize:11, fontWeight:600, padding:'6px 10px', borderRadius:100, cursor:'pointer', fontFamily:'Inter,sans-serif',
+                border: historyTab===id ? '1px solid rgba(19,194,142,.3)' : '1px solid rgba(255,255,255,.08)',
+                background: historyTab===id ? 'rgba(19,194,142,.1)' : 'transparent',
+                color: historyTab===id ? '#13c28e' : 'rgba(255,255,255,.5)' }}>{label}</button>
+          ))}
+        </div>
+
+        {historyTab==='screenings' && (
           <>
-            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
-              <div style={{ width:44, height:44, borderRadius:'50%', background:'linear-gradient(135deg,#0b7c5e,#13c28e)', display:'grid', placeItems:'center', fontSize:15, fontWeight:700, color:'#fff' }}>{initials(historySelected.filename)}</div>
-              <div>
-                <div style={{ fontSize:18, fontWeight:600 }}>{historySelected.filename}</div>
-                <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>{historySelected.jobTitle} · {historySelected.screenedAt}</div>
+            {scanHistoryLoading && <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>Loading...</div>}
+            {!scanHistoryLoading && scanHistory.length===0 && (
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', textAlign:'center', padding:'40px 0' }}>No screenings yet. Every CV you screen is saved here automatically.</div>
+            )}
+            {scanHistory.map((h:any) => (
+              <div key={h.id} onClick={()=>setScanHistorySelected(h)} style={s(card, { cursor:'pointer', marginBottom:8, border:`1px solid ${scanHistorySelected?.id===h.id?'rgba(19,194,142,.25)':'rgba(255,255,255,.07)'}` })}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                  <span style={{ fontSize:11, fontWeight:600, color: h.is_shortlisted==='True'?'#13c28e':'rgba(255,255,255,.4)' }}>{h.is_shortlisted==='True'?'✓ Shortlisted':h.final_verdict}</span>
+                  <span style={{ marginLeft:'auto', fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:600, color: h.candidate_score>=80?'#13c28e':h.candidate_score>=60?'#e2b04a':'#ef4444' }}>{h.candidate_score}</span>
+                </div>
+                <div style={{ fontSize:13, fontWeight:600 }}>{h.role_title}</div>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,.2)', marginTop:3 }}>{h.created_at ? new Date(h.created_at).toLocaleString() : ''}</div>
               </div>
-              <span style={{ marginLeft:'auto', fontFamily:"'Cormorant Garamond',serif", fontSize:36, fontWeight:600, color: historySelected.ai_score>=80?'#13c28e':historySelected.ai_score>=60?'#e2b04a':'#ef4444' }}>{historySelected.ai_score}</span>
-            </div>
-            <div style={{ display:'flex', gap:10, marginBottom:20 }}>
-              <div style={s(card, { flex:1 })}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#13c28e', marginBottom:8 }}>Matched Skills</div>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>{(historySelected.matched_skills||[]).map(sk=><span key={sk} style={{ fontSize:11, padding:'3px 8px', borderRadius:100, background:'rgba(19,194,142,.1)', color:'#13c28e', border:'1px solid rgba(19,194,142,.2)' }}>{sk}</span>)}</div>
+            ))}
+          </>
+        )}
+
+        {historyTab==='interviews' && (
+          <>
+            {interviewHistoryLoading && <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>Loading...</div>}
+            {!interviewHistoryLoading && interviewHistory.length===0 && (
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', textAlign:'center', padding:'40px 0' }}>No completed AI interviews yet.</div>
+            )}
+            {interviewHistory.map((h:any) => (
+              <div key={h.id} onClick={()=>setInterviewHistorySelected(h)} style={s(card, { cursor:'pointer', marginBottom:8, border:`1px solid ${interviewHistorySelected?.id===h.id?'rgba(19,194,142,.25)':'rgba(255,255,255,.07)'}` })}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                  <span style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.5)' }}>{h.final_verdict}</span>
+                  {h.ai_score != null && <span style={{ marginLeft:'auto', fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:600, color: h.ai_score>=80?'#13c28e':h.ai_score>=60?'#e2b04a':'#ef4444' }}>{h.ai_score}</span>}
+                </div>
+                <div style={{ fontSize:13, fontWeight:600 }}>{h.candidate_name}</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:2 }}>{h.posting_title}</div>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,.2)', marginTop:3 }}>{h.completed_at ? new Date(h.completed_at).toLocaleString() : ''}</div>
               </div>
-              <div style={s(card, { flex:1 })}>
-                <div style={{ fontSize:11, fontWeight:600, color:'#ef4444', marginBottom:8 }}>Missing Skills</div>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>{(historySelected.missing_skills||[]).map(sk=><span key={sk} style={{ fontSize:11, padding:'3px 8px', borderRadius:100, background:'rgba(239,68,68,.08)', color:'#ef4444', border:'1px solid rgba(239,68,68,.15)' }}>{sk}</span>)}</div>
+            ))}
+          </>
+        )}
+
+        {historyTab==='actions' && (
+          <>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:12 }}>{history.length} candidates you shortlisted/rejected (saved on this device only)</div>
+            {history.length===0 ? (
+              <div style={{ fontSize:12, color:'rgba(255,255,255,.3)', textAlign:'center', padding:'40px 0' }}>No history yet. Shortlist or reject candidates to save them here.</div>
+            ) : history.map((h,i)=>(
+              <div key={i} onClick={()=>setHistorySelected(h)} style={s(card, { cursor:'pointer', marginBottom:8, border:`1px solid ${historySelected===h?'rgba(19,194,142,.25)':'rgba(255,255,255,.07)'}` })}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                  <span style={{ fontSize:11, fontWeight:600, color: h.status==='shortlisted'?'#13c28e':'#ef4444' }}>{h.status==='shortlisted'?'✓ Shortlisted':'✗ Rejected'}</span>
+                  <span style={{ marginLeft:'auto', fontFamily:"'Cormorant Garamond',serif", fontSize:18, fontWeight:600, color: h.ai_score>=80?'#13c28e':h.ai_score>=60?'#e2b04a':'#ef4444' }}>{h.ai_score}</span>
+                </div>
+                <div style={{ fontSize:13, fontWeight:600 }}>{h.filename}</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:2 }}>{h.jobTitle}</div>
+                <div style={{ fontSize:10, color:'rgba(255,255,255,.2)', marginTop:3 }}>{h.screenedAt}</div>
               </div>
-            </div>
-            {historySelected.deep_analysis && (
-              <div style={card}>
-                <div style={{ fontSize:12, fontWeight:600, marginBottom:12 }}>Full Analysis</div>
-                <AnalysisCarousel text={historySelected.deep_analysis} />
-              </div>
+            ))}
+            {history.length>0 && (
+              <button onClick={()=>{if(confirm('Clear all history?')){setHistory([]);saveHistory([])}}} style={{ width:'100%', marginTop:8, fontSize:11, color:'#ef4444', background:'transparent', border:'1px solid rgba(239,68,68,.15)', borderRadius:8, padding:'8px', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Clear History</button>
             )}
           </>
+        )}
+      </div>
+
+      <div style={{ flex:1, overflowY:'auto', padding:28 }}>
+        {historyTab==='screenings' && (
+          !scanHistorySelected ? (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'rgba(255,255,255,.2)', fontSize:13 }}>Select a screening from history to view details</div>
+          ) : (
+            <>
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
+                <div>
+                  <div style={{ fontSize:18, fontWeight:600 }}>{scanHistorySelected.role_title}</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>{scanHistorySelected.created_at ? new Date(scanHistorySelected.created_at).toLocaleString() : ''}</div>
+                </div>
+                <span style={{ marginLeft:'auto', fontFamily:"'Cormorant Garamond',serif", fontSize:36, fontWeight:600, color: scanHistorySelected.candidate_score>=80?'#13c28e':scanHistorySelected.candidate_score>=60?'#e2b04a':'#ef4444' }}>{scanHistorySelected.candidate_score}</span>
+              </div>
+              <div style={{ display:'flex', gap:10, marginBottom:20 }}>
+                <div style={s(card, { flex:1 })}>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#13c28e', marginBottom:8 }}>Matched Skills</div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>{(scanHistorySelected.matched_skills||[]).map((sk:string)=><span key={sk} style={{ fontSize:11, padding:'3px 8px', borderRadius:100, background:'rgba(19,194,142,.1)', color:'#13c28e', border:'1px solid rgba(19,194,142,.2)' }}>{sk}</span>)}</div>
+                </div>
+                <div style={s(card, { flex:1 })}>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#ef4444', marginBottom:8 }}>Missing Skills</div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>{(scanHistorySelected.missing_skills||[]).map((sk:string)=><span key={sk} style={{ fontSize:11, padding:'3px 8px', borderRadius:100, background:'rgba(239,68,68,.08)', color:'#ef4444', border:'1px solid rgba(239,68,68,.15)' }}>{sk}</span>)}</div>
+                </div>
+              </div>
+              {scanHistorySelected.deep_analysis && (
+                <div style={card}>
+                  <div style={{ fontSize:12, fontWeight:600, marginBottom:12 }}>Full Analysis</div>
+                  <AnalysisCarousel text={scanHistorySelected.deep_analysis} />
+                </div>
+              )}
+            </>
+          )
+        )}
+
+        {historyTab==='interviews' && (
+          !interviewHistorySelected ? (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'rgba(255,255,255,.2)', fontSize:13 }}>Select a candidate to view their interview report</div>
+          ) : (
+            <>
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
+                <div>
+                  <div style={{ fontSize:18, fontWeight:600 }}>{interviewHistorySelected.candidate_name}</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>{interviewHistorySelected.candidate_email} · {interviewHistorySelected.posting_title}</div>
+                </div>
+                {interviewHistorySelected.ai_score != null && (
+                  <span style={{ marginLeft:'auto', fontFamily:"'Cormorant Garamond',serif", fontSize:36, fontWeight:600, color: interviewHistorySelected.ai_score>=80?'#13c28e':interviewHistorySelected.ai_score>=60?'#e2b04a':'#ef4444' }}>{interviewHistorySelected.ai_score}</span>
+                )}
+              </div>
+              {interviewHistorySelected.final_verdict && (
+                <div style={{ display:'inline-block', fontSize:11, fontWeight:700, padding:'4px 12px', borderRadius:100, marginBottom:16, background:'rgba(255,255,255,.06)', color:'rgba(255,255,255,.7)' }}>{interviewHistorySelected.final_verdict}</div>
+              )}
+              {interviewHistorySelected.experience_assessment && (
+                <div style={s(card, { marginBottom:14 })}>
+                  <div style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,.4)', marginBottom:6 }}>Experience Assessment</div>
+                  <div style={{ fontSize:13, color:'rgba(255,255,255,.6)', lineHeight:1.7 }}>{interviewHistorySelected.experience_assessment}</div>
+                </div>
+              )}
+              {interviewHistorySelected.deep_analysis && (
+                <div style={card}>
+                  <div style={{ fontSize:12, fontWeight:600, marginBottom:12 }}>Deep Analysis</div>
+                  <div style={{ fontSize:13, color:'rgba(255,255,255,.6)', lineHeight:1.7 }}>{interviewHistorySelected.deep_analysis}</div>
+                </div>
+              )}
+            </>
+          )
+        )}
+
+        {historyTab==='actions' && (
+          !historySelected ? (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'rgba(255,255,255,.2)', fontSize:13 }}>Select a candidate from history to view details</div>
+          ) : (
+            <>
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
+                <div style={{ width:44, height:44, borderRadius:'50%', background:'linear-gradient(135deg,#0b7c5e,#13c28e)', display:'grid', placeItems:'center', fontSize:15, fontWeight:700, color:'#fff' }}>{initials(historySelected.filename)}</div>
+                <div>
+                  <div style={{ fontSize:18, fontWeight:600 }}>{historySelected.filename}</div>
+                  <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>{historySelected.jobTitle} · {historySelected.screenedAt}</div>
+                </div>
+                <span style={{ marginLeft:'auto', fontFamily:"'Cormorant Garamond',serif", fontSize:36, fontWeight:600, color: historySelected.ai_score>=80?'#13c28e':historySelected.ai_score>=60?'#e2b04a':'#ef4444' }}>{historySelected.ai_score}</span>
+              </div>
+              <div style={{ display:'flex', gap:10, marginBottom:20 }}>
+                <div style={s(card, { flex:1 })}>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#13c28e', marginBottom:8 }}>Matched Skills</div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>{(historySelected.matched_skills||[]).map(sk=><span key={sk} style={{ fontSize:11, padding:'3px 8px', borderRadius:100, background:'rgba(19,194,142,.1)', color:'#13c28e', border:'1px solid rgba(19,194,142,.2)' }}>{sk}</span>)}</div>
+                </div>
+                <div style={s(card, { flex:1 })}>
+                  <div style={{ fontSize:11, fontWeight:600, color:'#ef4444', marginBottom:8 }}>Missing Skills</div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>{(historySelected.missing_skills||[]).map(sk=><span key={sk} style={{ fontSize:11, padding:'3px 8px', borderRadius:100, background:'rgba(239,68,68,.08)', color:'#ef4444', border:'1px solid rgba(239,68,68,.15)' }}>{sk}</span>)}</div>
+                </div>
+              </div>
+              {historySelected.deep_analysis && (
+                <div style={card}>
+                  <div style={{ fontSize:12, fontWeight:600, marginBottom:12 }}>Full Analysis</div>
+                  <AnalysisCarousel text={historySelected.deep_analysis} />
+                </div>
+              )}
+            </>
+          )
         )}
       </div>
     </div>
@@ -657,7 +797,7 @@ export default function HRDashboard() {
       <div style={s(card, { marginBottom:16, padding:12 })}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
           <span style={{ fontSize:12, fontWeight:600 }}>Policy Documents ({policyDocs.length})</span>
-          <button onClick={()=>policyFileRef.current?.click()} disabled={policyUploading} style={{ fontSize:11, fontWeight:600, padding:'5px 12px', borderRadius:6, border:'1px solid rgba(19,194,142,.2)', background:'rgba(19,194,142,.08)', color:'#13c28e', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+          <button onClick={()=>policyFileRef.current?.click()} disabled={policyUploading} style={{ fontSize:11, fontWeight:600, padding:'5px 12px', borderRadius:6, border:'1px solid rgba(19,194,142,.2)', background:'rgba(19,194,142,.08)', color:'#13c28e', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
             {policyUploading ? 'Uploading…' : '+ Upload PDF'}
           </button>
         </div>
@@ -698,7 +838,7 @@ export default function HRDashboard() {
       </div>
       <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginBottom:10 }}>
         {["What's our leave policy?","Remote work rules?","Onboarding checklist","Health benefits?"].map(q=>(
-          <button key={q} onClick={()=>sendMessage(q)} style={{ fontSize:11, color:'rgba(255,255,255,.4)', background:'#161614', border:'1px solid rgba(255,255,255,.08)', borderRadius:100, padding:'4px 10px', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>{q}</button>
+          <button key={q} onClick={()=>sendMessage(q)} style={{ fontSize:11, color:'rgba(255,255,255,.4)', background:'#161614', border:'1px solid rgba(255,255,255,.08)', borderRadius:100, padding:'4px 10px', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>{q}</button>
         ))}
       </div>
       <div style={{ display:'flex', gap:8 }}>
@@ -720,7 +860,7 @@ export default function HRDashboard() {
         <input defaultValue={userName} style={s(inputSt, { marginBottom:10 })} />
         <div style={{ fontSize:12, color:'rgba(255,255,255,.4)', marginBottom:4 }}>Email</div>
         <input defaultValue={userEmail} disabled style={s(inputSt, { opacity:.5, cursor:'not-allowed', marginBottom:10 })} />
-        <button style={{ fontSize:12, fontWeight:600, background:'#13c28e', color:'#fff', border:'none', borderRadius:8, padding:'9px 18px', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>Save Changes</button>
+        <button style={{ fontSize:12, fontWeight:600, background:'#13c28e', color:'#fff', border:'none', borderRadius:8, padding:'9px 18px', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Save Changes</button>
       </div>
       <div style={s(card, { marginBottom:12 })}>
         <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>Team Workspace</div>
@@ -732,7 +872,7 @@ export default function HRDashboard() {
             <input value={newOrgName} onChange={e=>setNewOrgName(e.target.value)} placeholder="Workspace name (e.g. your company)"
               style={s(inputSt, { flex:'1 1 220px', marginBottom:0 })} />
             <button onClick={handleCreateOrg} disabled={creatingOrg}
-              style={{ background:'#e2b04a', color:'#0a0a09', fontSize:13, fontWeight:700, padding:'9px 18px', borderRadius:8, border:'none', cursor:'pointer', fontFamily:'Syne,sans-serif', whiteSpace:'nowrap' }}>
+              style={{ background:'#e2b04a', color:'#0a0a09', fontSize:13, fontWeight:700, padding:'9px 18px', borderRadius:8, border:'none', cursor:'pointer', fontFamily:'Inter,sans-serif', whiteSpace:'nowrap' }}>
               {creatingOrg ? 'Creating...' : 'Create Workspace'}
             </button>
           </div>
@@ -748,7 +888,7 @@ export default function HRDashboard() {
                   {m.is_owner && <span style={{ fontSize:10, color:'#e2b04a', marginLeft:8, fontWeight:700 }}>OWNER</span>}
                 </div>
                 {org.is_owner && !m.is_owner && (
-                  <button onClick={()=>handleRemoveMember(m.id)} style={{ fontSize:11.5, color:'#ef4444', background:'none', border:'none', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>Remove</button>
+                  <button onClick={()=>handleRemoveMember(m.id)} style={{ fontSize:11.5, color:'#ef4444', background:'none', border:'none', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Remove</button>
                 )}
               </div>
             ))}
@@ -757,7 +897,7 @@ export default function HRDashboard() {
                 <input value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="teammate@company.com"
                   style={s(inputSt, { flex:'1 1 220px', marginBottom:0 })} />
                 <button onClick={handleInvite} disabled={inviting}
-                  style={{ background:'transparent', border:'1px solid rgba(255,255,255,.15)', color:'rgba(255,255,255,.85)', fontSize:13, fontWeight:600, padding:'9px 18px', borderRadius:8, cursor:'pointer', fontFamily:'Syne,sans-serif', whiteSpace:'nowrap' }}>
+                  style={{ background:'transparent', border:'1px solid rgba(255,255,255,.15)', color:'rgba(255,255,255,.85)', fontSize:13, fontWeight:600, padding:'9px 18px', borderRadius:8, cursor:'pointer', fontFamily:'Inter,sans-serif', whiteSpace:'nowrap' }}>
                   {inviting ? 'Sending...' : 'Send Invite'}
                 </button>
               </div>
@@ -769,7 +909,7 @@ export default function HRDashboard() {
       </div>
       <div style={card}>
         <div style={{ fontSize:13, fontWeight:600, marginBottom:12 }}>Danger Zone</div>
-        <button onClick={handleLogout} style={{ fontSize:12, fontWeight:600, background:'rgba(239,68,68,.1)', color:'#ef4444', border:'1px solid rgba(239,68,68,.2)', borderRadius:8, padding:'9px 18px', cursor:'pointer', fontFamily:'Syne,sans-serif' }}>Logout</button>
+        <button onClick={handleLogout} style={{ fontSize:12, fontWeight:600, background:'rgba(239,68,68,.1)', color:'#ef4444', border:'1px solid rgba(239,68,68,.2)', borderRadius:8, padding:'9px 18px', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Logout</button>
       </div>
     </div>
   )
@@ -809,7 +949,7 @@ export default function HRDashboard() {
           <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>Paste a JD, get a shareable link, let candidates interview themselves</div>
         </div>
         <button onClick={()=>{ setShowInterviewForm(v=>!v); setIError('') }}
-          style={{ padding:'10px 18px', borderRadius:8, border:'none', background:'#e2b04a', color:'#0a0a08', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+          style={{ padding:'10px 18px', borderRadius:8, border:'none', background:'#e2b04a', color:'#0a0a08', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
           {showInterviewForm ? 'Cancel' : '+ New Interview Link'}
         </button>
       </div>
@@ -824,13 +964,13 @@ export default function HRDashboard() {
           <input placeholder="Interviewer name (optional — e.g. Kelly, Alex). Leave blank for a random one."
             value={iInterviewerName} onChange={e=>setIInterviewerName(e.target.value)} style={s(inputSt, { marginBottom:10 })} />
           <textarea placeholder="Paste the full job description here..." value={iJD} onChange={e=>setIJD(e.target.value)}
-            style={s(inputSt, { minHeight:130, resize:'vertical', marginBottom:10, fontFamily:'Syne,sans-serif' })} />
+            style={s(inputSt, { minHeight:130, resize:'vertical', marginBottom:10, fontFamily:'Inter,sans-serif' })} />
           <textarea placeholder={"Extra questions HR wants covered (optional, one per line)\ne.g. Are you willing to relocate to Lahore?\nWhat's your notice period?"}
             value={iExtraQuestions} onChange={e=>setIExtraQuestions(e.target.value)}
-            style={s(inputSt, { minHeight:70, resize:'vertical', marginBottom:10, fontFamily:'Syne,sans-serif' })} />
+            style={s(inputSt, { minHeight:70, resize:'vertical', marginBottom:10, fontFamily:'Inter,sans-serif' })} />
           {iError && <div style={{ fontSize:12, color:'#ef4444', marginBottom:10 }}>{iError}</div>}
           <button onClick={createInterviewPosting} disabled={iSaving}
-            style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#13c28e', color:'#0a0a08', fontSize:13, fontWeight:700, cursor: iSaving?'default':'pointer', opacity: iSaving ? 0.6 : 1, fontFamily:'Syne,sans-serif' }}>
+            style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#13c28e', color:'#0a0a08', fontSize:13, fontWeight:700, cursor: iSaving?'default':'pointer', opacity: iSaving ? 0.6 : 1, fontFamily:'Inter,sans-serif' }}>
             {iSaving ? 'Creating...' : 'Continue → Generate Link'}
           </button>
         </div>
@@ -862,11 +1002,11 @@ export default function HRDashboard() {
                 <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:8 }}>Interviewer: {p.interviewer_name} · {p.candidate_count} candidate{p.candidate_count===1?'':'s'} interviewed</div>
                 <div style={{ display:'flex', gap:6 }}>
                   <button onClick={(e)=>{e.stopPropagation(); copyInterviewLink(p.public_link, p.public_slug)}}
-                    style={{ flex:1, padding:'6px 10px', borderRadius:6, border:'1px solid rgba(255,255,255,.1)', background:'transparent', color:'rgba(255,255,255,.6)', fontSize:11, cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+                    style={{ flex:1, padding:'6px 10px', borderRadius:6, border:'1px solid rgba(255,255,255,.1)', background:'transparent', color:'rgba(255,255,255,.6)', fontSize:11, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
                     {copiedSlug===p.public_slug ? '✓ Copied' : 'Copy Public Link'}
                   </button>
                   <button onClick={(e)=>{e.stopPropagation(); deleteInterviewPosting(p.id)}}
-                    style={{ padding:'6px 10px', borderRadius:6, border:'1px solid rgba(239,68,68,.2)', background:'rgba(239,68,68,.06)', color:'#ef4444', fontSize:11, cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+                    style={{ padding:'6px 10px', borderRadius:6, border:'1px solid rgba(239,68,68,.2)', background:'rgba(239,68,68,.06)', color:'#ef4444', fontSize:11, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
                     Delete
                   </button>
                 </div>
@@ -882,7 +1022,7 @@ export default function HRDashboard() {
               </div>
             ) : selectedReport ? (
               <div>
-                <button onClick={()=>setSelectedReport(null)} style={{ background:'none', border:'none', color:'rgba(255,255,255,.4)', fontSize:12, cursor:'pointer', marginBottom:14, padding:0, fontFamily:'Syne,sans-serif' }}>← Back to candidates</button>
+                <button onClick={()=>setSelectedReport(null)} style={{ background:'none', border:'none', color:'rgba(255,255,255,.4)', fontSize:12, cursor:'pointer', marginBottom:14, padding:0, fontFamily:'Inter,sans-serif' }}>← Back to candidates</button>
                 <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:16 }}>
                   <div>
                     <div style={{ fontSize:18, fontWeight:600 }}>{selectedReport.candidate_name}</div>
@@ -996,7 +1136,7 @@ export default function HRDashboard() {
                 color: section===n.id?'rgba(255,255,255,.88)':'rgba(255,255,255,.38)', cursor:'pointer', transition:'all .15s',
                 margin:'0 6px 2px', border: section===n.id?'1px solid rgba(255,255,255,.08)':'1px solid transparent',
                 background: section===n.id?'rgba(255,255,255,.04)':'transparent',
-                fontFamily:'Syne,sans-serif', width:'calc(100% - 12px)', textAlign:'left' }}>
+                fontFamily:'Inter,sans-serif', width:'calc(100% - 12px)', textAlign:'left' }}>
               {n.label}
               {'badge' in n && n.badge ? <span style={{ marginLeft:'auto', minWidth:18, height:18, borderRadius:9, background:'rgba(19,194,142,.15)', color:'#13c28e', fontSize:10, fontWeight:700, display:'grid', placeItems:'center', padding:'0 4px' }}>{n.badge}</span> : null}
             </button>
@@ -1010,7 +1150,7 @@ export default function HRDashboard() {
               <div style={{ fontSize:10, color:'rgba(255,255,255,.3)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{userEmail}</div>
             </div>
           </div>
-          <button onClick={handleLogout} style={{ width:'100%', marginTop:6, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'8px', borderRadius:8, border:'1px solid rgba(239,68,68,.15)', background:'rgba(239,68,68,.06)', color:'#ef4444', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'Syne,sans-serif' }}>
+          <button onClick={handleLogout} style={{ width:'100%', marginTop:6, display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'8px', borderRadius:8, border:'1px solid rgba(239,68,68,.15)', background:'rgba(239,68,68,.06)', color:'#ef4444', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
             <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
             Logout
           </button>
