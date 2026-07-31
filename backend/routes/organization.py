@@ -10,7 +10,7 @@ from models.organization import Organization
 from middleware.auth import get_current_user
 from core.redis_client import create_invite_token, get_invite_token, delete_invite_token, check_rate_limit
 from utils.otp_mailer import send_invite_email
-
+ 
 router = APIRouter(prefix="/org", tags=["Team Workspace"])
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
@@ -114,6 +114,31 @@ async def get_my_organization(
             for m in members
         ],
     }
+
+
+@router.delete("/delete")
+async def delete_organization(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_org_owner(current_user)
+
+    org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Workspace not found.")
+
+    # Free every member (including the owner) so they can join or create a
+    # new workspace afterward — nobody stays stuck pointing at a deleted org.
+    members = db.query(User).filter(User.organization_id == org.id).all()
+    for m in members:
+        m.organization_id = None
+        m.is_org_owner = False
+        db.add(m)
+
+    db.delete(org)
+    db.commit()
+
+    return {"message": "Workspace deleted."}
 
 
 @router.post("/invite")
