@@ -348,6 +348,18 @@ export default function HRDashboard() {
 
   // ── Bulk screening (async + polling) ──
   const [pollProgress, setPollProgress] = useState({ current: 0, total: 0, currentName: '' })
+  const [bulkAnimStep, setBulkAnimStep] = useState(0)
+
+  const BULK_ANIM_STEPS = [
+    'Uploading CVs…',
+    'Parsing resumes…',
+    'Creating text chunks…',
+    'Building vector embeddings…',
+    'Storing in FAISS index…',
+    'Retrieving relevant context…',
+    'Reasoning with LLaMA 3.3…',
+    'Ranking candidates…',
+  ]
 
   const runBulk = async () => {
     setBulkError('')
@@ -356,6 +368,15 @@ export default function HRDashboard() {
     setLoading(true)
     setBulkStatus('Uploading CVs…')
     setPollProgress({ current: 0, total: 0, currentName: '' })
+    setBulkAnimStep(0)
+
+    // Cycles a fun step checklist (matching the candidate-side scan animation)
+    // while we're waiting on the upload + task kickoff — cleared the moment
+    // real per-CV progress numbers start coming in from the poll below.
+    const animInterval = setInterval(() => {
+      setBulkAnimStep(s => s < BULK_ANIM_STEPS.length - 1 ? s + 1 : s)
+    }, 900)
+
     try {
       const jd = jobTitle ? `Job Title: ${jobTitle}\n\n${jobDescription}` : jobDescription
       const res: any = await api.bulkScreen(jd, topN, zipFile)
@@ -363,6 +384,7 @@ export default function HRDashboard() {
       const totalCvs: number = res.total_cvs || 0
       setPollProgress(p => ({ ...p, total: totalCvs }))
       setBulkStatus(`Screening started — ${totalCvs} CV(s) in queue…`)
+      clearInterval(animInterval)
 
       // Poll every 2s until done
       await new Promise<void>((resolve, reject) => {
@@ -389,6 +411,7 @@ export default function HRDashboard() {
         }, 2000)
       })
     } catch (e: any) {
+      clearInterval(animInterval)
       setBulkError(e.message || 'Bulk screening failed.')
       setBulkStatus('')
     } finally {
@@ -585,6 +608,21 @@ export default function HRDashboard() {
               {pollProgress.currentName && <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>Analyzing: {pollProgress.currentName}</div>}
             </div>
           </div>
+          {pollProgress.total === 0 && (
+            <div style={{ marginTop:4 }}>
+              {BULK_ANIM_STEPS.map((step, i) => (
+                <div key={i} style={{ display:'flex', alignItems:'center', gap:8, opacity: i <= bulkAnimStep ? 1 : 0.2, transition:'opacity 0.4s ease', fontSize:11, color: i === bulkAnimStep ? '#e2b04a' : i < bulkAnimStep ? '#13c28e' : 'rgba(255,255,255,.3)', marginBottom:4 }}>
+                  <div style={{ width:5, height:5, borderRadius:'50%', background: i === bulkAnimStep ? '#e2b04a' : i < bulkAnimStep ? '#13c28e' : 'rgba(255,255,255,.15)', flexShrink:0, transition:'background 0.4s' }} />
+                  {step}
+                  {i < bulkAnimStep && <span style={{ marginLeft:'auto', color:'#13c28e', fontSize:10 }}>done</span>}
+                  {i === bulkAnimStep && <span style={{ marginLeft:'auto', fontSize:10, animation:'pulse 1s infinite' }}>...</span>}
+                </div>
+              ))}
+              <div style={{ height:2, background:'rgba(255,255,255,.06)', borderRadius:1, marginTop:10, overflow:'hidden' }}>
+                <div style={{ height:'100%', background:'linear-gradient(90deg,#b8860b,#e2b04a)', borderRadius:1, width:`${Math.round(((bulkAnimStep + 1) / BULK_ANIM_STEPS.length) * 100)}%`, transition:'width 0.6s ease' }} />
+              </div>
+            </div>
+          )}
           {pollProgress.total > 0 && (
             <>
               <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:6 }}>
@@ -1153,7 +1191,7 @@ export default function HRDashboard() {
 
   return (
     <div style={s(base, { display:'flex', height:'100vh', overflow:'hidden' })}>
-      <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-4px)}}` }} />
+      <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-4px)}} @keyframes pulse{0%,100%{opacity:.35}50%{opacity:.8}}` }} />
       {/* SIDEBAR */}
       <div style={{ width:224, flexShrink:0, background:'#0c0c0b', borderRight:'1px solid rgba(255,255,255,.05)', display:'flex', flexDirection:'column' }}>
         <Link href="/" style={{ padding:'22px 20px', borderBottom:'1px solid rgba(255,255,255,.05)', display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
