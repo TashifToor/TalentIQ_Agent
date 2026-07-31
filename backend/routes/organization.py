@@ -20,6 +20,10 @@ class CreateOrgRequest(BaseModel):
     name: str
 
 
+class RenameOrgRequest(BaseModel):
+    name: str
+
+
 class InviteRequest(BaseModel):
     email: str
 
@@ -59,6 +63,28 @@ async def create_organization(
     db.commit()
 
     return {"id": str(org.id), "name": org.name, "max_seats": org.max_seats}
+
+
+@router.patch("/rename")
+async def rename_organization(
+    body: RenameOrgRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    _require_org_owner(current_user)
+
+    if not body.name.strip():
+        raise HTTPException(status_code=400, detail="Workspace name is required.")
+
+    org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Workspace not found.")
+
+    org.name = body.name.strip()
+    db.add(org)
+    db.commit()
+
+    return {"id": str(org.id), "name": org.name}
 
 
 @router.get("/me")
@@ -118,7 +144,13 @@ async def invite_teammate(
         raise HTTPException(status_code=400, detail="This email already belongs to a different workspace.")
 
     token = secrets.token_urlsafe(24)
-    create_invite_token(token, str(org.id), email, org.name)
+    stored = create_invite_token(token, str(org.id), email, org.name)
+    if not stored:
+        raise HTTPException(
+            status_code=503,
+            detail="Could not create the invite link right now (our cache service looks unreachable). "
+                   "Please try again shortly — if this keeps happening, check that Redis is running."
+        )
 
     invite_link = f"{FRONTEND_URL}/auth/login/hr?invite={token}"
     try:
