@@ -389,6 +389,7 @@ async def delete_account(
     from models.chat import Chat
     from models.application import Application
     from models.job import Job
+    from models.interview import InterviewPosting, InterviewSession
 
     db.query(ScanHistory).filter(ScanHistory.user_id == user_id).delete()
     db.query(Chat).filter(Chat.user_id == user_id).delete()
@@ -401,10 +402,22 @@ async def delete_account(
             db.query(Application).filter(Application.job_id.in_(job_ids)).delete(synchronize_session=False)
         db.query(Job).filter(Job.hr_user_id == user_id).delete()
 
+        posting_ids = [p.id for p in db.query(InterviewPosting.id).filter(InterviewPosting.hr_user_id == user_id).all()]
+        if posting_ids:
+            db.query(InterviewSession).filter(InterviewSession.posting_id.in_(posting_ids)).delete(synchronize_session=False)
+        db.query(InterviewPosting).filter(InterviewPosting.hr_user_id == user_id).delete()
+
+        if current_user.is_org_owner and current_user.organization_id:
+            from models.organization import Organization
+            org = db.query(Organization).filter(Organization.id == current_user.organization_id).first()
+            if org:
+                db.query(User).filter(User.organization_id == org.id).update({"organization_id": None, "is_org_owner": False})
+                db.delete(org)
+
     db.delete(current_user)
     db.commit()
 
     track(user_id, "account_deleted", {"role": role})
 
     print(f"[Account] Deleted account and all associated data for user_id={user_id} ({role})")
-    return {"status": "success", "message": "Your account and all associated data have been permanently deleted."} 
+    return {"status": "success", "message": "Your account and all associated data have been permanently deleted."}
