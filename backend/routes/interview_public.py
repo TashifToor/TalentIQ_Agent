@@ -213,7 +213,7 @@ async def upload_cv(
     transcript = json.loads(session.transcript or "[]")
     _finalize(session, posting, transcript, db)
 
-    closing = "Thanks — got your CV, and that wraps up the interview. We'll be in touch with next steps soon!"
+    closing = f"Thanks — got your CV, and that wraps up the interview. Your responses have been sent to the hiring team for {posting.title}. We'll be in touch with next steps soon!"
     return {"message": closing, "status": "completed", "turn_count": session.turn_count, "awaiting_cv": False}
 
 
@@ -231,5 +231,5 @@ def skip_cv(slug: str, session_id: str, db: Session = Depends(get_db)):
     transcript = json.loads(session.transcript or "[]")
     _finalize(session, posting, transcript, db)
 
-    closing = "No problem — that wraps up the interview. We'll be in touch with next steps soon!"
+    closing = f"No problem — that wraps up the interview. Your responses have been sent to the hiring team for {posting.title}. We'll be in touch with next steps soon!"
     return {"message": closing, "status": "completed", "turn_count": session.turn_count, "awaiting_cv": False}
