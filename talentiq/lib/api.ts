@@ -287,6 +287,8 @@ export const api = {
 
   getInterviewCandidates: (postingId: string) => apiFetch(`/interview/postings/${postingId}/candidates`),
 
+  getAllInterviewCandidates: () => apiFetch(`/interview/candidates`),
+
   getInterviewSessionReport: (sessionId: string) => apiFetch(`/interview/sessions/${sessionId}`),
 
   // --- AI Chatbot Interviewer — public candidate side (no login) ---
