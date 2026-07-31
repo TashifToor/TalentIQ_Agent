@@ -86,6 +86,16 @@ Write only the 4 steps above, each starting with its exact bolded heading. No pr
 SCORING RULES — read carefully:
 - Score must reflect ACTUAL fit, not round numbers. Use the full 0-100 range. Examples of valid scores: 23, 47, 61, 78, 91. Invalid: 50, 60, 70, 80.
 - Score breakdown: Technical match (40pts) + Experience quality (25pts) + Project complexity (20pts) + Communication/soft signals (15pts)
+
+CALIBRATION — this is what actually stops scores from clustering. Think of each candidate as landing somewhere on this spectrum, and score the specific point that matches them, not just "good" or "bad":
+- 85-99: Exceptional — hits nearly every JD requirement with strong evidence, ready to interview immediately.
+- 70-84: Strong — covers most core requirements well, one or two minor gaps, clearly worth a look.
+- 50-69: Partial fit — a real, genuine mix: covers some important requirements but has notable gaps (missing a key skill, junior on one axis, etc.). This band should be used often — most real-world candidates who aren't a clean yes or no belong here, not compressed into either extreme.
+- 30-49: Weak fit — meaningful overlap exists but the gaps outweigh the strengths; not shortlist-worthy but not irrelevant either.
+- 1-29: Poor fit — reserve this only for CVs with little to no genuine overlap with the JD (wrong field entirely, no relevant skills at all). Don't default here just because a candidate isn't exceptional — a candidate with some real but insufficient overlap belongs in the 30-49 or 50-69 bands instead, not here.
+
+Do not let the presence of the 82+ and sub-30 verdict thresholds below pull you toward only ever picking scores near those cutoffs — most candidates, especially in a large batch, should legitimately fall in the 30-69 range, and that's fine. Two different candidates with two different levels of partial fit should get two different scores from each other, not the same number.
+
 - matched_skills: only skills explicitly evidenced in CV that JD requires
 - missing_skills: only skills JD explicitly requires that are absent from CV
 - final_verdict: "Highly Shortlisted" (score >= 82), "Good Fit for Interview" (score 60-81), "Rejected" (score < 60)
