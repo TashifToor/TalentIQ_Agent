@@ -179,6 +179,43 @@ def list_candidates(
     ]
 
 
+# ── GET /interview/candidates — ALL completed interview candidates across every posting, for the History tab ──
+@router.get("/candidates")
+def list_all_candidates(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+
+    rows = (
+        db.query(InterviewSession, InterviewPosting)
+        .join(InterviewPosting, InterviewSession.posting_id == InterviewPosting.id)
+        .filter(InterviewPosting.hr_user_id.in_(scoped_ids))
+        .order_by(InterviewSession.created_at.desc())
+        .limit(100)
+        .all()
+    )
+
+    return [
+        {
+            "id": str(s.id),
+            "posting_id": str(p.id),
+            "posting_title": p.title,
+            "candidate_name": s.candidate_name,
+            "candidate_email": s.candidate_email,
+            "status": s.status,
+            "ai_score": s.ai_score,
+            "final_verdict": s.final_verdict,
+            "experience_assessment": s.experience_assessment,
+            "deep_analysis": s.deep_analysis,
+            "created_at": s.created_at.isoformat() if s.created_at else "",
+            "completed_at": s.completed_at.isoformat() if s.completed_at else None,
+        }
+        for s, p in rows
+    ]
+
+
 # ── GET /interview/sessions/{id} — full transcript + report for one candidate ──
 @router.get("/sessions/{session_id}", response_model=InterviewSessionReport)
 def get_session_report(
