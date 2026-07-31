@@ -378,9 +378,16 @@ export default function CandidateLogin() {
                 <a href="#" onClick={e=>{e.preventDefault();setShowForgot(true);setForgotMsg('');setForgotEmail(email)}} style={{ fontSize: 12.5, color: 'rgba(245,242,235,.32)', textDecoration: 'none' }}>Forgot password?</a>
               </div>
 
-              <button onClick={handleLogin} disabled={loading} style={primaryBtn}>
+              <button onClick={handleLogin} disabled={loading} style={{ ...primaryBtn, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                {loading && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" style={{ animation:'spin 0.8s linear infinite' }}>
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3"/>
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="28 56" strokeLinecap="round"/>
+                  </svg>
+                )}
                 {loading ? 'Signing in…' : 'Sign in'}
               </button>
+              <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{to{transform:rotate(360deg)}}` }} />
 
               <RefinedDivider />
               <GoogleButton />
