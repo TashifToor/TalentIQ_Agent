@@ -59,9 +59,9 @@ export default function PublicInterviewPage() {
     }
   }, [sessionId, messages, status, awaitingCv, slug])
 
-  const base = { background: '#0a0a08', minHeight: '100vh', fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.88)' }
+  const base = { background: '#0a0a08', minHeight: '100vh', fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.88)' }
   const card = { background: '#111110', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, padding: 20 }
-  const inputSt = { background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Syne,sans-serif', color: 'rgba(255,255,255,.85)', outline: 'none', width: '100%' }
+  const inputSt = { background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: 'rgba(255,255,255,.85)', outline: 'none', width: '100%' }
 
   const startInterview = async () => {
     if (!name.trim() || !email.trim() || !email.includes('@')) {
@@ -170,7 +170,7 @@ export default function PublicInterviewPage() {
           <input placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} style={{ ...inputSt, marginBottom: 14 }} />
           {startError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12 }}>{startError}</div>}
           <button onClick={startInterview} disabled={starting}
-            style={{ width: '100%', padding: '12px 20px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: starting ? 'default' : 'pointer', opacity: starting ? 0.6 : 1, fontFamily: 'Syne,sans-serif' }}>
+            style={{ width: '100%', padding: '12px 20px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: starting ? 'default' : 'pointer', opacity: starting ? 0.6 : 1, fontFamily: 'Inter,sans-serif' }}>
             {starting ? 'Starting...' : 'Start Interview'}
           </button>
         </div>
@@ -188,7 +188,7 @@ export default function PublicInterviewPage() {
           </div>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Interview Complete</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,.45)', lineHeight: 1.7, marginBottom: 6 }}>
-            Thanks, {name || 'there'} — your responses have been submitted to the hiring team for review.
+            Thanks, {name || 'there'} — your interview for <strong>{posting.title}</strong> has been sent to the hiring team.
           </div>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,.25)' }}>You can close this tab now.</div>
         </div>
@@ -234,11 +234,11 @@ export default function PublicInterviewPage() {
             <input ref={cvFileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
               onChange={e => { const f = e.target.files?.[0]; if (f) uploadCv(f) }} />
             <button onClick={() => cvFileRef.current?.click()} disabled={uploadingCv}
-              style={{ flex: 1, padding: '12px 20px', borderRadius: 8, border: '1px dashed rgba(255,255,255,.2)', background: 'transparent', color: 'rgba(255,255,255,.7)', fontSize: 13, fontWeight: 600, cursor: uploadingCv ? 'default' : 'pointer', opacity: uploadingCv ? 0.6 : 1, fontFamily: 'Syne,sans-serif' }}>
+              style={{ flex: 1, padding: '12px 20px', borderRadius: 8, border: '1px dashed rgba(255,255,255,.2)', background: 'transparent', color: 'rgba(255,255,255,.7)', fontSize: 13, fontWeight: 600, cursor: uploadingCv ? 'default' : 'pointer', opacity: uploadingCv ? 0.6 : 1, fontFamily: 'Inter,sans-serif' }}>
               {uploadingCv ? 'Uploading...' : '📎 Upload your CV (PDF)'}
             </button>
             <button onClick={skipCv} disabled={uploadingCv}
-              style={{ padding: '0 20px', height: 44, borderRadius: 8, border: '1px solid rgba(255,255,255,.1)', background: 'transparent', color: 'rgba(255,255,255,.4)', fontSize: 13, fontWeight: 600, cursor: uploadingCv ? 'default' : 'pointer', fontFamily: 'Syne,sans-serif' }}>
+              style={{ padding: '0 20px', height: 44, borderRadius: 8, border: '1px solid rgba(255,255,255,.1)', background: 'transparent', color: 'rgba(255,255,255,.4)', fontSize: 13, fontWeight: 600, cursor: uploadingCv ? 'default' : 'pointer', fontFamily: 'Inter,sans-serif' }}>
               Skip
             </button>
           </div>
@@ -253,7 +253,7 @@ export default function PublicInterviewPage() {
               style={{ ...inputSt, flex: 1 }}
             />
             <button onClick={sendMessage} disabled={sending || !input.trim()}
-              style={{ padding: '0 22px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: sending ? 'default' : 'pointer', opacity: (sending || !input.trim()) ? 0.5 : 1, fontFamily: 'Syne,sans-serif' }}>
+              style={{ padding: '0 22px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: sending ? 'default' : 'pointer', opacity: (sending || !input.trim()) ? 0.5 : 1, fontFamily: 'Inter,sans-serif' }}>
               Send
             </button>
           </div>
