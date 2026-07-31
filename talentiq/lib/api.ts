@@ -124,6 +124,7 @@ export const api = {
   // --- Team Workspace ---
   createOrg: (name: string) => apiFetch("/org/create", { method: "POST", body: JSON.stringify({ name }) }),
   renameOrg: (name: string) => apiFetch("/org/rename", { method: "PATCH", body: JSON.stringify({ name }) }),
+  deleteOrg: () => apiFetch("/org/delete", { method: "DELETE" }),
   getMyOrg: () => apiFetch("/org/me"),
   inviteTeammate: (email: string) => apiFetch("/org/invite", { method: "POST", body: JSON.stringify({ email }) }),
   removeMember: (memberId: number) => apiFetch(`/org/members/${memberId}`, { method: "DELETE" }),
