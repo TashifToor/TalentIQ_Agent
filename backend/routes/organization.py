@@ -10,7 +10,7 @@ from models.organization import Organization
 from middleware.auth import get_current_user
 from core.redis_client import create_invite_token, get_invite_token, delete_invite_token, check_rate_limit
 from utils.otp_mailer import send_invite_email
- 
+
 router = APIRouter(prefix="/org", tags=["Team Workspace"])
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")

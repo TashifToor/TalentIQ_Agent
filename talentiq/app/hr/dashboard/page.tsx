@@ -166,6 +166,10 @@ export default function HRDashboard() {
   const [editingOrgName, setEditingOrgName] = useState(false)
   const [renameOrgValue, setRenameOrgValue] = useState('')
   const [renamingOrg, setRenamingOrg] = useState(false)
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false)
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState('')
+  const [deleteAccountError, setDeleteAccountError] = useState('')
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   const loadOrg = () => {
     setOrgLoading(true)
@@ -201,6 +205,35 @@ export default function HRDashboard() {
       setOrgError(e.message || 'Could not rename workspace.')
     } finally {
       setRenamingOrg(false)
+    }
+  }
+
+  const handleDeleteOrg = async () => {
+    if (!confirm('Delete this workspace permanently? All teammates will be removed and you can create a new workspace afterward.')) return
+    setOrgError('')
+    try {
+      await api.deleteOrg()
+      setOrg(null)
+      setOrgMembers([])
+      loadOrg()
+    } catch (e: any) {
+      setOrgError(e.message || 'Could not delete workspace.')
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!deleteAccountPassword) { setDeleteAccountError('Enter your password to confirm.'); return }
+    setDeletingAccount(true)
+    setDeleteAccountError('')
+    try {
+      await api.deleteAccount(deleteAccountPassword)
+      localStorage.removeItem('token'); localStorage.removeItem('role')
+      document.cookie='token=; path=/; max-age=0'; document.cookie='role=; path=/; max-age=0'
+      window.location.href = '/'
+    } catch (e: any) {
+      setDeleteAccountError(e.message || 'Could not delete account.')
+    } finally {
+      setDeletingAccount(false)
     }
   }
 
@@ -979,10 +1012,32 @@ export default function HRDashboard() {
         )}
         {orgMsg && <div style={{ fontSize:12, color:'#13c28e', marginTop:12 }}>{orgMsg}</div>}
         {orgError && <div style={{ fontSize:12, color:'#ef4444', marginTop:12 }}>{orgError}</div>}
+        {org?.is_owner && (
+          <button onClick={handleDeleteOrg} style={{ marginTop:16, fontSize:11.5, fontWeight:600, color:'#ef4444', background:'rgba(239,68,68,.06)', border:'1px solid rgba(239,68,68,.15)', borderRadius:8, padding:'8px 14px', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
+            Delete Workspace
+          </button>
+        )}
       </div>
       <div style={card}>
         <div style={{ fontSize:13, fontWeight:600, marginBottom:12 }}>Danger Zone</div>
-        <button onClick={handleLogout} style={{ fontSize:12, fontWeight:600, background:'rgba(239,68,68,.1)', color:'#ef4444', border:'1px solid rgba(239,68,68,.2)', borderRadius:8, padding:'9px 18px', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Logout</button>
+        <button onClick={handleLogout} style={{ fontSize:12, fontWeight:600, background:'rgba(239,68,68,.1)', color:'#ef4444', border:'1px solid rgba(239,68,68,.2)', borderRadius:8, padding:'9px 18px', cursor:'pointer', fontFamily:'Inter,sans-serif', marginRight:10 }}>Logout</button>
+        <button onClick={()=>setShowDeleteAccount(true)} style={{ fontSize:12, fontWeight:600, background:'transparent', color:'#ef4444', border:'1px solid rgba(239,68,68,.35)', borderRadius:8, padding:'9px 18px', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Delete Account</button>
+
+        {showDeleteAccount && (
+          <div style={{ marginTop:16, paddingTop:16, borderTop:'1px solid rgba(239,68,68,.15)' }}>
+            <div style={{ fontSize:12, color:'rgba(255,255,255,.5)', marginBottom:10 }}>This permanently deletes your account, all screening history, job postings, and AI interview data. Enter your password to confirm.</div>
+            <input type="password" placeholder="Password" value={deleteAccountPassword} onChange={e=>setDeleteAccountPassword(e.target.value)} style={s(inputSt, { marginBottom:10 })} />
+            {deleteAccountError && <div style={{ fontSize:12, color:'#ef4444', marginBottom:10 }}>{deleteAccountError}</div>}
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={handleDeleteAccount} disabled={deletingAccount}
+                style={{ fontSize:12, fontWeight:700, background:'#ef4444', color:'#fff', border:'none', borderRadius:8, padding:'9px 18px', cursor: deletingAccount?'default':'pointer', opacity: deletingAccount?0.6:1, fontFamily:'Inter,sans-serif' }}>
+                {deletingAccount ? 'Deleting...' : 'Permanently Delete My Account'}
+              </button>
+              <button onClick={()=>{setShowDeleteAccount(false); setDeleteAccountPassword(''); setDeleteAccountError('')}}
+                style={{ fontSize:12, color:'rgba(255,255,255,.4)', background:'none', border:'none', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Cancel</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
