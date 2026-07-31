@@ -163,6 +163,9 @@ export default function HRDashboard() {
   const [inviting, setInviting] = useState(false)
   const [orgMsg, setOrgMsg] = useState('')
   const [orgError, setOrgError] = useState('')
+  const [editingOrgName, setEditingOrgName] = useState(false)
+  const [renameOrgValue, setRenameOrgValue] = useState('')
+  const [renamingOrg, setRenamingOrg] = useState(false)
 
   const loadOrg = () => {
     setOrgLoading(true)
@@ -183,6 +186,21 @@ export default function HRDashboard() {
       setOrgError(e.message || 'Could not create workspace.')
     } finally {
       setCreatingOrg(false)
+    }
+  }
+
+  const handleRenameOrg = async () => {
+    if (!renameOrgValue.trim()) return
+    setRenamingOrg(true)
+    setOrgError('')
+    try {
+      await api.renameOrg(renameOrgValue.trim())
+      setEditingOrgName(false)
+      loadOrg()
+    } catch (e: any) {
+      setOrgError(e.message || 'Could not rename workspace.')
+    } finally {
+      setRenamingOrg(false)
     }
   }
 
@@ -878,7 +896,24 @@ export default function HRDashboard() {
           </div>
         ) : (
           <div>
-            <div style={{ fontSize:13, fontWeight:600, marginBottom:4 }}>{org.name}</div>
+            {editingOrgName ? (
+              <div style={{ display:'flex', gap:8, marginBottom:4 }}>
+                <input value={renameOrgValue} onChange={e=>setRenameOrgValue(e.target.value)} autoFocus
+                  style={s(inputSt, { flex:1, padding:'6px 10px', fontSize:13, marginBottom:0 })} />
+                <button onClick={handleRenameOrg} disabled={renamingOrg}
+                  style={{ fontSize:11.5, fontWeight:700, color:'#13c28e', background:'none', border:'none', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Save</button>
+                <button onClick={()=>setEditingOrgName(false)}
+                  style={{ fontSize:11.5, color:'rgba(255,255,255,.4)', background:'none', border:'none', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Cancel</button>
+              </div>
+            ) : (
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                <div style={{ fontSize:13, fontWeight:600 }}>{org.name}</div>
+                {org.is_owner && (
+                  <button onClick={()=>{setRenameOrgValue(org.name); setEditingOrgName(true)}}
+                    style={{ fontSize:11, color:'rgba(255,255,255,.35)', background:'none', border:'none', cursor:'pointer', fontFamily:'Inter,sans-serif' }}>Rename</button>
+                )}
+              </div>
+            )}
             <div style={{ fontSize:11.5, color:'rgba(255,255,255,.3)', marginBottom:14 }}>{org.seats_used} / {org.max_seats} seats used</div>
             {orgMembers.map((m:any) => (
               <div key={m.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderTop:'1px solid rgba(255,255,255,.06)' }}>
