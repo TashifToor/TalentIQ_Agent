@@ -460,7 +460,7 @@ function HRLoginInner() {
                 Start your trial
               </h1>
               <p style={{ fontSize: 13.5, color: '#7a7768', marginBottom: 24, fontWeight: 300 }}>
-                14 days, full access. No card required.
+                3 days, full access. No card required.
               </p>
 
               {inviteToken && inviteOrgName && (
