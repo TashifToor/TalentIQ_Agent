@@ -15,19 +15,20 @@ from datetime import datetime, timezone
 router = APIRouter(prefix="/Rating", tags=["CV Screening"])
 
 FREE_SCANS = 3
-TRIAL_DAYS = 7
+TRIAL_DAYS = 3
 SCREENING_TIMEOUT_SECONDS = 45
 
 
-async def check_screening_access(user: User):
+async def check_screening_access(user: User, db: Session):
     """
     Candidate: 3 free scans, then must pay
-    HR: 7 day trial, then must pay
+    HR: 7 day trial, then must pay — UNLESS they're a member of a workspace
+        whose owner has an active paid subscription, in which case they
+        inherit access for as long as they stay in that workspace. This is
+        checked live (via organization_id) on every request, so removing a
+        teammate from the workspace revokes this immediately — it's never
+        a one-time grant baked into their own account.
     """
-    from core.unlimited_access import has_unlimited_access
-    if has_unlimited_access(user.email):
-        return  # allowlisted account — unlimited, no expiry, any role
-
     now = datetime.now(timezone.utc)
 
     if user.role == "candidate":
@@ -41,6 +42,15 @@ async def check_screening_access(user: User):
     elif user.role == "hr":
         if user.subscription_status == "active":
             return
+
+        if user.organization_id:
+            owner = db.query(User).filter(
+                User.organization_id == user.organization_id,
+                User.is_org_owner == True,
+            ).first()
+            if owner and owner.subscription_status == "active":
+                return  # workspace owner is paid — every current member inherits access
+
         if user.subscription_status == "trial" and user.trial_started_at:
             trial_start = user.trial_started_at
             if trial_start.tzinfo is None:
@@ -72,7 +82,7 @@ async def screen_candidate(
     if not allowed:
         raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before scanning again.")
 
-    await check_screening_access(current_user)
+    await check_screening_access(current_user, db)
 
     if not payload.cv_text or not payload.cv_text.strip():
         raise HTTPException(
