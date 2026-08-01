@@ -287,7 +287,7 @@ export default function LandingPage() {
               <div style={{ marginBottom: 28 }}>
                 <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 52, fontWeight: 600, color: 'var(--ink)' }}>$49</span>
                 <span style={{ fontSize: 16, color: 'var(--ink3)' }}>/mo</span>
-                <p style={{ fontSize: 13, color: 'var(--ink3)', marginTop: 4 }}>14-day free trial · No credit card needed</p>
+                <p style={{ fontSize: 13, color: 'var(--ink3)', marginTop: 4 }}>3-day free trial · No credit card needed</p>
               </div>
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
                 {['Unlimited bulk CV screening', 'Ranked candidate shortlists', 'HR policy chatbot', 'Team workspace (up to 5 seats)', 'Export reports as PDF'].map(f => (
