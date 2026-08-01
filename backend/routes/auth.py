@@ -14,7 +14,7 @@ from core.redis_client import check_rate_limit, record_failed_login, is_login_lo
 from core.analytics import track, identify
 
 FREE_SCANS = 3
-TRIAL_DAYS = 7
+TRIAL_DAYS = 3
 
 
 async def build_user_response(user: User) -> dict:
