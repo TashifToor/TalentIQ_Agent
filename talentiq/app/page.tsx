@@ -4,6 +4,7 @@ import Link from 'next/link'
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false)
+  const [demoOpen, setDemoOpen] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50)
@@ -11,6 +12,12 @@ export default function LandingPage() {
     const obs = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible') }), { threshold: 0.12 })
     document.querySelectorAll('.reveal').forEach(el => obs.observe(el))
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDemoOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   return (
@@ -87,7 +94,7 @@ export default function LandingPage() {
             <Link href="/auth/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 600, color: 'var(--ink)', background: 'var(--gold2)', padding: '15px 32px', borderRadius: 10, textDecoration: 'none', transition: 'all .25s', letterSpacing: '.02em' }}>
               Try 3 free scans — no signup →
             </Link>
-            <button style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15, color: 'var(--ink)', border: '1.5px solid var(--border)', background: 'transparent', padding: '15px 28px', borderRadius: 10, cursor: 'pointer', transition: 'all .25s' }}>
+            <button onClick={()=>setDemoOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15, color: 'var(--ink)', border: '1.5px solid var(--border)', background: 'transparent', padding: '15px 28px', borderRadius: 10, cursor: 'pointer', transition: 'all .25s' }}>
               <svg width="15" height="15" fill="none" viewBox="0 0 15 15"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" strokeWidth="1.3" /><path d="M6 5.5l3 2-3 2V5.5z" fill="currentColor" /></svg>
               Watch demo
             </button>
@@ -330,6 +337,19 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* DEMO VIDEO */}
+      {demoOpen && (
+        <div onClick={()=>setDemoOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.75)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ width:'100%', maxWidth:900, background:'#000', borderRadius:14, overflow:'hidden', position:'relative', boxShadow:'0 20px 80px rgba(0,0,0,.5)' }}>
+            <button onClick={()=>setDemoOpen(false)} aria-label="Close demo video" style={{ position:'absolute', top:12, right:12, zIndex:1, width:34, height:34, borderRadius:'50%', background:'rgba(255,255,255,.12)', border:'none', color:'#fff', fontSize:18, cursor:'pointer', display:'grid', placeItems:'center' }}>✕</button>
+            <video controls autoPlay style={{ width:'100%', display:'block', aspectRatio:'16/9' }}>
+              <source src="/demo.mp4" type="video/mp4" />
+              Your browser doesn't support embedded video.
+            </video>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
