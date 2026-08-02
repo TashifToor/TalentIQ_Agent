@@ -136,6 +136,11 @@ export default function HRDashboard() {
   const [iJD, setIJD] = useState('')
   const [iExtraQuestions, setIExtraQuestions] = useState('')
   const [iInterviewerName, setIInterviewerName] = useState('')
+  const [iInterviewEnabled, setIInterviewEnabled] = useState(true)
+  const [iAssessmentEnabled, setIAssessmentEnabled] = useState(false)
+  const [iAssessmentSource, setIAssessmentSource] = useState<'ai'|'bank'>('ai')
+  const [iAssessmentNumQuestions, setIAssessmentNumQuestions] = useState(20)
+  const [iAssessmentBankText, setIAssessmentBankText] = useState('')
   const [iSaving, setISaving] = useState(false)
   const [iError, setIError] = useState('')
   const [copiedSlug, setCopiedSlug] = useState('')
@@ -280,15 +285,55 @@ export default function HRDashboard() {
       .finally(() => setInterviewCandidatesLoading(false))
   }
 
+  const parseBankText = (text: string): { question: string; options: string[]; correct_index: number; topic?: string }[] => {
+    // Blocks separated by blank lines. Format per block:
+    //   Question text?
+    //   A) option
+    //   B) option
+    //   C) option
+    //   D) option
+    //   Correct: B
+    const blocks = text.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean)
+    const parsed: { question: string; options: string[]; correct_index: number; topic?: string }[] = []
+    for (const block of blocks) {
+      const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
+      if (lines.length < 6) continue
+      const question = lines[0]
+      const options = lines.slice(1, 5).map(l => l.replace(/^[A-Da-d][\).\-:]\s*/, ''))
+      const correctLine = lines.find(l => /^correct/i.test(l))
+      const letter = correctLine?.match(/[A-Da-d]/)?.[0]?.toUpperCase()
+      const correct_index = letter ? letter.charCodeAt(0) - 65 : -1
+      if (options.length === 4 && correct_index >= 0 && correct_index <= 3) {
+        parsed.push({ question, options, correct_index })
+      }
+    }
+    return parsed
+  }
+
   const createInterviewPosting = async () => {
     if (!iTitle.trim() || !iJD.trim()) { setIError('Role title and job description are required.'); return }
+    if (!iInterviewEnabled && !iAssessmentEnabled) { setIError('Enable at least the interview or the assessment.'); return }
+    let bank: { question: string; options: string[]; correct_index: number; topic?: string }[] | undefined
+    if (iAssessmentEnabled && iAssessmentSource === 'bank') {
+      bank = parseBankText(iAssessmentBankText)
+      if (bank.length < 10) { setIError(`Question bank needs at least 10 valid questions (found ${bank.length}). Check the format.`); return }
+    }
     setISaving(true)
     setIError('')
     try {
       const extra = iExtraQuestions.split('\n').map(q=>q.trim()).filter(Boolean)
-      const posting = await api.createInterviewPosting({ title: iTitle.trim(), company: iCompany.trim() || undefined, job_description: iJD.trim(), extra_questions: extra, interviewer_name: iInterviewerName.trim() || undefined })
+      const posting = await api.createInterviewPosting({
+        title: iTitle.trim(), company: iCompany.trim() || undefined, job_description: iJD.trim(), extra_questions: extra,
+        interviewer_name: iInterviewerName.trim() || undefined,
+        interview_enabled: iInterviewEnabled,
+        assessment_enabled: iAssessmentEnabled,
+        assessment_source: iAssessmentEnabled ? iAssessmentSource : undefined,
+        assessment_num_questions: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentNumQuestions : undefined,
+        assessment_bank: bank,
+      })
       setShowInterviewForm(false)
       setITitle(''); setICompany(''); setIJD(''); setIExtraQuestions(''); setIInterviewerName('')
+      setIInterviewEnabled(true); setIAssessmentEnabled(false); setIAssessmentSource('ai'); setIAssessmentNumQuestions(20); setIAssessmentBankText('')
       loadInterviewPostings()
       openPosting(posting)
     } catch (e:any) {
@@ -1096,6 +1141,55 @@ export default function HRDashboard() {
           <textarea placeholder={"Extra questions HR wants covered (optional, one per line)\ne.g. Are you willing to relocate to Lahore?\nWhat's your notice period?"}
             value={iExtraQuestions} onChange={e=>setIExtraQuestions(e.target.value)}
             style={s(inputSt, { minHeight:70, resize:'vertical', marginBottom:10, fontFamily:'Inter,sans-serif' })} />
+
+          <div style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,.5)', marginBottom:8, marginTop:6 }}>Stages (enable at least one)</div>
+          <div style={{ display:'flex', gap:16, marginBottom:14 }}>
+            <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer' }}>
+              <input type="checkbox" checked={iInterviewEnabled} onChange={e=>setIInterviewEnabled(e.target.checked)} />
+              Conversational Interview
+            </label>
+            <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer' }}>
+              <input type="checkbox" checked={iAssessmentEnabled} onChange={e=>setIAssessmentEnabled(e.target.checked)} />
+              MCQ Assessment (proctored)
+            </label>
+          </div>
+
+          {iAssessmentEnabled && (
+            <div style={s(card, { background:'#161614', marginBottom:14 })}>
+              <div style={{ fontSize:12, fontWeight:600, marginBottom:10 }}>Assessment Setup</div>
+              <div style={{ display:'flex', gap:16, marginBottom:12 }}>
+                <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5, cursor:'pointer' }}>
+                  <input type="radio" name="assessSource" checked={iAssessmentSource==='ai'} onChange={()=>setIAssessmentSource('ai')} />
+                  AI generates questions
+                </label>
+                <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5, cursor:'pointer' }}>
+                  <input type="radio" name="assessSource" checked={iAssessmentSource==='bank'} onChange={()=>setIAssessmentSource('bank')} />
+                  I'll provide my own questions
+                </label>
+              </div>
+
+              {iAssessmentSource === 'ai' ? (
+                <div>
+                  <label style={{ fontSize:12, color:'rgba(255,255,255,.5)', display:'block', marginBottom:6 }}>Number of questions (10–50)</label>
+                  <input type="number" min={10} max={50} value={iAssessmentNumQuestions}
+                    onChange={e=>setIAssessmentNumQuestions(Math.max(10, Math.min(50, Number(e.target.value)||20)))}
+                    style={s(inputSt, { width:100, marginBottom:0 })} />
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:8 }}>Mix of aptitude, DSA, JD's language/framework, and team-collaboration/git-scenario questions — generated once when you create this link, same set for every candidate.</div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:8, lineHeight:1.6 }}>
+                    One question per block, blank line between blocks:<br/>
+                    <code style={{ color:'rgba(255,255,255,.5)' }}>Question text?<br/>A) option<br/>B) option<br/>C) option<br/>D) option<br/>Correct: B</code>
+                  </div>
+                  <textarea placeholder={"What does 'git rebase -i' let you do?\nA) Delete the repo\nB) Interactively edit commit history\nC) Push to a remote\nD) Clone a branch\nCorrect: B"}
+                    value={iAssessmentBankText} onChange={e=>setIAssessmentBankText(e.target.value)}
+                    style={s(inputSt, { minHeight:140, resize:'vertical', marginBottom:0, fontFamily:'monospace', fontSize:12 })} />
+                </div>
+              )}
+            </div>
+          )}
+
           {iError && <div style={{ fontSize:12, color:'#ef4444', marginBottom:10 }}>{iError}</div>}
           <button onClick={createInterviewPosting} disabled={iSaving}
             style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#13c28e', color:'#0a0a08', fontSize:13, fontWeight:700, cursor: iSaving?'default':'pointer', opacity: iSaving ? 0.6 : 1, fontFamily:'Inter,sans-serif' }}>
@@ -1127,7 +1221,11 @@ export default function HRDashboard() {
                     color: p.is_active ? '#13c28e' : 'rgba(255,255,255,.35)' }}>{p.is_active ? 'ACTIVE' : 'PAUSED'}</span>
                 </div>
                 {p.company && <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:2 }}>{p.company}</div>}
-                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:8 }}>Interviewer: {p.interviewer_name} · {p.candidate_count} candidate{p.candidate_count===1?'':'s'} interviewed</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:6 }}>Interviewer: {p.interviewer_name} · {p.candidate_count} candidate{p.candidate_count===1?'':'s'} interviewed</div>
+                <div style={{ display:'flex', gap:5, marginBottom:8 }}>
+                  {p.interview_enabled && <span style={{ fontSize:9.5, fontWeight:700, padding:'2px 7px', borderRadius:100, background:'rgba(226,176,74,.1)', color:'#e2b04a' }}>INTERVIEW</span>}
+                  {p.assessment_enabled && <span style={{ fontSize:9.5, fontWeight:700, padding:'2px 7px', borderRadius:100, background:'rgba(19,194,142,.1)', color:'#13c28e' }}>MCQ ×{p.assessment_question_count}</span>}
+                </div>
                 <div style={{ display:'flex', gap:6 }}>
                   <button onClick={(e)=>{e.stopPropagation(); copyInterviewLink(p.public_link, p.public_slug)}}
                     style={{ flex:1, padding:'6px 10px', borderRadius:6, border:'1px solid rgba(255,255,255,.1)', background:'transparent', color:'rgba(255,255,255,.6)', fontSize:11, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
@@ -1160,13 +1258,55 @@ export default function HRDashboard() {
                     <div style={{ marginLeft:'auto', fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:600,
                       color: selectedReport.ai_score>=80?'#13c28e':selectedReport.ai_score>=60?'#e2b04a':'#ef4444' }}>{selectedReport.ai_score}</div>
                   )}
+                  {selectedReport.ai_score == null && selectedReport.assessment_score != null && (
+                    <div style={{ marginLeft:'auto', fontFamily:"'Cormorant Garamond',serif", fontSize:32, fontWeight:600,
+                      color: selectedReport.assessment_score>=80?'#13c28e':selectedReport.assessment_score>=60?'#e2b04a':'#ef4444' }}>{selectedReport.assessment_score}%</div>
+                  )}
                 </div>
                 {selectedReport.final_verdict && (
                   <div style={{ display:'inline-block', fontSize:11, fontWeight:700, padding:'4px 12px', borderRadius:100, marginBottom:16,
                     background:'rgba(255,255,255,.06)', color:'rgba(255,255,255,.7)' }}>{selectedReport.final_verdict}</div>
                 )}
                 {selectedReport.status !== 'completed' && (
-                  <div style={s(card, { marginBottom:14, color:'#e2b04a', fontSize:12 })}>Interview still in progress — candidate hasn't finished yet.</div>
+                  <div style={s(card, { marginBottom:14, color:'#e2b04a', fontSize:12 })}>Still in progress — candidate hasn't finished yet.</div>
+                )}
+                {selectedReport.assessment_score != null && (
+                  <div style={s(card, { marginBottom:14 })}>
+                    <div style={{ display:'flex', alignItems:'center', marginBottom:10 }}>
+                      <div style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,.4)' }}>MCQ Assessment</div>
+                      <div style={{ marginLeft:'auto', fontSize:16, fontWeight:700, color: selectedReport.assessment_score>=80?'#13c28e':selectedReport.assessment_score>=60?'#e2b04a':'#ef4444' }}>{selectedReport.assessment_score}%</div>
+                    </div>
+                    {selectedReport.assessment_breakdown && (
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom: (selectedReport.assessment_flags||[]).length ? 12 : 0 }}>
+                        {Object.entries(selectedReport.assessment_breakdown).map(([topic, stat]:any) => (
+                          <div key={topic} style={{ fontSize:10.5, padding:'4px 9px', borderRadius:100, background:'rgba(255,255,255,.05)', color:'rgba(255,255,255,.55)' }}>
+                            {topic}: {stat.correct}/{stat.total}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {(selectedReport.assessment_flags||[]).length > 0 && (
+                      <div>
+                        <div style={{ fontSize:11, fontWeight:600, color:'#ef4444', marginBottom:6 }}>⚠ Proctoring Flags ({selectedReport.assessment_flags.length})</div>
+                        {selectedReport.assessment_flags.map((f:any, i:number) => (
+                          <div key={i} style={{ fontSize:11, color:'rgba(255,255,255,.45)', marginBottom:3 }}>
+                            {f.type.replace(/_/g,' ')} — {f.at ? new Date(f.at).toLocaleTimeString() : ''}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {(selectedReport.assessment_photos||[]).length > 0 && (
+                      <div style={{ marginTop:12 }}>
+                        <div style={{ fontSize:11, fontWeight:600, color:'rgba(255,255,255,.4)', marginBottom:8 }}>Proctoring Snapshots ({selectedReport.assessment_photos.length})</div>
+                        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                          {selectedReport.assessment_photos.map((p:string, i:number) => (
+                            <img key={i} src={api.getProctoringPhotoUrl(selectedReport.id, p)} alt={`Snapshot ${i+1}`}
+                              style={{ width:60, height:60, objectFit:'cover', borderRadius:6, border:'1px solid rgba(255,255,255,.1)' }} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {selectedReport.experience_assessment && (
                   <div style={s(card, { marginBottom:14 })}>
@@ -1210,14 +1350,30 @@ export default function HRDashboard() {
                         {initials(c.candidate_name)}
                       </div>
                       <div style={{ flex:1 }}>
-                        <div style={{ fontSize:13, fontWeight:600 }}>{c.candidate_name}</div>
+                        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                          <div style={{ fontSize:13, fontWeight:600 }}>{c.candidate_name}</div>
+                          {c.proctoring_flag_count > 0 && (
+                            <span title={`${c.proctoring_flag_count} proctoring flag(s)`} style={{ fontSize:9.5, fontWeight:700, padding:'1px 6px', borderRadius:100, background:'rgba(239,68,68,.12)', color:'#ef4444' }}>⚠ {c.proctoring_flag_count}</span>
+                          )}
+                        </div>
                         <div style={{ fontSize:11, color:'rgba(255,255,255,.3)' }}>
                           {c.status==='completed' ? (c.final_verdict || 'Completed') : 'In progress...'}
                         </div>
                       </div>
-                      {c.ai_score != null && (
-                        <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, color: c.ai_score>=80?'#13c28e':c.ai_score>=60?'#e2b04a':'#ef4444' }}>{c.ai_score}</div>
-                      )}
+                      <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+                        {c.ai_score != null && (
+                          <div style={{ textAlign:'center' }}>
+                            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:600, color: c.ai_score>=80?'#13c28e':c.ai_score>=60?'#e2b04a':'#ef4444' }}>{c.ai_score}</div>
+                            <div style={{ fontSize:8.5, color:'rgba(255,255,255,.25)' }}>INTERVIEW</div>
+                          </div>
+                        )}
+                        {c.assessment_score != null && (
+                          <div style={{ textAlign:'center' }}>
+                            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:20, fontWeight:600, color: c.assessment_score>=80?'#13c28e':c.assessment_score>=60?'#e2b04a':'#ef4444' }}>{c.assessment_score}%</div>
+                            <div style={{ fontSize:8.5, color:'rgba(255,255,255,.25)' }}>MCQ</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
