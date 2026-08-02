@@ -28,6 +28,15 @@ class InterviewPosting(Base):
     interviewer_name = Column(String, default="Kelly")  # human name the AI interviewer goes by in chat
     public_slug =      Column(String, unique=True, index=True, nullable=False, default=generate_slug)
     is_active =        Column(Boolean, default=True)
+
+    # HR toggles each stage independently — a posting can be interview-only,
+    # assessment-only, or both (in which case interview runs first).
+    interview_enabled =         Column(Boolean, default=True)
+    assessment_enabled =        Column(Boolean, default=False)
+    assessment_source =         Column(String, nullable=True)   # "ai" | "bank"
+    assessment_num_questions =  Column(Integer, default=20)
+    assessment_questions =      Column(Text, default="[]")  # JSON list[{id, question, options[4], correct_index, topic}] — fixed at posting creation so every candidate gets the same set
+
     created_at =       Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -49,6 +58,15 @@ class InterviewSession(Base):
     status =                   Column(String, default="in_progress")  # in_progress | completed
     awaiting_cv =              Column(Boolean, default=False)  # AI has asked for CV, waiting on upload/skip
     cv_text =                  Column(Text, nullable=True)     # extracted text from uploaded CV, if any
+
+    stage =                    Column(String, default="interview")  # interview | assessment | done — drives what the public UI shows next
+    assessment_answers =       Column(Text, default="[]")   # JSON list[{question_id, selected_index}]
+    assessment_current_index = Column(Integer, default=0)
+    assessment_score =         Column(Integer, nullable=True)     # % correct, 0-100
+    assessment_flags =         Column(Text, default="[]")   # JSON list[{type, detail, at}] — proctoring events (tab switch, left site, etc.)
+    assessment_photos =        Column(Text, default="[]")   # JSON list[str] — relative file paths of periodic webcam captures
+    assessment_started_at =    Column(DateTime(timezone=True), nullable=True)
+    assessment_completed_at =  Column(DateTime(timezone=True), nullable=True)
 
     ai_score =                 Column(Integer, nullable=True)
     final_verdict =            Column(String, nullable=True)
