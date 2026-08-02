@@ -2,6 +2,7 @@ import json
 import os
 import random
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from models.database import get_db
@@ -9,6 +10,7 @@ from middleware.auth import get_current_user
 from models.user import User
 from models.interview import InterviewPosting, InterviewSession
 from core.org_scope import get_org_scoped_user_ids
+from core.assessment import generate_assessment_questions, score_assessment, MIN_QUESTIONS, MAX_QUESTIONS
 from schemas.interview import (
     InterviewPostingCreate, InterviewPostingResponse,
     InterviewSessionSummary, InterviewSessionReport,
@@ -18,6 +20,7 @@ router = APIRouter(prefix="/interview", tags=["AI Interviewer"])
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 DEFAULT_INTERVIEWER_NAMES = ["Kelly", "Alex", "Sarah", "Sam", "Emma", "Jordan"]
+PROCTORING_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "proctoring")
 
 
 def require_hr(current_user: User):
@@ -34,6 +37,10 @@ def _posting_to_response(posting: InterviewPosting, candidate_count: int) -> dic
         "job_description": posting.job_description,
         "extra_questions": json.loads(posting.extra_questions or "[]"),
         "interviewer_name": posting.interviewer_name or "Kelly",
+        "interview_enabled": posting.interview_enabled,
+        "assessment_enabled": posting.assessment_enabled,
+        "assessment_source": posting.assessment_source,
+        "assessment_question_count": len(json.loads(posting.assessment_questions or "[]")),
         "public_slug": posting.public_slug,
         "public_link": f"{FRONTEND_URL}/interview/{posting.public_slug}",
         "is_active": posting.is_active,
@@ -54,6 +61,36 @@ def create_posting(
     if not payload.job_description.strip():
         raise HTTPException(status_code=400, detail="Job description cannot be empty.")
 
+    if not payload.interview_enabled and not payload.assessment_enabled:
+        raise HTTPException(status_code=400, detail="Enable at least one of the interview or the assessment.")
+
+    assessment_questions = []
+    if payload.assessment_enabled:
+        if payload.assessment_source not in ("ai", "bank"):
+            raise HTTPException(status_code=400, detail="assessment_source must be 'ai' or 'bank' when the assessment is enabled.")
+
+        if payload.assessment_source == "bank":
+            if not payload.assessment_bank or len(payload.assessment_bank) < MIN_QUESTIONS:
+                raise HTTPException(status_code=400, detail=f"Provide at least {MIN_QUESTIONS} questions for a question bank.")
+            if len(payload.assessment_bank) > MAX_QUESTIONS:
+                raise HTTPException(status_code=400, detail=f"Maximum {MAX_QUESTIONS} questions allowed.")
+            for q in payload.assessment_bank:
+                if len(q.options) != 4 or not (0 <= q.correct_index <= 3):
+                    raise HTTPException(status_code=400, detail=f"Question '{q.question[:40]}...' needs exactly 4 options and a valid correct_index (0-3).")
+            import uuid as _uuid
+            assessment_questions = [
+                {"id": str(_uuid.uuid4())[:8], "question": q.question, "options": q.options,
+                 "correct_index": q.correct_index, "topic": q.topic or "general"}
+                for q in payload.assessment_bank
+            ]
+        else:  # "ai"
+            num_q = payload.assessment_num_questions or 20
+            if not (MIN_QUESTIONS <= num_q <= MAX_QUESTIONS):
+                raise HTTPException(status_code=400, detail=f"assessment_num_questions must be between {MIN_QUESTIONS} and {MAX_QUESTIONS}.")
+            assessment_questions = generate_assessment_questions(payload.job_description.strip(), num_q)
+            if not assessment_questions:
+                raise HTTPException(status_code=500, detail="Could not generate assessment questions. Please try again.")
+
     posting = InterviewPosting(
         hr_user_id=current_user.id,
         title=payload.title.strip() or "Untitled Role",
@@ -61,6 +98,11 @@ def create_posting(
         job_description=payload.job_description.strip(),
         extra_questions=json.dumps([q.strip() for q in payload.extra_questions if q.strip()]),
         interviewer_name=(payload.interviewer_name.strip() if payload.interviewer_name and payload.interviewer_name.strip() else random.choice(DEFAULT_INTERVIEWER_NAMES)),
+        interview_enabled=payload.interview_enabled,
+        assessment_enabled=payload.assessment_enabled,
+        assessment_source=payload.assessment_source if payload.assessment_enabled else None,
+        assessment_num_questions=len(assessment_questions) if assessment_questions else (payload.assessment_num_questions or 20),
+        assessment_questions=json.dumps(assessment_questions),
     )
     db.add(posting)
     db.commit()
@@ -172,6 +214,8 @@ def list_candidates(
             "status": s.status,
             "ai_score": s.ai_score,
             "final_verdict": s.final_verdict,
+            "assessment_score": s.assessment_score,
+            "proctoring_flag_count": len(json.loads(s.assessment_flags or "[]")),
             "created_at": s.created_at.isoformat() if s.created_at else "",
             "completed_at": s.completed_at.isoformat() if s.completed_at else None,
         }
@@ -207,6 +251,7 @@ def list_all_candidates(
             "status": s.status,
             "ai_score": s.ai_score,
             "final_verdict": s.final_verdict,
+            "assessment_score": s.assessment_score,
             "experience_assessment": s.experience_assessment,
             "deep_analysis": s.deep_analysis,
             "created_at": s.created_at.isoformat() if s.created_at else "",
@@ -237,16 +282,76 @@ def get_session_report(
     if not posting:
         raise HTTPException(status_code=404, detail="Session not found.")
 
+    assessment_breakdown = None
+    if session.assessment_score is not None:
+        questions = json.loads(posting.assessment_questions or "[]")
+        answers = json.loads(session.assessment_answers or "[]")
+        if questions:
+            assessment_breakdown = score_assessment(questions, answers)["breakdown_by_topic"]
+
     return {
         "id": str(session.id),
         "candidate_name": session.candidate_name,
         "candidate_email": session.candidate_email,
         "status": session.status,
+        "stage": session.stage,
         "ai_score": session.ai_score,
         "final_verdict": session.final_verdict,
         "experience_assessment": session.experience_assessment,
         "deep_analysis": session.deep_analysis,
         "transcript": json.loads(session.transcript or "[]"),
+        "assessment_score": session.assessment_score,
+        "assessment_breakdown": assessment_breakdown,
+        "assessment_flags": json.loads(session.assessment_flags or "[]"),
+        "assessment_photos": json.loads(session.assessment_photos or "[]"),
         "created_at": session.created_at.isoformat() if session.created_at else "",
         "completed_at": session.completed_at.isoformat() if session.completed_at else None,
     }
+
+
+# ── GET /interview/sessions/{id}/photos/{filename} — HR views a proctoring snapshot ──
+@router.get("/sessions/{session_id}/photos/{filename}")
+def get_proctoring_photo(
+    session_id: str,
+    filename: str,
+    token: str = None,
+    db: Session = Depends(get_db),
+):
+    # A plain <img src> can't send an Authorization header, so this endpoint
+    # accepts the JWT as a query param too — everything else about auth
+    # (signature, expiry, org scoping below) is identical either way.
+    from jose import jwt, JWTError
+    from middleware.auth import SECRET_KEY, ALGORITHM
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing token.")
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token expired or invalid.")
+    current_user = db.query(User).filter(User.id == user_id).first()
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    require_hr(current_user)
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+
+    session = db.query(InterviewSession).filter(InterviewSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found.")
+    posting = db.query(InterviewPosting).filter(
+        InterviewPosting.id == session.posting_id,
+        InterviewPosting.hr_user_id.in_(scoped_ids),
+    ).first()
+    if not posting:
+        raise HTTPException(status_code=404, detail="Session not found.")
+
+    photos = json.loads(session.assessment_photos or "[]")
+    matching = [p for p in photos if os.path.basename(p) == filename]
+    if not matching:
+        raise HTTPException(status_code=404, detail="Photo not found.")
+
+    path = os.path.join(PROCTORING_DIR, session_id, filename)
+    if not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Photo file missing on disk.")
+    return FileResponse(path, media_type="image/jpeg")
