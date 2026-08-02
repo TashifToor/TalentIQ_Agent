@@ -17,54 +17,40 @@ def _clean_json(raw: str):
     return json.loads(clean)
 
 
-def _category_split(total: int) -> dict:
-    """Proportional allocation across the fixed category mix — always sums to `total`."""
-    weights = {
-        "aptitude": 0.15,       # general reasoning / character / workplace judgement
-        "dsa": 0.25,            # data structures & algorithms / problem solving
-        "language": 0.25,       # specific to the JD's primary programming language
-        "framework": 0.20,      # specific to the JD's stated framework(s)/tools
-        "collaboration": 0.15,  # team workflows, git scenarios, code review judgement
-    }
-    counts = {k: max(1, round(total * w)) for k, w in weights.items()}
-    # Rounding can drift the total slightly off — correct against the largest bucket.
-    diff = total - sum(counts.values())
-    if diff != 0:
-        biggest = max(counts, key=counts.get)
-        counts[biggest] += diff
-    return counts
-
-
-def generate_assessment_questions(job_description: str, num_questions: int) -> list[dict]:
+def generate_assessment_questions(job_description: str, counts: dict) -> list[dict]:
     """
     Generates a fixed MCQ set for a posting — same questions for every
     candidate who takes this assessment, so scores are comparable.
+
+    counts: {"dsa": int, "job_desc": int, "problem_solving": int, "teamwork": int, "hr": int}
     Returns list of {id, question, options[4], correct_index, topic}.
     """
-    num_questions = max(MIN_QUESTIONS, min(MAX_QUESTIONS, num_questions))
-    counts = _category_split(num_questions)
+    total = sum(counts.values())
+    total = max(MIN_QUESTIONS, min(MAX_QUESTIONS, total))
 
-    prompt = f"""You are building a technical screening assessment (multiple choice, single correct answer each) for this role. Read the job description and infer the primary programming language(s) and framework(s)/tools it requires — use those to write the language- and framework-specific questions.
+    prompt = f"""You are building a technical screening assessment (multiple choice, single correct answer each) for this role. Read the job description and infer the primary programming language(s) and framework(s)/tools it requires — use those for the job-description-specific questions.
 
 <job_description>
 {job_description}
 </job_description>
 
 Generate EXACTLY this many questions per category:
-- "aptitude": {counts['aptitude']} — general workplace reasoning, logical judgement, prioritization scenarios. Not language-specific.
-- "dsa": {counts['dsa']} — data structures & algorithms, complexity analysis, problem-solving. Language-agnostic where possible (pseudocode or plain description), unless the JD's language makes a language-specific question more natural.
-- "language": {counts['language']} — specific to the JD's primary programming language's syntax, semantics, gotchas, standard library.
-- "framework": {counts['framework']} — specific to the JD's named framework(s)/tools (e.g. the actual framework mentioned in the JD — if none is named, use the most relevant common framework for that language/domain instead).
-- "collaboration": {counts['collaboration']} — git workflows (merge conflicts, rebasing, branching strategy), code review judgement, working in a team, resolving disagreements on an issue/PR.
+- "dsa" ({counts.get('dsa', 0)}): data structures & algorithms, complexity analysis, coding problem-solving. Language-agnostic where possible (pseudocode or plain description), unless the JD's language makes a language-specific question more natural.
+- "job_desc" ({counts.get('job_desc', 0)}): specific to the JD's named programming language(s), framework(s), and tools — syntax, semantics, gotchas, standard library, framework-specific behavior.
+- "problem_solving" ({counts.get('problem_solving', 0)}): general logical reasoning, prioritization, and workplace problem-solving scenarios — not language-specific, not coding.
+- "teamwork" ({counts.get('teamwork', 0)}): git workflows (merge conflicts, rebasing, branching), code review judgement, resolving disagreements on an issue/PR, working in a team.
+- "hr" ({counts.get('hr', 0)}): behavioral/motivational — why this role, why this company, handling feedback, work ethic, culture fit. Phrase as realistic workplace scenarios with 4 plausible responses, not generic trivia.
+
+Skip any category above with a count of 0 — generate nothing for it.
 
 RULES:
-- Each question has EXACTLY 4 options, exactly one correct.
+- Each question has EXACTLY 4 options, exactly one correct (for "hr" questions, "correct" means the most professional/effective response).
 - Make wrong options plausible, not obviously silly — this should genuinely differentiate skill level.
 - Vary difficulty across each category (some easy, some hard) rather than making them all the same difficulty.
 - Keep each question and each option concise — one or two sentences max.
 
 Respond ONLY with a valid JSON array, no markdown, no backticks, no commentary. Each item exactly:
-{{"question": "...", "options": ["...", "...", "...", "..."], "correct_index": 0, "topic": "aptitude|dsa|language|framework|collaboration"}}"""
+{{"question": "...", "options": ["...", "...", "...", "..."], "correct_index": 0, "topic": "dsa|job_desc|problem_solving|teamwork|hr"}}"""
 
     response = llm.invoke(prompt)
     raw = _clean_json(response.content)
@@ -88,7 +74,7 @@ Respond ONLY with a valid JSON array, no markdown, no backticks, no commentary. 
         except (KeyError, TypeError, ValueError):
             continue  # skip anything malformed rather than failing the whole batch
 
-    return questions[:num_questions]
+    return questions[:total]
 
 
 def score_assessment(questions: list[dict], answers: list[dict]) -> dict:
