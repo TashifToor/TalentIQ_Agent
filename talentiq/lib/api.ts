@@ -279,7 +279,9 @@ export const api = {
   createInterviewPosting: (payload: {
     title: string; company?: string; job_description: string; extra_questions: string[]; interviewer_name?: string;
     interview_enabled: boolean; assessment_enabled: boolean;
-    assessment_source?: 'ai' | 'bank'; assessment_num_questions?: number;
+    assessment_source?: 'ai' | 'bank';
+    assessment_count_dsa?: number; assessment_count_job_desc?: number; assessment_count_problem_solving?: number;
+    assessment_count_teamwork?: number; assessment_count_hr?: number;
     assessment_bank?: { question: string; options: string[]; correct_index: number; topic?: string }[];
   }) =>
     apiFetch("/interview/postings", { method: "POST", body: JSON.stringify(payload) }),
