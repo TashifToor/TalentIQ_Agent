@@ -139,7 +139,7 @@ export default function HRDashboard() {
   const [iInterviewEnabled, setIInterviewEnabled] = useState(true)
   const [iAssessmentEnabled, setIAssessmentEnabled] = useState(false)
   const [iAssessmentSource, setIAssessmentSource] = useState<'ai'|'bank'>('ai')
-  const [iAssessmentNumQuestions, setIAssessmentNumQuestions] = useState(20)
+  const [iAssessmentCounts, setIAssessmentCounts] = useState({ dsa: 5, job_desc: 5, problem_solving: 4, teamwork: 3, hr: 3 })
   const [iAssessmentBankText, setIAssessmentBankText] = useState('')
   const [iSaving, setISaving] = useState(false)
   const [iError, setIError] = useState('')
@@ -313,6 +313,10 @@ export default function HRDashboard() {
   const createInterviewPosting = async () => {
     if (!iTitle.trim() || !iJD.trim()) { setIError('Role title and job description are required.'); return }
     if (!iInterviewEnabled && !iAssessmentEnabled) { setIError('Enable at least the interview or the assessment.'); return }
+    if (iAssessmentEnabled && iAssessmentSource === 'ai') {
+      const total = Object.values(iAssessmentCounts).reduce((a,b)=>a+b,0)
+      if (total < 10 || total > 50) { setIError(`Total questions across categories must be 10–50 (currently ${total}).`); return }
+    }
     let bank: { question: string; options: string[]; correct_index: number; topic?: string }[] | undefined
     if (iAssessmentEnabled && iAssessmentSource === 'bank') {
       bank = parseBankText(iAssessmentBankText)
@@ -328,12 +332,16 @@ export default function HRDashboard() {
         interview_enabled: iInterviewEnabled,
         assessment_enabled: iAssessmentEnabled,
         assessment_source: iAssessmentEnabled ? iAssessmentSource : undefined,
-        assessment_num_questions: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentNumQuestions : undefined,
+        assessment_count_dsa: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.dsa : undefined,
+        assessment_count_job_desc: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.job_desc : undefined,
+        assessment_count_problem_solving: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.problem_solving : undefined,
+        assessment_count_teamwork: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.teamwork : undefined,
+        assessment_count_hr: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.hr : undefined,
         assessment_bank: bank,
       })
       setShowInterviewForm(false)
       setITitle(''); setICompany(''); setIJD(''); setIExtraQuestions(''); setIInterviewerName('')
-      setIInterviewEnabled(true); setIAssessmentEnabled(false); setIAssessmentSource('ai'); setIAssessmentNumQuestions(20); setIAssessmentBankText('')
+      setIInterviewEnabled(true); setIAssessmentEnabled(false); setIAssessmentSource('ai'); setIAssessmentCounts({ dsa: 5, job_desc: 5, problem_solving: 4, teamwork: 3, hr: 3 }); setIAssessmentBankText('')
       loadInterviewPostings()
       openPosting(posting)
     } catch (e:any) {
@@ -1170,11 +1178,29 @@ export default function HRDashboard() {
 
               {iAssessmentSource === 'ai' ? (
                 <div>
-                  <label style={{ fontSize:12, color:'rgba(255,255,255,.5)', display:'block', marginBottom:6 }}>Number of questions (10–50)</label>
-                  <input type="number" min={10} max={50} value={iAssessmentNumQuestions}
-                    onChange={e=>setIAssessmentNumQuestions(Math.max(10, Math.min(50, Number(e.target.value)||20)))}
-                    style={s(inputSt, { width:100, marginBottom:0 })} />
-                  <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:8 }}>Mix of aptitude, DSA, JD's language/framework, and team-collaboration/git-scenario questions — generated once when you create this link, same set for every candidate.</div>
+                  <label style={{ fontSize:12, color:'rgba(255,255,255,.5)', display:'block', marginBottom:10 }}>How many questions per category?</label>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+                    {([
+                      ['dsa', 'DSA'],
+                      ['job_desc', 'Job Description (language/framework)'],
+                      ['problem_solving', 'Problem Solving'],
+                      ['teamwork', 'Team Work (git/collaboration)'],
+                      ['hr', 'HR (e.g. "why should we hire you")'],
+                    ] as const).map(([key, label]) => (
+                      <div key={key}>
+                        <label style={{ fontSize:11, color:'rgba(255,255,255,.4)', display:'block', marginBottom:4 }}>{label}</label>
+                        <input type="number" min={0} max={50} value={iAssessmentCounts[key]}
+                          onChange={e=>setIAssessmentCounts(prev=>({ ...prev, [key]: Math.max(0, Math.min(50, Number(e.target.value)||0)) }))}
+                          style={s(inputSt, { marginBottom:0 })} />
+                      </div>
+                    ))}
+                  </div>
+                  {(() => {
+                    const total = Object.values(iAssessmentCounts).reduce((a,b)=>a+b,0)
+                    const ok = total >= 10 && total <= 50
+                    return <div style={{ fontSize:12, fontWeight:600, color: ok ? '#13c28e' : '#ef4444' }}>Total: {total} questions {!ok && '(must be 10–50)'}</div>
+                  })()}
+                  <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:8 }}>Generated once when you create this link — same set for every candidate.</div>
                 </div>
               ) : (
                 <div>
