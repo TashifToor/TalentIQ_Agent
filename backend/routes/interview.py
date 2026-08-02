@@ -84,10 +84,17 @@ def create_posting(
                 for q in payload.assessment_bank
             ]
         else:  # "ai"
-            num_q = payload.assessment_num_questions or 20
-            if not (MIN_QUESTIONS <= num_q <= MAX_QUESTIONS):
-                raise HTTPException(status_code=400, detail=f"assessment_num_questions must be between {MIN_QUESTIONS} and {MAX_QUESTIONS}.")
-            assessment_questions = generate_assessment_questions(payload.job_description.strip(), num_q)
+            counts = {
+                "dsa": max(0, payload.assessment_count_dsa),
+                "job_desc": max(0, payload.assessment_count_job_desc),
+                "problem_solving": max(0, payload.assessment_count_problem_solving),
+                "teamwork": max(0, payload.assessment_count_teamwork),
+                "hr": max(0, payload.assessment_count_hr),
+            }
+            total_q = sum(counts.values())
+            if not (MIN_QUESTIONS <= total_q <= MAX_QUESTIONS):
+                raise HTTPException(status_code=400, detail=f"Total questions across all categories must be between {MIN_QUESTIONS} and {MAX_QUESTIONS} (currently {total_q}).")
+            assessment_questions = generate_assessment_questions(payload.job_description.strip(), counts)
             if not assessment_questions:
                 raise HTTPException(status_code=500, detail="Could not generate assessment questions. Please try again.")
 
@@ -101,7 +108,7 @@ def create_posting(
         interview_enabled=payload.interview_enabled,
         assessment_enabled=payload.assessment_enabled,
         assessment_source=payload.assessment_source if payload.assessment_enabled else None,
-        assessment_num_questions=len(assessment_questions) if assessment_questions else (payload.assessment_num_questions or 20),
+        assessment_num_questions=len(assessment_questions) if assessment_questions else 0,
         assessment_questions=json.dumps(assessment_questions),
     )
     db.add(posting)
