@@ -7,7 +7,7 @@ node_modules/
 # TalentIQ specific sub-folder patterns
 talentiq/node_modules/
 talentiq/.next/
-
+uploads
 # Backend patterns
 **/__pycache__/
 backend/.data/

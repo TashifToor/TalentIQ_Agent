@@ -22,8 +22,14 @@ class InterviewPostingCreate(BaseModel):
     interview_enabled: bool = True
     assessment_enabled: bool = False
     assessment_source: Optional[str] = None          # "ai" | "bank" — required if assessment_enabled
-    assessment_num_questions: Optional[int] = 20      # used when source == "ai"
     assessment_bank: Optional[List[BankQuestion]] = None  # used when source == "bank"
+
+    # used when source == "ai" — HR controls exactly how many questions per category
+    assessment_count_dsa: int = 0
+    assessment_count_job_desc: int = 0
+    assessment_count_problem_solving: int = 0
+    assessment_count_teamwork: int = 0
+    assessment_count_hr: int = 0
 
 
 class InterviewPostingResponse(BaseModel):
