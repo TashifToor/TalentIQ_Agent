@@ -276,7 +276,12 @@ export const api = {
   },
 
   // --- AI Chatbot Interviewer — HR side (authenticated) ---
-  createInterviewPosting: (payload: { title: string; company?: string; job_description: string; extra_questions: string[]; interviewer_name?: string }) =>
+  createInterviewPosting: (payload: {
+    title: string; company?: string; job_description: string; extra_questions: string[]; interviewer_name?: string;
+    interview_enabled: boolean; assessment_enabled: boolean;
+    assessment_source?: 'ai' | 'bank'; assessment_num_questions?: number;
+    assessment_bank?: { question: string; options: string[]; correct_index: number; topic?: string }[];
+  }) =>
     apiFetch("/interview/postings", { method: "POST", body: JSON.stringify(payload) }),
 
   getInterviewPostings: () => apiFetch("/interview/postings"),
@@ -293,6 +298,12 @@ export const api = {
 
   getInterviewSessionReport: (sessionId: string) => apiFetch(`/interview/sessions/${sessionId}`),
 
+  getProctoringPhotoUrl: (sessionId: string, path: string) => {
+    const filename = path.split('/').pop()
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
+    return `${API_BASE_URL}/interview/sessions/${sessionId}/photos/${filename}${token ? `?t=${encodeURIComponent(token)}` : ''}`
+  },
+
   // --- AI Chatbot Interviewer — public candidate side (no login) ---
   getPublicInterviewPosting: (slug: string) => apiFetch(`/interview/public/${slug}`),
 
@@ -307,6 +318,32 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ message }),
     }),
+
+  getCurrentAssessmentQuestion: (slug: string, sessionId: string) =>
+    apiFetch(`/interview/public/${slug}/${sessionId}/assessment/current`),
+
+  answerAssessmentQuestion: (slug: string, sessionId: string, question_id: string, selected_index: number) =>
+    apiFetch(`/interview/public/${slug}/${sessionId}/assessment/answer`, {
+      method: "POST",
+      body: JSON.stringify({ question_id, selected_index }),
+    }),
+
+  uploadProctoringPhoto: async (slug: string, sessionId: string, blob: Blob): Promise<any> => {
+    const formData = new FormData()
+    formData.append("file", blob, "snapshot.jpg")
+    const res = await fetch(`${API_BASE_URL}/interview/public/${slug}/${sessionId}/assessment/photo`, {
+      method: "POST",
+      body: formData,
+    })
+    if (!res.ok) return null
+    return res.json()
+  },
+
+  reportProctoringFlag: (slug: string, sessionId: string, type: string, detail?: string) =>
+    apiFetch(`/interview/public/${slug}/${sessionId}/assessment/flag`, {
+      method: "POST",
+      body: JSON.stringify({ type, detail }),
+    }).catch(() => {}),
 
   uploadPublicInterviewCV: async (slug: string, sessionId: string, file: File): Promise<any> => {
     const formData = new FormData();
