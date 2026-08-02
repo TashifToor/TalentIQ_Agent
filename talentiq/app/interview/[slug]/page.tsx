@@ -1,16 +1,20 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { api } from '@/lib/api'
 
 type Msg = { role: 'assistant' | 'candidate'; content: string }
+type Question = { id: string; index: number; total: number; question: string; options: string[] }
+type Posting = { title: string; company?: string; interviewer_name: string; is_active: boolean; interview_enabled: boolean; assessment_enabled: boolean }
+
+const SNAPSHOT_INTERVAL_MS = 45000
 
 export default function PublicInterviewPage() {
   const params = useParams()
   const slug = String(params?.slug || '')
 
   const [loadingPosting, setLoadingPosting] = useState(true)
-  const [posting, setPosting] = useState<{ title: string; company?: string; interviewer_name: string; is_active: boolean } | null>(null)
+  const [posting, setPosting] = useState<Posting | null>(null)
   const [notFound, setNotFound] = useState(false)
 
   const [name, setName] = useState('')
@@ -19,14 +23,32 @@ export default function PublicInterviewPage() {
   const [starting, setStarting] = useState(false)
 
   const [sessionId, setSessionId] = useState('')
+  const [status, setStatus] = useState<'idle' | 'in_progress' | 'completed'>('idle')
+  const [stage, setStage] = useState<'interview' | 'assessment'>('interview')
+  const [awaitingCv, setAwaitingCv] = useState(false)
+
+  // interview (chat) stage
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
-  const [status, setStatus] = useState<'idle' | 'in_progress' | 'completed'>('idle')
-  const [awaitingCv, setAwaitingCv] = useState(false)
+  const endRef = useRef<HTMLDivElement>(null)
+
+  // assessment (MCQ) stage
+  const [question, setQuestion] = useState<Question | null>(null)
+  const [selectedOption, setSelectedOption] = useState<number | null>(null)
+  const [answering, setAnswering] = useState(false)
+  const [assessmentError, setAssessmentError] = useState('')
+
+  // camera / proctoring
+  const [cameraState, setCameraState] = useState<'idle' | 'requesting' | 'granted' | 'denied'>('idle')
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const snapshotTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // CV upload
   const [uploadingCv, setUploadingCv] = useState(false)
   const [sendError, setSendError] = useState('')
-  const endRef = useRef<HTMLDivElement>(null)
   const cvFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -36,14 +58,14 @@ export default function PublicInterviewPage() {
       .catch(() => setNotFound(true))
       .finally(() => setLoadingPosting(false))
 
-    // resume an in-progress session on refresh
     const saved = sessionStorage.getItem(`interview_session_${slug}`)
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
         setSessionId(parsed.sessionId)
-        setMessages(parsed.messages)
+        setMessages(parsed.messages || [])
         setStatus(parsed.status)
+        setStage(parsed.stage || 'interview')
         setAwaitingCv(!!parsed.awaitingCv)
       } catch {}
     }
@@ -55,13 +77,85 @@ export default function PublicInterviewPage() {
 
   useEffect(() => {
     if (sessionId) {
-      sessionStorage.setItem(`interview_session_${slug}`, JSON.stringify({ sessionId, messages, status, awaitingCv }))
+      sessionStorage.setItem(`interview_session_${slug}`, JSON.stringify({ sessionId, messages, status, stage, awaitingCv }))
     }
-  }, [sessionId, messages, status, awaitingCv, slug])
+  }, [sessionId, messages, status, stage, awaitingCv, slug])
 
-  const base = { background: '#0a0a08', minHeight: '100vh', fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.88)' }
-  const card = { background: '#111110', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, padding: 20 }
-  const inputSt = { background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: 'rgba(255,255,255,.85)', outline: 'none', width: '100%' }
+  // ── Proctoring: tab-switch / leave-site detection ──
+  const flag = useCallback((type: string, detail?: string) => {
+    if (!sessionId || stage !== 'assessment') return
+    api.reportProctoringFlag(slug, sessionId, type, detail)
+  }, [slug, sessionId, stage])
+
+  useEffect(() => {
+    const onVisibility = () => { if (document.hidden) flag('tab_hidden') }
+    const onBlur = () => flag('window_blur')
+    const onUnload = () => {
+      if (!sessionId || stage !== 'assessment') return
+      try {
+        navigator.sendBeacon?.(
+          `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')}/interview/public/${slug}/${sessionId}/assessment/flag`,
+          new Blob([JSON.stringify({ type: 'left_site' })], { type: 'application/json' })
+        )
+      } catch {}
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('blur', onBlur)
+    window.addEventListener('beforeunload', onUnload)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('blur', onBlur)
+      window.removeEventListener('beforeunload', onUnload)
+    }
+  }, [flag, sessionId, stage, slug])
+
+  // ── Camera setup + periodic snapshots ──
+  const stopCamera = useCallback(() => {
+    if (snapshotTimerRef.current) { clearInterval(snapshotTimerRef.current); snapshotTimerRef.current = null }
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+  }, [])
+
+  const captureSnapshot = useCallback(() => {
+    const video = videoRef.current, canvas = canvasRef.current
+    if (!video || !canvas || !streamRef.current) return
+    canvas.width = video.videoWidth || 320
+    canvas.height = video.videoHeight || 240
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    canvas.toBlob(blob => {
+      if (blob) api.uploadProctoringPhoto(slug, sessionId, blob)
+    }, 'image/jpeg', 0.7)
+  }, [slug, sessionId])
+
+  const requestCameraAndBeginAssessment = async () => {
+    setCameraState('requesting')
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } })
+      streamRef.current = stream
+      if (videoRef.current) videoRef.current.srcObject = stream
+      setCameraState('granted')
+      snapshotTimerRef.current = setInterval(captureSnapshot, SNAPSHOT_INTERVAL_MS)
+      setTimeout(captureSnapshot, 2000) // one early snapshot too
+      await loadCurrentQuestion()
+    } catch (e) {
+      setCameraState('denied')
+    }
+  }
+
+  useEffect(() => () => stopCamera(), [stopCamera])
+
+  const loadCurrentQuestion = async () => {
+    setAssessmentError('')
+    try {
+      const q: any = await api.getCurrentAssessmentQuestion(slug, sessionId)
+      setQuestion(q)
+      setSelectedOption(null)
+    } catch (e: any) {
+      setAssessmentError(e?.message || 'Could not load the next question.')
+    }
+  }
 
   const startInterview = async () => {
     if (!name.trim() || !email.trim() || !email.includes('@')) {
@@ -73,14 +167,26 @@ export default function PublicInterviewPage() {
     try {
       const res: any = await api.startPublicInterview(slug, name.trim(), email.trim())
       setSessionId(res.session_id)
-      setMessages([{ role: 'assistant', content: res.message }])
       setStatus('in_progress')
+      if (res.stage === 'assessment') {
+        setStage('assessment')
+      } else {
+        setStage('interview')
+        setMessages([{ role: 'assistant', content: res.message }])
+      }
     } catch (e: any) {
       setStartError(e?.message || 'Could not start the interview. Try again.')
     } finally {
       setStarting(false)
     }
   }
+
+  // kick off camera request the moment we land on the assessment stage with no session/camera yet
+  useEffect(() => {
+    if (status === 'in_progress' && stage === 'assessment' && !awaitingCv && cameraState === 'idle' && sessionId) {
+      requestCameraAndBeginAssessment()
+    }
+  }, [status, stage, awaitingCv, cameraState, sessionId])
 
   const sendMessage = async () => {
     const text = input.trim()
@@ -91,11 +197,10 @@ export default function PublicInterviewPage() {
     setInput('')
     try {
       const res: any = await api.sendPublicInterviewMessage(slug, sessionId, text)
-      if (res.message) {
-        setMessages(prev => [...prev, { role: 'assistant', content: res.message }])
-      }
+      if (res.message) setMessages(prev => [...prev, { role: 'assistant', content: res.message }])
       setStatus(res.status)
       setAwaitingCv(!!res.awaiting_cv)
+      if (res.next_stage === 'assessment') setStage('assessment')
     } catch (e: any) {
       setSendError(e?.message || 'Message failed to send. Please try again.')
     } finally {
@@ -103,16 +208,33 @@ export default function PublicInterviewPage() {
     }
   }
 
-  const uploadCv = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setSendError('Only PDF files are supported right now.')
-      return
+  const submitAnswer = async () => {
+    if (selectedOption === null || !question || answering) return
+    setAnswering(true)
+    setAssessmentError('')
+    try {
+      const res: any = await api.answerAssessmentQuestion(slug, sessionId, question.id, selectedOption)
+      if (res.status === 'completed') {
+        stopCamera()
+        setAwaitingCv(true)
+        setQuestion(null)
+      } else {
+        setQuestion(res.next_question)
+        setSelectedOption(null)
+      }
+    } catch (e: any) {
+      setAssessmentError(e?.message || 'Could not submit your answer. Please try again.')
+    } finally {
+      setAnswering(false)
     }
+  }
+
+  const uploadCv = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith('.pdf')) { setSendError('Only PDF files are supported right now.'); return }
     setUploadingCv(true)
     setSendError('')
     try {
       const res: any = await api.uploadPublicInterviewCV(slug, sessionId, file)
-      if (res.message) setMessages(prev => [...prev, { role: 'assistant', content: res.message }])
       setStatus(res.status)
       setAwaitingCv(!!res.awaiting_cv)
     } catch (e: any) {
@@ -127,7 +249,6 @@ export default function PublicInterviewPage() {
     setSendError('')
     try {
       const res: any = await api.skipPublicInterviewCV(slug, sessionId)
-      if (res.message) setMessages(prev => [...prev, { role: 'assistant', content: res.message }])
       setStatus(res.status)
       setAwaitingCv(!!res.awaiting_cv)
     } catch (e: any) {
@@ -136,6 +257,10 @@ export default function PublicInterviewPage() {
       setUploadingCv(false)
     }
   }
+
+  const base = { background: '#0a0a08', minHeight: '100vh', fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.88)' }
+  const card = { background: '#111110', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, padding: 20 }
+  const inputSt = { background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: 'rgba(255,255,255,.85)', outline: 'none', width: '100%' }
 
   if (loadingPosting) {
     return <div style={{ ...base, display: 'grid', placeItems: 'center' }}><div style={{ color: 'rgba(255,255,255,.3)', fontSize: 13 }}>Loading...</div></div>
@@ -162,16 +287,26 @@ export default function PublicInterviewPage() {
           </div>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>{posting.title}</div>
           {posting.company && <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)', marginBottom: 6 }}>{posting.company}</div>}
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', marginBottom: 16 }}>You'll be interviewed by {posting.interviewer_name}, our AI screening interviewer.</div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,.5)', lineHeight: 1.7, marginBottom: 20 }}>
-            You're about to start a short AI-conducted screening interview for this role. It's conversational — answer naturally, and give specific, concrete examples where you can. Once started, please go through to the end; it can't be skipped or paused partway.
+          {posting.interview_enabled && (
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', marginBottom: 16 }}>You'll be interviewed by {posting.interviewer_name}, our AI screening interviewer.</div>
+          )}
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,.5)', lineHeight: 1.7, marginBottom: 12 }}>
+            {posting.interview_enabled && posting.assessment_enabled && "This role has two parts: a short conversational interview, then a timed skills assessment. Answer naturally, and give specific, concrete examples where you can."}
+            {posting.interview_enabled && !posting.assessment_enabled && "You're about to start a short AI-conducted screening interview for this role. It's conversational — answer naturally, and give specific, concrete examples where you can."}
+            {!posting.interview_enabled && posting.assessment_enabled && "This role requires a short multiple-choice skills assessment."}
           </div>
+          {posting.assessment_enabled && (
+            <div style={{ fontSize: 12, color: '#e2b04a', background: 'rgba(226,176,74,.08)', border: '1px solid rgba(226,176,74,.15)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, lineHeight: 1.6 }}>
+              📷 The assessment is proctored — your camera will take periodic snapshots, and leaving this tab is flagged for the hiring team.
+            </div>
+          )}
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginBottom: 20 }}>Once started, please go through to the end; it can't be skipped or paused partway.</div>
           <input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} style={{ ...inputSt, marginBottom: 10 }} />
           <input placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} style={{ ...inputSt, marginBottom: 14 }} />
           {startError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12 }}>{startError}</div>}
           <button onClick={startInterview} disabled={starting}
             style={{ width: '100%', padding: '12px 20px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: starting ? 'default' : 'pointer', opacity: starting ? 0.6 : 1, fontFamily: 'Inter,sans-serif' }}>
-            {starting ? 'Starting...' : 'Start Interview'}
+            {starting ? 'Starting...' : 'Start'}
           </button>
         </div>
       </div>
@@ -186,9 +321,9 @@ export default function PublicInterviewPage() {
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(19,194,142,.12)', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="#13c28e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Interview Complete</div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 600, marginBottom: 8 }}>All Done</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,.45)', lineHeight: 1.7, marginBottom: 6 }}>
-            Thanks, {name || 'there'} — your interview for <strong>{posting.title}</strong> has been sent to the hiring team.
+            Thanks, {name || 'there'} — your submission for <strong>{posting.title}</strong> has been sent to the hiring team.
           </div>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,.25)' }}>You can close this tab now.</div>
         </div>
@@ -196,7 +331,99 @@ export default function PublicInterviewPage() {
     )
   }
 
-  // ── Live chat ──
+  // ── CV upload (shared final step, regardless of which stage(s) ran) ──
+  if (awaitingCv) {
+    return (
+      <div style={{ ...base, display: 'grid', placeItems: 'center', padding: 20 }}>
+        <div style={{ ...card, maxWidth: 440, width: '100%', textAlign: 'center' }}>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, marginBottom: 10 }}>One last thing</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,.5)', lineHeight: 1.7, marginBottom: 20 }}>Upload your CV so we can cross-check it against your answers — or skip if you don't have one handy.</div>
+          <input ref={cvFileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) uploadCv(f) }} />
+          <button onClick={() => cvFileRef.current?.click()} disabled={uploadingCv}
+            style={{ width: '100%', padding: '12px 20px', borderRadius: 8, border: '1px dashed rgba(255,255,255,.2)', background: 'transparent', color: 'rgba(255,255,255,.7)', fontSize: 13, fontWeight: 600, cursor: uploadingCv ? 'default' : 'pointer', opacity: uploadingCv ? 0.6 : 1, fontFamily: 'Inter,sans-serif', marginBottom: 10 }}>
+            {uploadingCv ? 'Uploading...' : '📎 Upload your CV (PDF)'}
+          </button>
+          <button onClick={skipCv} disabled={uploadingCv}
+            style={{ width: '100%', padding: '10px 20px', borderRadius: 8, border: '1px solid rgba(255,255,255,.1)', background: 'transparent', color: 'rgba(255,255,255,.4)', fontSize: 13, fontWeight: 600, cursor: uploadingCv ? 'default' : 'pointer', fontFamily: 'Inter,sans-serif' }}>
+            Skip this step
+          </button>
+          {sendError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 12 }}>{sendError}</div>}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Assessment (MCQ) stage ──
+  if (stage === 'assessment') {
+    return (
+      <div style={{ ...base, display: 'flex', flexDirection: 'column' }}>
+        <video ref={videoRef} autoPlay muted playsInline style={{ display: 'none' }} />
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 30, height: 30, background: '#13c28e', borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="#0a0a08"><path d="M2 3h12v2H2V3zm0 4h12v2H2V7zm0 4h8v2H2v-2z" /></svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>{posting.title} — Skills Assessment</div>
+            {cameraState === 'granted' && <div style={{ fontSize: 10, color: '#13c28e' }}>● Camera active — proctoring on</div>}
+          </div>
+          {question && <div style={{ marginLeft: 'auto', fontSize: 12, color: 'rgba(255,255,255,.4)' }}>Question {question.index} of {question.total}</div>}
+        </div>
+
+        <div style={{ flex: 1, display: 'grid', placeItems: 'center', padding: 20 }}>
+          {cameraState === 'idle' || cameraState === 'requesting' ? (
+            <div style={{ ...card, maxWidth: 420, textAlign: 'center' }}>
+              <div style={{ fontSize: 28, marginBottom: 10 }}>📷</div>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Camera access needed</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', lineHeight: 1.6, marginBottom: 16 }}>This assessment is proctored — please allow camera access to begin. It's used only for periodic snapshots, never continuous recording.</div>
+              <button onClick={requestCameraAndBeginAssessment} disabled={cameraState === 'requesting'}
+                style={{ width: '100%', padding: '12px 20px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
+                {cameraState === 'requesting' ? 'Requesting access...' : 'Allow Camera & Begin'}
+              </button>
+            </div>
+          ) : cameraState === 'denied' ? (
+            <div style={{ ...card, maxWidth: 420, textAlign: 'center' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#ef4444', marginBottom: 8 }}>Camera access was denied</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', lineHeight: 1.6, marginBottom: 16 }}>This assessment requires camera access to proceed. Please allow it in your browser's site settings, then retry.</div>
+              <button onClick={requestCameraAndBeginAssessment}
+                style={{ width: '100%', padding: '12px 20px', borderRadius: 8, border: '1px solid rgba(255,255,255,.15)', background: 'transparent', color: 'rgba(255,255,255,.8)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
+                Retry
+              </button>
+            </div>
+          ) : !question ? (
+            <div style={{ color: 'rgba(255,255,255,.3)', fontSize: 13 }}>Loading question...</div>
+          ) : (
+            <div style={{ ...card, maxWidth: 560, width: '100%' }}>
+              <div style={{ height: 3, background: 'rgba(255,255,255,.06)', borderRadius: 2, marginBottom: 20, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${(question.index / question.total) * 100}%`, background: 'linear-gradient(90deg,#0b7c5e,#13c28e)', transition: 'width .4s' }} />
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, marginBottom: 18 }}>{question.question}</div>
+              {question.options.map((opt, i) => (
+                <div key={i} onClick={() => setSelectedOption(i)}
+                  style={{
+                    padding: '12px 14px', borderRadius: 8, marginBottom: 8, cursor: 'pointer', fontSize: 13, lineHeight: 1.5,
+                    border: `1px solid ${selectedOption === i ? '#13c28e' : 'rgba(255,255,255,.08)'}`,
+                    background: selectedOption === i ? 'rgba(19,194,142,.08)' : '#161614',
+                    color: selectedOption === i ? '#13c28e' : 'rgba(255,255,255,.75)',
+                  }}>
+                  <span style={{ fontWeight: 700, marginRight: 8 }}>{String.fromCharCode(65 + i)}.</span>{opt}
+                </div>
+              ))}
+              {assessmentError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 10 }}>{assessmentError}</div>}
+              <button onClick={submitAnswer} disabled={selectedOption === null || answering}
+                style={{ width: '100%', marginTop: 16, padding: '12px 20px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: (selectedOption === null || answering) ? 'default' : 'pointer', opacity: (selectedOption === null || answering) ? 0.5 : 1, fontFamily: 'Inter,sans-serif' }}>
+                {answering ? 'Submitting...' : question.index === question.total ? 'Finish Assessment' : 'Next Question'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Conversational interview (chat) stage ──
   return (
     <div style={{ ...base, display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -229,35 +456,20 @@ export default function PublicInterviewPage() {
       </div>
 
       <div style={{ borderTop: '1px solid rgba(255,255,255,.06)', padding: 16 }}>
-        {awaitingCv ? (
-          <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-            <input ref={cvFileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
-              onChange={e => { const f = e.target.files?.[0]; if (f) uploadCv(f) }} />
-            <button onClick={() => cvFileRef.current?.click()} disabled={uploadingCv}
-              style={{ flex: 1, padding: '12px 20px', borderRadius: 8, border: '1px dashed rgba(255,255,255,.2)', background: 'transparent', color: 'rgba(255,255,255,.7)', fontSize: 13, fontWeight: 600, cursor: uploadingCv ? 'default' : 'pointer', opacity: uploadingCv ? 0.6 : 1, fontFamily: 'Inter,sans-serif' }}>
-              {uploadingCv ? 'Uploading...' : '📎 Upload your CV (PDF)'}
-            </button>
-            <button onClick={skipCv} disabled={uploadingCv}
-              style={{ padding: '0 20px', height: 44, borderRadius: 8, border: '1px solid rgba(255,255,255,.1)', background: 'transparent', color: 'rgba(255,255,255,.4)', fontSize: 13, fontWeight: 600, cursor: uploadingCv ? 'default' : 'pointer', fontFamily: 'Inter,sans-serif' }}>
-              Skip
-            </button>
-          </div>
-        ) : (
-          <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', gap: 10 }}>
-            <input
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-              placeholder="Type your answer..."
-              disabled={sending}
-              style={{ ...inputSt, flex: 1 }}
-            />
-            <button onClick={sendMessage} disabled={sending || !input.trim()}
-              style={{ padding: '0 22px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: sending ? 'default' : 'pointer', opacity: (sending || !input.trim()) ? 0.5 : 1, fontFamily: 'Inter,sans-serif' }}>
-              Send
-            </button>
-          </div>
-        )}
+        <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', gap: 10 }}>
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
+            placeholder="Type your answer..."
+            disabled={sending}
+            style={{ ...inputSt, flex: 1 }}
+          />
+          <button onClick={sendMessage} disabled={sending || !input.trim()}
+            style={{ padding: '0 22px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: sending ? 'default' : 'pointer', opacity: (sending || !input.trim()) ? 0.5 : 1, fontFamily: 'Inter,sans-serif' }}>
+            Send
+          </button>
+        </div>
         {sendError && <div style={{ maxWidth: 720, margin: '8px auto 0', fontSize: 12, color: '#ef4444' }}>{sendError}</div>}
       </div>
     </div>
