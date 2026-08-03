@@ -14,11 +14,12 @@ from core.interviewer import get_next_turn, generate_report, cv_request_message
 from core.assessment import score_assessment
 from core.redis_client import check_rate_limit
 from core.loader import CvLoader
-from utils.otp_mailer import send_interview_completed_email
+from utils.otp_mailer import send_interview_completed_email, send_candidate_completion_email
 from schemas.interview import (
     PublicPostingInfo, InterviewStartRequest, InterviewStartResponse,
     InterviewMessageRequest, InterviewMessageResponse,
     AssessmentQuestionOut, AssessmentAnswerRequest, AssessmentAnswerResponse, AssessmentFlagRequest,
+    TerminateResponse,
 )
 
 router = APIRouter(prefix="/interview/public", tags=["AI Interviewer — Public"])
@@ -51,7 +52,7 @@ def _assessment_question_out(posting: InterviewPosting, index: int) -> Assessmen
     if index >= len(questions):
         return None
     q = questions[index]
-    return AssessmentQuestionOut(id=q["id"], index=index + 1, total=len(questions), question=q["question"], options=q["options"])
+    return AssessmentQuestionOut(id=q["id"], index=index + 1, total=len(questions), question=q["question"], options=q["options"], seconds_allowed=posting.assessment_seconds_per_question or 60)
 
 
 def _finalize(session: InterviewSession, posting: InterviewPosting, transcript: list, db: Session):
@@ -78,20 +79,33 @@ def _finalize(session: InterviewSession, posting: InterviewPosting, transcript: 
     session.completed_at = datetime.now(timezone.utc)
     db.commit()
 
+    if posting.notify_hr_on_completion:
+        try:
+            hr_user = db.query(User).filter(User.id == posting.hr_user_id).first()
+            if hr_user and hr_user.email:
+                send_interview_completed_email(
+                    to_email=hr_user.email,
+                    hr_name=hr_user.name or "there",
+                    candidate_name=session.candidate_name,
+                    candidate_email=session.candidate_email,
+                    role_title=posting.title,
+                    score=session.ai_score if session.ai_score is not None else session.assessment_score,
+                    verdict=session.final_verdict,
+                )
+        except Exception as e:
+            print(f"[Interview] Could not send HR notification email: {e}")
+
     try:
-        hr_user = db.query(User).filter(User.id == posting.hr_user_id).first()
-        if hr_user and hr_user.email:
-            send_interview_completed_email(
-                to_email=hr_user.email,
-                hr_name=hr_user.name or "there",
-                candidate_name=session.candidate_name,
-                candidate_email=session.candidate_email,
-                role_title=posting.title,
-                score=session.ai_score if session.ai_score is not None else session.assessment_score,
-                verdict=session.final_verdict,
-            )
+        what = "interview and assessment" if (posting.interview_enabled and posting.assessment_enabled) else "assessment" if posting.assessment_enabled else "interview"
+        send_candidate_completion_email(
+            to_email=session.candidate_email,
+            candidate_name=session.candidate_name,
+            role_title=posting.title,
+            company=posting.company,
+            what=what,
+        )
     except Exception as e:
-        print(f"[Interview] Could not send HR notification email: {e}")
+        print(f"[Interview] Could not send candidate confirmation email: {e}")
 
 
 def _finish_assessment_and_advance(session: InterviewSession, posting: InterviewPosting, db: Session) -> dict:
@@ -119,6 +133,7 @@ def get_posting_info(slug: str, db: Session = Depends(get_db)):
         "is_active": posting.is_active,
         "interview_enabled": posting.interview_enabled,
         "assessment_enabled": posting.assessment_enabled,
+        "assessment_seconds_per_question": posting.assessment_seconds_per_question or 60,
     }
 
 
@@ -253,8 +268,8 @@ def answer_assessment_question(
 
     if session.stage != "assessment" or session.status == "completed":
         raise HTTPException(status_code=400, detail="The assessment isn't active for this session.")
-    if not (0 <= payload.selected_index <= 3):
-        raise HTTPException(status_code=400, detail="selected_index must be 0-3.")
+    if not (-1 <= payload.selected_index <= 3):
+        raise HTTPException(status_code=400, detail="selected_index must be -1 (timeout) or 0-3.")
 
     ip = request.client.host if request.client else "unknown"
     allowed, wait_seconds = check_rate_limit(f"assessment-answer:{session_id}", cooldown_seconds=1)
@@ -324,6 +339,49 @@ def report_proctoring_flag(slug: str, session_id: str, payload: AssessmentFlagRe
     session.assessment_flags = json.dumps(flags)
     db.commit()
     return {"logged": True}
+
+
+# ── POST /interview/public/{slug}/{session_id}/assessment/terminate — immediate end for suspected cheating ──
+@router.post("/{slug}/{session_id}/assessment/terminate", response_model=TerminateResponse)
+def terminate_for_cheating(slug: str, session_id: str, payload: AssessmentFlagRequest, db: Session = Depends(get_db)):
+    posting = _get_active_posting(slug, db)
+    session = _get_session(posting, session_id, db)
+
+    if session.status == "completed":
+        return {"status": "terminated", "message": "Session already ended."}
+    if session.stage != "assessment":
+        raise HTTPException(status_code=400, detail="Termination only applies during the assessment.")
+
+    flags = json.loads(session.assessment_flags or "[]")
+    flags.append({"type": payload.type, "detail": payload.detail or "Session terminated for leaving the page during the assessment.", "at": datetime.now(timezone.utc).isoformat()})
+    session.assessment_flags = json.dumps(flags)
+
+    session.terminated_reason = payload.type
+    session.final_verdict = "Flagged — Possible Cheating"
+    session.assessment_score = 0  # an interrupted assessment is not a valid completed score
+    session.status = "completed"
+    session.stage = "done"
+    session.awaiting_cv = False
+    session.completed_at = datetime.now(timezone.utc)
+    db.commit()
+
+    if posting.notify_hr_on_completion:
+        try:
+            hr_user = db.query(User).filter(User.id == posting.hr_user_id).first()
+            if hr_user and hr_user.email:
+                send_interview_completed_email(
+                    to_email=hr_user.email,
+                    hr_name=hr_user.name or "there",
+                    candidate_name=session.candidate_name,
+                    candidate_email=session.candidate_email,
+                    role_title=posting.title,
+                    score=0,
+                    verdict="⚠ Flagged — Possible Cheating (left the page during the proctored assessment)",
+                )
+        except Exception as e:
+            print(f"[Interview] Could not send HR cheating-flag email: {e}")
+
+    return {"status": "terminated", "message": "Your session was ended because you left the page during the proctored assessment. This has been flagged for the hiring team."}
 
 
 # ── POST /interview/public/{slug}/{session_id}/upload-cv — candidate attaches their CV ──
