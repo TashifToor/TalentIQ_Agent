@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation'
 import { api } from '@/lib/api'
 
 type Msg = { role: 'assistant' | 'candidate'; content: string }
-type Question = { id: string; index: number; total: number; question: string; options: string[] }
+type Question = { id: string; index: number; total: number; question: string; options: string[]; seconds_allowed: number }
 type Posting = { title: string; company?: string; interviewer_name: string; is_active: boolean; interview_enabled: boolean; assessment_enabled: boolean }
 
 const SNAPSHOT_INTERVAL_MS = 45000
@@ -36,6 +36,10 @@ export default function PublicInterviewPage() {
   // assessment (MCQ) stage
   const [question, setQuestion] = useState<Question | null>(null)
   const [selectedOption, setSelectedOption] = useState<number | null>(null)
+  const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [terminated, setTerminated] = useState(false)
+  const [terminatedMessage, setTerminatedMessage] = useState('')
   const [answering, setAnswering] = useState(false)
   const [assessmentError, setAssessmentError] = useState('')
 
@@ -81,14 +85,31 @@ export default function PublicInterviewPage() {
     }
   }, [sessionId, messages, status, stage, awaitingCv, slug])
 
-  // ── Proctoring: tab-switch / leave-site detection ──
+  // ── Proctoring: tab-switch = immediate termination; blur = soft flag ──
   const flag = useCallback((type: string, detail?: string) => {
     if (!sessionId || stage !== 'assessment') return
     api.reportProctoringFlag(slug, sessionId, type, detail)
   }, [slug, sessionId, stage])
 
+  const terminateNow = useCallback(async (type: string) => {
+    if (!sessionId || stage !== 'assessment' || terminated) return
+    setTerminated(true) // set immediately so the render switches before the request even returns
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
+    if (snapshotTimerRef.current) { clearInterval(snapshotTimerRef.current); snapshotTimerRef.current = null }
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+    try {
+      const res: any = await api.terminateAssessment(slug, sessionId, type)
+      setTerminatedMessage(res?.message || 'Your session was ended because you left the page during the proctored assessment.')
+      setStatus('completed')
+    } catch {
+      setTerminatedMessage('Your session was ended because you left the page during the proctored assessment. This has been flagged for the hiring team.')
+      setStatus('completed')
+    }
+  }, [slug, sessionId, stage, terminated])
+
   useEffect(() => {
-    const onVisibility = () => { if (document.hidden) flag('tab_hidden') }
+    const onVisibility = () => { if (document.hidden) terminateNow('tab_hidden') }
     const onBlur = () => flag('window_blur')
     const onUnload = () => {
       if (!sessionId || stage !== 'assessment') return
@@ -107,7 +128,7 @@ export default function PublicInterviewPage() {
       window.removeEventListener('blur', onBlur)
       window.removeEventListener('beforeunload', onUnload)
     }
-  }, [flag, sessionId, stage, slug])
+  }, [flag, terminateNow, sessionId, stage, slug])
 
   // ── Camera setup + periodic snapshots ──
   const stopCamera = useCallback(() => {
@@ -208,12 +229,14 @@ export default function PublicInterviewPage() {
     }
   }
 
-  const submitAnswer = async () => {
-    if (selectedOption === null || !question || answering) return
+  const submitAnswer = async (forcedIndex?: number) => {
+    const indexToSend = forcedIndex !== undefined ? forcedIndex : selectedOption
+    if (indexToSend === null || indexToSend === undefined || !question || answering) return
     setAnswering(true)
     setAssessmentError('')
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
     try {
-      const res: any = await api.answerAssessmentQuestion(slug, sessionId, question.id, selectedOption)
+      const res: any = await api.answerAssessmentQuestion(slug, sessionId, question.id, indexToSend)
       if (res.status === 'completed') {
         stopCamera()
         setAwaitingCv(true)
@@ -228,6 +251,25 @@ export default function PublicInterviewPage() {
       setAnswering(false)
     }
   }
+
+  // Countdown timer — resets on every new question, auto-submits -1 (counts as wrong) at zero.
+  useEffect(() => {
+    if (!question || terminated) return
+    setTimeLeft(question.seconds_allowed)
+    timerRef.current = setInterval(() => {
+      setTimeLeft(t => {
+        if (t === null) return null
+        if (t <= 1) {
+          if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
+          submitAnswer(-1)
+          return 0
+        }
+        return t - 1
+      })
+    }, 1000)
+    return () => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null } }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question?.id])
 
   const uploadCv = async (file: File) => {
     if (!file.name.toLowerCase().endsWith('.pdf')) { setSendError('Only PDF files are supported right now.'); return }
@@ -272,6 +314,21 @@ export default function PublicInterviewPage() {
         <div style={{ ...card, maxWidth: 420, textAlign: 'center' }}>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Link not available</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)' }}>This interview link is no longer active. Please check with the hiring team for an updated link.</div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Terminated for suspected cheating (highest priority — always wins) ──
+  if (terminated) {
+    return (
+      <div style={{ ...base, display: 'grid', placeItems: 'center', padding: 20 }}>
+        <div style={{ ...card, maxWidth: 440, textAlign: 'center', border: '1px solid rgba(239,68,68,.3)' }}>
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(239,68,68,.12)', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
+            <span style={{ fontSize: 22 }}>⚠</span>
+          </div>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, color: '#ef4444', marginBottom: 10 }}>Session Ended</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,.55)', lineHeight: 1.7 }}>{terminatedMessage || 'You left the page during the proctored assessment, so this session has ended and been flagged for the hiring team.'}</div>
         </div>
       </div>
     )
@@ -369,7 +426,16 @@ export default function PublicInterviewPage() {
             <div style={{ fontSize: 13, fontWeight: 700 }}>{posting.title} — Skills Assessment</div>
             {cameraState === 'granted' && <div style={{ fontSize: 10, color: '#13c28e' }}>● Camera active — proctoring on</div>}
           </div>
-          {question && <div style={{ marginLeft: 'auto', fontSize: 12, color: 'rgba(255,255,255,.4)' }}>Question {question.index} of {question.total}</div>}
+          {question && (
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+              {timeLeft !== null && (
+                <div style={{ fontSize: 13, fontWeight: 700, color: timeLeft <= 10 ? '#ef4444' : 'rgba(255,255,255,.6)', fontVariantNumeric: 'tabular-nums' }}>
+                  ⏱ {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+                </div>
+              )}
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.4)' }}>Question {question.index} of {question.total}</div>
+            </div>
+          )}
         </div>
 
         <div style={{ flex: 1, display: 'grid', placeItems: 'center', padding: 20 }}>
@@ -412,7 +478,7 @@ export default function PublicInterviewPage() {
                 </div>
               ))}
               {assessmentError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 10 }}>{assessmentError}</div>}
-              <button onClick={submitAnswer} disabled={selectedOption === null || answering}
+              <button onClick={() => submitAnswer()} disabled={selectedOption === null || answering}
                 style={{ width: '100%', marginTop: 16, padding: '12px 20px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: (selectedOption === null || answering) ? 'default' : 'pointer', opacity: (selectedOption === null || answering) ? 0.5 : 1, fontFamily: 'Inter,sans-serif' }}>
                 {answering ? 'Submitting...' : question.index === question.total ? 'Finish Assessment' : 'Next Question'}
               </button>
