@@ -115,7 +115,6 @@ def send_otp_email(to_email: str, otp: str, user_name: str, purpose: str = "rese
         server.login(MAIL_USERNAME, MAIL_PASSWORD)
         server.sendmail(MAIL_FROM, to_email, msg.as_string())
 
-
 def send_interview_completed_email(to_email: str, hr_name: str, candidate_name: str, candidate_email: str, role_title: str, score: int | None, verdict: str | None):
     """Notifies the HR user who owns an interview posting once a candidate finishes the AI interview."""
     if not MAIL_PASSWORD or MAIL_PASSWORD == "your_gmail_app_password_here":
@@ -158,6 +157,48 @@ def send_interview_completed_email(to_email: str, hr_name: str, candidate_name: 
            text-decoration:none;font-weight:700;font-size:14px;display:inline-block;">View Full Report</a>
       </div>
       <p style="color:rgba(255,255,255,.2);font-size:11px;margin-top:24px;">Open the AI Interviewer tab in your dashboard to see the full transcript and analysis.</p>
+    </div>
+    </body>
+    </html>
+    """
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
+        server.starttls()
+        server.login(MAIL_USERNAME, MAIL_PASSWORD)
+        server.sendmail(MAIL_FROM, to_email, msg.as_string())
+
+
+def send_candidate_completion_email(to_email: str, candidate_name: str, role_title: str, company: str | None, what: str = "interview"):
+    """Sent to the candidate themselves right after they finish an AI interview and/or assessment.
+    `what` should be one of: "interview", "assessment", "interview and assessment"."""
+    if not MAIL_PASSWORD or MAIL_PASSWORD == "your_gmail_app_password_here":
+        print(f"[OTP Mailer] Email not configured. Would confirm completion with {candidate_name} <{to_email}> for '{role_title}'.")
+        return
+
+    company_line = f" at {company}" if company else ""
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"Thanks for completing your {what} — {role_title}"
+    msg["From"]    = MAIL_FROM
+    msg["To"]      = to_email
+
+    html = f"""
+    <html>
+    <head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="margin:0;padding:0;background:#0a0a08;">
+    <div style="font-family:sans-serif;max-width:480px;width:100%;margin:0 auto;
+                padding:32px 20px;background:#0a0a08;color:#fff;border-radius:12px;
+                box-sizing:border-box;">
+      <div style="font-size:22px;font-weight:700;margin-bottom:8px;">TalentIQ</div>
+      <p style="color:rgba(255,255,255,.6);font-size:14px;">Hi {candidate_name},</p>
+      <p style="color:rgba(255,255,255,.6);font-size:14px;">
+        Thanks for completing your {what} for <strong>{role_title}</strong>{company_line}. Your responses have been submitted to the hiring team for review.
+      </p>
+      <p style="color:rgba(255,255,255,.6);font-size:14px;">
+        They'll be in touch if there's a next step. We appreciate the time you put into this.
+      </p>
+      <p style="color:rgba(255,255,255,.2);font-size:11px;margin-top:24px;">This is an automated confirmation — no action needed from you right now.</p>
     </div>
     </body>
     </html>
