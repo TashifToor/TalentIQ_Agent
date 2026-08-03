@@ -283,6 +283,7 @@ export const api = {
     assessment_count_dsa?: number; assessment_count_job_desc?: number; assessment_count_problem_solving?: number;
     assessment_count_teamwork?: number; assessment_count_hr?: number;
     assessment_bank?: { question: string; options: string[]; correct_index: number; topic?: string }[];
+    assessment_seconds_per_question?: number; notify_hr_on_completion?: boolean;
   }) =>
     apiFetch("/interview/postings", { method: "POST", body: JSON.stringify(payload) }),
 
@@ -346,6 +347,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ type, detail }),
     }).catch(() => {}),
+
+  terminateAssessment: (slug: string, sessionId: string, type: string, detail?: string) =>
+    apiFetch(`/interview/public/${slug}/${sessionId}/assessment/terminate`, {
+      method: "POST",
+      body: JSON.stringify({ type, detail }),
+    }),
 
   uploadPublicInterviewCV: async (slug: string, sessionId: string, file: File): Promise<any> => {
     const formData = new FormData();
