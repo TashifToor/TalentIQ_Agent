@@ -41,6 +41,8 @@ def _posting_to_response(posting: InterviewPosting, candidate_count: int) -> dic
         "assessment_enabled": posting.assessment_enabled,
         "assessment_source": posting.assessment_source,
         "assessment_question_count": len(json.loads(posting.assessment_questions or "[]")),
+        "assessment_seconds_per_question": posting.assessment_seconds_per_question or 60,
+        "notify_hr_on_completion": posting.notify_hr_on_completion if posting.notify_hr_on_completion is not None else True,
         "public_slug": posting.public_slug,
         "public_link": f"{FRONTEND_URL}/interview/{posting.public_slug}",
         "is_active": posting.is_active,
@@ -110,6 +112,8 @@ def create_posting(
         assessment_source=payload.assessment_source if payload.assessment_enabled else None,
         assessment_num_questions=len(assessment_questions) if assessment_questions else 0,
         assessment_questions=json.dumps(assessment_questions),
+        assessment_seconds_per_question=max(5, min(600, payload.assessment_seconds_per_question or 60)),
+        notify_hr_on_completion=payload.notify_hr_on_completion,
     )
     db.add(posting)
     db.commit()
@@ -223,6 +227,7 @@ def list_candidates(
             "final_verdict": s.final_verdict,
             "assessment_score": s.assessment_score,
             "proctoring_flag_count": len(json.loads(s.assessment_flags or "[]")),
+            "terminated_reason": s.terminated_reason,
             "created_at": s.created_at.isoformat() if s.created_at else "",
             "completed_at": s.completed_at.isoformat() if s.completed_at else None,
         }
@@ -311,6 +316,7 @@ def get_session_report(
         "assessment_breakdown": assessment_breakdown,
         "assessment_flags": json.loads(session.assessment_flags or "[]"),
         "assessment_photos": json.loads(session.assessment_photos or "[]"),
+        "terminated_reason": session.terminated_reason,
         "created_at": session.created_at.isoformat() if session.created_at else "",
         "completed_at": session.completed_at.isoformat() if session.completed_at else None,
     }
