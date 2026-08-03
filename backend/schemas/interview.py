@@ -30,6 +30,8 @@ class InterviewPostingCreate(BaseModel):
     assessment_count_problem_solving: int = 0
     assessment_count_teamwork: int = 0
     assessment_count_hr: int = 0
+    assessment_seconds_per_question: int = 60
+    notify_hr_on_completion: bool = True
 
 
 class InterviewPostingResponse(BaseModel):
@@ -43,6 +45,8 @@ class InterviewPostingResponse(BaseModel):
     assessment_enabled: bool
     assessment_source: Optional[str] = None
     assessment_question_count: int = 0
+    assessment_seconds_per_question: int = 60
+    notify_hr_on_completion: bool = True
     public_slug: str
     public_link: str
     is_active: bool
@@ -59,6 +63,7 @@ class InterviewSessionSummary(BaseModel):
     final_verdict: Optional[str] = None
     assessment_score: Optional[int] = None
     proctoring_flag_count: int = 0
+    terminated_reason: Optional[str] = None
     created_at: str
     completed_at: Optional[str] = None
 
@@ -78,6 +83,7 @@ class InterviewSessionReport(BaseModel):
     assessment_breakdown: Optional[dict] = None
     assessment_flags: List[dict] = []
     assessment_photos: List[str] = []
+    terminated_reason: Optional[str] = None
     created_at: str
     completed_at: Optional[str] = None
 
@@ -91,6 +97,7 @@ class PublicPostingInfo(BaseModel):
     is_active: bool
     interview_enabled: bool
     assessment_enabled: bool
+    assessment_seconds_per_question: int = 60
 
 
 class InterviewStartRequest(BaseModel):
@@ -127,11 +134,12 @@ class AssessmentQuestionOut(BaseModel):
     total: int
     question: str
     options: List[str]
+    seconds_allowed: int = 60
 
 
 class AssessmentAnswerRequest(BaseModel):
     question_id: str
-    selected_index: int
+    selected_index: int    # -1 means "timed out / no answer" — always scored as incorrect
 
 
 class AssessmentAnswerResponse(BaseModel):
@@ -143,3 +151,8 @@ class AssessmentAnswerResponse(BaseModel):
 class AssessmentFlagRequest(BaseModel):
     type: str        # "tab_hidden" | "window_blur" | "left_site" | "fullscreen_exit" | etc.
     detail: Optional[str] = None
+
+
+class TerminateResponse(BaseModel):
+    status: str = "terminated"
+    message: str
