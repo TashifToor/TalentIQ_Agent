@@ -140,6 +140,8 @@ export default function HRDashboard() {
   const [iAssessmentEnabled, setIAssessmentEnabled] = useState(false)
   const [iAssessmentSource, setIAssessmentSource] = useState<'ai'|'bank'>('ai')
   const [iAssessmentCounts, setIAssessmentCounts] = useState({ dsa: 5, job_desc: 5, problem_solving: 4, teamwork: 3, hr: 3 })
+  const [iSecondsPerQuestion, setISecondsPerQuestion] = useState(60)
+  const [iNotifyOnCompletion, setINotifyOnCompletion] = useState(true)
   const [iAssessmentBankText, setIAssessmentBankText] = useState('')
   const [iSaving, setISaving] = useState(false)
   const [iError, setIError] = useState('')
@@ -337,11 +339,14 @@ export default function HRDashboard() {
         assessment_count_problem_solving: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.problem_solving : undefined,
         assessment_count_teamwork: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.teamwork : undefined,
         assessment_count_hr: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.hr : undefined,
+        assessment_seconds_per_question: iAssessmentEnabled ? iSecondsPerQuestion : undefined,
+        notify_hr_on_completion: iNotifyOnCompletion,
         assessment_bank: bank,
       })
       setShowInterviewForm(false)
       setITitle(''); setICompany(''); setIJD(''); setIExtraQuestions(''); setIInterviewerName('')
       setIInterviewEnabled(true); setIAssessmentEnabled(false); setIAssessmentSource('ai'); setIAssessmentCounts({ dsa: 5, job_desc: 5, problem_solving: 4, teamwork: 3, hr: 3 }); setIAssessmentBankText('')
+      setISecondsPerQuestion(60); setINotifyOnCompletion(true)
       loadInterviewPostings()
       openPosting(posting)
     } catch (e:any) {
@@ -1213,8 +1218,21 @@ export default function HRDashboard() {
                     style={s(inputSt, { minHeight:140, resize:'vertical', marginBottom:0, fontFamily:'monospace', fontSize:12 })} />
                 </div>
               )}
+
+              <div style={{ marginTop:14, paddingTop:14, borderTop:'1px solid rgba(255,255,255,.06)' }}>
+                <label style={{ fontSize:12, color:'rgba(255,255,255,.5)', display:'block', marginBottom:6 }}>Seconds allowed per question</label>
+                <input type="number" min={5} max={600} value={iSecondsPerQuestion}
+                  onChange={e=>setISecondsPerQuestion(Math.max(5, Math.min(600, Number(e.target.value)||60)))}
+                  style={s(inputSt, { width:100, marginBottom:0 })} />
+                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:6 }}>Countdown per question — unanswered when time runs out scores 0 for that question.</div>
+              </div>
             </div>
           )}
+
+          <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12.5, cursor:'pointer', marginBottom:14 }}>
+            <input type="checkbox" checked={iNotifyOnCompletion} onChange={e=>setINotifyOnCompletion(e.target.checked)} />
+            Email me when a candidate completes this
+          </label>
 
           {iError && <div style={{ fontSize:12, color:'#ef4444', marginBottom:10 }}>{iError}</div>}
           <button onClick={createInterviewPosting} disabled={iSaving}
