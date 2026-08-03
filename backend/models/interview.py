@@ -36,6 +36,8 @@ class InterviewPosting(Base):
     assessment_source =         Column(String, nullable=True)   # "ai" | "bank"
     assessment_num_questions =  Column(Integer, default=20)
     assessment_questions =      Column(Text, default="[]")  # JSON list[{id, question, options[4], correct_index, topic}] — fixed at posting creation so every candidate gets the same set
+    assessment_seconds_per_question = Column(Integer, default=60)  # countdown per MCQ — unanswered in time scores 0 for that question
+    notify_hr_on_completion =  Column(Boolean, default=True)  # send the HR notification email when a candidate finishes
 
     created_at =       Column(DateTime(timezone=True), server_default=func.now())
 
@@ -67,6 +69,7 @@ class InterviewSession(Base):
     assessment_photos =        Column(Text, default="[]")   # JSON list[str] — relative file paths of periodic webcam captures
     assessment_started_at =    Column(DateTime(timezone=True), nullable=True)
     assessment_completed_at =  Column(DateTime(timezone=True), nullable=True)
+    terminated_reason =        Column(String, nullable=True)  # e.g. "left_page_during_assessment" — set when a session is force-ended for suspected cheating
 
     ai_score =                 Column(Integer, nullable=True)
     final_verdict =            Column(String, nullable=True)
