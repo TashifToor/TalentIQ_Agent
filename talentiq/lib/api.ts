@@ -284,6 +284,7 @@ export const api = {
     assessment_count_teamwork?: number; assessment_count_hr?: number;
     assessment_bank?: { question: string; options: string[]; correct_index: number; topic?: string }[];
     assessment_seconds_per_question?: number; notify_hr_on_completion?: boolean;
+    voice_enabled?: boolean;
   }) =>
     apiFetch("/interview/postings", { method: "POST", body: JSON.stringify(payload) }),
 
@@ -353,6 +354,20 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ type, detail }),
     }),
+
+  transcribeVoice: async (slug: string, sessionId: string, blob: Blob): Promise<any> => {
+    const formData = new FormData()
+    formData.append("file", blob, "answer.webm")
+    const res = await fetch(`${API_BASE_URL}/interview/public/${slug}/${sessionId}/voice/transcribe`, {
+      method: "POST",
+      body: formData,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Could not transcribe audio." }))
+      throw buildApiError(err)
+    }
+    return res.json()
+  },
 
   uploadPublicInterviewCV: async (slug: string, sessionId: string, file: File): Promise<any> => {
     const formData = new FormData();
