@@ -33,6 +33,7 @@ class InterviewPosting(Base):
     # assessment-only, or both (in which case interview runs first).
     interview_enabled =         Column(Boolean, default=True)
     assessment_enabled =        Column(Boolean, default=False)
+    voice_enabled =             Column(Boolean, default=False)  # delivers the interview + assessment stages via voice instead of text/click
     assessment_source =         Column(String, nullable=True)   # "ai" | "bank"
     assessment_num_questions =  Column(Integer, default=20)
     assessment_questions =      Column(Text, default="[]")  # JSON list[{id, question, options[4], correct_index, topic}] — fixed at posting creation so every candidate gets the same set
