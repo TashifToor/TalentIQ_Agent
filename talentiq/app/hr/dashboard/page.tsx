@@ -138,6 +138,7 @@ export default function HRDashboard() {
   const [iInterviewerName, setIInterviewerName] = useState('')
   const [iInterviewEnabled, setIInterviewEnabled] = useState(true)
   const [iAssessmentEnabled, setIAssessmentEnabled] = useState(false)
+  const [iVoiceEnabled, setIVoiceEnabled] = useState(false)
   const [iAssessmentSource, setIAssessmentSource] = useState<'ai'|'bank'>('ai')
   const [iAssessmentCounts, setIAssessmentCounts] = useState({ dsa: 5, job_desc: 5, problem_solving: 4, teamwork: 3, hr: 3 })
   const [iSecondsPerQuestion, setISecondsPerQuestion] = useState(60)
@@ -341,12 +342,13 @@ export default function HRDashboard() {
         assessment_count_hr: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.hr : undefined,
         assessment_seconds_per_question: iAssessmentEnabled ? iSecondsPerQuestion : undefined,
         notify_hr_on_completion: iNotifyOnCompletion,
+        voice_enabled: iVoiceEnabled,
         assessment_bank: bank,
       })
       setShowInterviewForm(false)
       setITitle(''); setICompany(''); setIJD(''); setIExtraQuestions(''); setIInterviewerName('')
       setIInterviewEnabled(true); setIAssessmentEnabled(false); setIAssessmentSource('ai'); setIAssessmentCounts({ dsa: 5, job_desc: 5, problem_solving: 4, teamwork: 3, hr: 3 }); setIAssessmentBankText('')
-      setISecondsPerQuestion(60); setINotifyOnCompletion(true)
+      setISecondsPerQuestion(60); setINotifyOnCompletion(true); setIVoiceEnabled(false)
       loadInterviewPostings()
       openPosting(posting)
     } catch (e:any) {
@@ -1167,6 +1169,11 @@ export default function HRDashboard() {
             </label>
           </div>
 
+          <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer', marginBottom:14 }}>
+            <input type="checkbox" checked={iVoiceEnabled} onChange={e=>setIVoiceEnabled(e.target.checked)} />
+            🎙 Voice mode — deliver the interview and/or MCQs by voice instead of text/click
+          </label>
+
           {iAssessmentEnabled && (
             <div style={s(card, { background:'#161614', marginBottom:14 })}>
               <div style={{ fontSize:12, fontWeight:600, marginBottom:10 }}>Assessment Setup</div>
@@ -1269,6 +1276,7 @@ export default function HRDashboard() {
                 <div style={{ display:'flex', gap:5, marginBottom:8 }}>
                   {p.interview_enabled && <span style={{ fontSize:9.5, fontWeight:700, padding:'2px 7px', borderRadius:100, background:'rgba(226,176,74,.1)', color:'#e2b04a' }}>INTERVIEW</span>}
                   {p.assessment_enabled && <span style={{ fontSize:9.5, fontWeight:700, padding:'2px 7px', borderRadius:100, background:'rgba(19,194,142,.1)', color:'#13c28e' }}>MCQ ×{p.assessment_question_count}</span>}
+                  {p.voice_enabled && <span style={{ fontSize:9.5, fontWeight:700, padding:'2px 7px', borderRadius:100, background:'rgba(139,92,246,.12)', color:'#a78bfa' }}>🎙 VOICE</span>}
                 </div>
                 <div style={{ display:'flex', gap:6 }}>
                   <button onClick={(e)=>{e.stopPropagation(); copyInterviewLink(p.public_link, p.public_slug)}}
