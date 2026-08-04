@@ -12,6 +12,7 @@ from models.interview import InterviewPosting, InterviewSession
 from models.user import User
 from core.interviewer import get_next_turn, generate_report, cv_request_message
 from core.assessment import score_assessment
+from core.voice import transcribe_audio
 from core.redis_client import check_rate_limit
 from core.loader import CvLoader
 from utils.otp_mailer import send_interview_completed_email, send_candidate_completion_email
@@ -19,7 +20,7 @@ from schemas.interview import (
     PublicPostingInfo, InterviewStartRequest, InterviewStartResponse,
     InterviewMessageRequest, InterviewMessageResponse,
     AssessmentQuestionOut, AssessmentAnswerRequest, AssessmentAnswerResponse, AssessmentFlagRequest,
-    TerminateResponse,
+    TerminateResponse, VoiceTranscribeResponse,
 )
 
 router = APIRouter(prefix="/interview/public", tags=["AI Interviewer — Public"])
@@ -134,6 +135,7 @@ def get_posting_info(slug: str, db: Session = Depends(get_db)):
         "interview_enabled": posting.interview_enabled,
         "assessment_enabled": posting.assessment_enabled,
         "assessment_seconds_per_question": posting.assessment_seconds_per_question or 60,
+        "voice_enabled": posting.voice_enabled or False,
     }
 
 
@@ -237,6 +239,47 @@ def send_message(
     session.transcript = json.dumps(transcript)
     db.commit()
     return {"message": next_turn["message"], "status": "in_progress", "turn_count": session.turn_count, "awaiting_cv": False, "next_stage": None}
+
+
+# ── POST /interview/public/{slug}/{session_id}/voice/transcribe — speech-to-text for a spoken turn ──
+MAX_AUDIO_SIZE_BYTES = 10 * 1024 * 1024
+
+
+@router.post("/{slug}/{session_id}/voice/transcribe", response_model=VoiceTranscribeResponse)
+async def transcribe_voice_turn(
+    slug: str,
+    session_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    posting = _get_active_posting(slug, db)
+    session = _get_session(posting, session_id, db)
+
+    if session.status == "completed":
+        raise HTTPException(status_code=400, detail="This session has already been completed.")
+
+    ip = request.client.host if request.client else "unknown"
+    allowed, wait_seconds = check_rate_limit(f"voice-transcribe:{session_id}", cooldown_seconds=1)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s.")
+
+    contents = await file.read()
+    if len(contents) > MAX_AUDIO_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail="Recording too long.")
+    if len(contents) < 500:
+        raise HTTPException(status_code=400, detail="Didn't catch that — the recording was empty.")
+
+    try:
+        text = transcribe_audio(contents, filename=file.filename or "audio.webm")
+    except Exception as e:
+        print(f"[Voice] Transcription failed: {e}")
+        raise HTTPException(status_code=502, detail="Could not transcribe that — please try again.")
+
+    if not text:
+        raise HTTPException(status_code=400, detail="Didn't catch that — please try again.")
+
+    return {"text": text}
 
 
 # ── GET /interview/public/{slug}/{session_id}/assessment/current — current MCQ ──
