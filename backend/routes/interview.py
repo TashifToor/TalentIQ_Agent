@@ -43,6 +43,7 @@ def _posting_to_response(posting: InterviewPosting, candidate_count: int) -> dic
         "assessment_question_count": len(json.loads(posting.assessment_questions or "[]")),
         "assessment_seconds_per_question": posting.assessment_seconds_per_question or 60,
         "notify_hr_on_completion": posting.notify_hr_on_completion if posting.notify_hr_on_completion is not None else True,
+        "voice_enabled": posting.voice_enabled or False,
         "public_slug": posting.public_slug,
         "public_link": f"{FRONTEND_URL}/interview/{posting.public_slug}",
         "is_active": posting.is_active,
@@ -114,6 +115,7 @@ def create_posting(
         assessment_questions=json.dumps(assessment_questions),
         assessment_seconds_per_question=max(5, min(600, payload.assessment_seconds_per_question or 60)),
         notify_hr_on_completion=payload.notify_hr_on_completion,
+        voice_enabled=payload.voice_enabled,
     )
     db.add(posting)
     db.commit()
