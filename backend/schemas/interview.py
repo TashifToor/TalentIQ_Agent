@@ -32,6 +32,7 @@ class InterviewPostingCreate(BaseModel):
     assessment_count_hr: int = 0
     assessment_seconds_per_question: int = 60
     notify_hr_on_completion: bool = True
+    voice_enabled: bool = False
 
 
 class InterviewPostingResponse(BaseModel):
@@ -47,6 +48,7 @@ class InterviewPostingResponse(BaseModel):
     assessment_question_count: int = 0
     assessment_seconds_per_question: int = 60
     notify_hr_on_completion: bool = True
+    voice_enabled: bool = False
     public_slug: str
     public_link: str
     is_active: bool
@@ -98,6 +100,7 @@ class PublicPostingInfo(BaseModel):
     interview_enabled: bool
     assessment_enabled: bool
     assessment_seconds_per_question: int = 60
+    voice_enabled: bool = False
 
 
 class InterviewStartRequest(BaseModel):
@@ -156,3 +159,7 @@ class AssessmentFlagRequest(BaseModel):
 class TerminateResponse(BaseModel):
     status: str = "terminated"
     message: str
+
+
+class VoiceTranscribeResponse(BaseModel):
+    text: str
