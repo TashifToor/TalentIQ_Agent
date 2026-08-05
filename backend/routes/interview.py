@@ -37,13 +37,11 @@ def _posting_to_response(posting: InterviewPosting, candidate_count: int) -> dic
         "job_description": posting.job_description,
         "extra_questions": json.loads(posting.extra_questions or "[]"),
         "interviewer_name": posting.interviewer_name or "Kelly",
-        "interview_enabled": posting.interview_enabled,
-        "assessment_enabled": posting.assessment_enabled,
+        "mode": posting.mode or "chatbot",
         "assessment_source": posting.assessment_source,
         "assessment_question_count": len(json.loads(posting.assessment_questions or "[]")),
         "assessment_seconds_per_question": posting.assessment_seconds_per_question or 60,
         "notify_hr_on_completion": posting.notify_hr_on_completion if posting.notify_hr_on_completion is not None else True,
-        "voice_enabled": posting.voice_enabled or False,
         "public_slug": posting.public_slug,
         "public_link": f"{FRONTEND_URL}/interview/{posting.public_slug}",
         "is_active": posting.is_active,
@@ -64,13 +62,13 @@ def create_posting(
     if not payload.job_description.strip():
         raise HTTPException(status_code=400, detail="Job description cannot be empty.")
 
-    if not payload.interview_enabled and not payload.assessment_enabled:
-        raise HTTPException(status_code=400, detail="Enable at least one of the interview or the assessment.")
+    if payload.mode not in ("chatbot", "mcq", "voice_agent"):
+        raise HTTPException(status_code=400, detail="mode must be 'chatbot', 'mcq', or 'voice_agent'.")
 
     assessment_questions = []
-    if payload.assessment_enabled:
+    if payload.mode == "mcq":
         if payload.assessment_source not in ("ai", "bank"):
-            raise HTTPException(status_code=400, detail="assessment_source must be 'ai' or 'bank' when the assessment is enabled.")
+            raise HTTPException(status_code=400, detail="assessment_source must be 'ai' or 'bank' for an MCQ posting.")
 
         if payload.assessment_source == "bank":
             if not payload.assessment_bank or len(payload.assessment_bank) < MIN_QUESTIONS:
@@ -108,14 +106,12 @@ def create_posting(
         job_description=payload.job_description.strip(),
         extra_questions=json.dumps([q.strip() for q in payload.extra_questions if q.strip()]),
         interviewer_name=(payload.interviewer_name.strip() if payload.interviewer_name and payload.interviewer_name.strip() else random.choice(DEFAULT_INTERVIEWER_NAMES)),
-        interview_enabled=payload.interview_enabled,
-        assessment_enabled=payload.assessment_enabled,
-        assessment_source=payload.assessment_source if payload.assessment_enabled else None,
+        mode=payload.mode,
+        assessment_source=payload.assessment_source if payload.mode == "mcq" else None,
         assessment_num_questions=len(assessment_questions) if assessment_questions else 0,
         assessment_questions=json.dumps(assessment_questions),
         assessment_seconds_per_question=max(5, min(600, payload.assessment_seconds_per_question or 60)),
         notify_hr_on_completion=payload.notify_hr_on_completion,
-        voice_enabled=payload.voice_enabled,
     )
     db.add(posting)
     db.commit()
