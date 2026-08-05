@@ -59,7 +59,7 @@ def _assessment_question_out(posting: InterviewPosting, index: int) -> Assessmen
 def _finalize(session: InterviewSession, posting: InterviewPosting, transcript: list, db: Session):
     """Runs the scoring pass(es) and marks the session completed. Handles
     interview-only, assessment-only, and combined postings."""
-    if posting.interview_enabled and transcript:
+    if posting.mode in ("chatbot", "voice_agent") and transcript:
         extra_questions = json.loads(posting.extra_questions or "[]")
         report = generate_report(
             posting.interviewer_name or "Kelly", posting.job_description, extra_questions, transcript,
@@ -70,7 +70,7 @@ def _finalize(session: InterviewSession, posting: InterviewPosting, transcript: 
         session.experience_assessment = report.get("experience_assessment")
         session.deep_analysis = report.get("deep_analysis")
     elif session.assessment_score is not None:
-        # Assessment-only posting — derive a verdict straight from the MCQ score.
+        # MCQ posting — derive a verdict straight from the MCQ score.
         s = session.assessment_score
         session.final_verdict = "Strong Hire" if s >= 80 else "Proceed to Human Interview" if s >= 60 else "Borderline" if s >= 40 else "Not a Fit"
 
@@ -97,7 +97,7 @@ def _finalize(session: InterviewSession, posting: InterviewPosting, transcript: 
             print(f"[Interview] Could not send HR notification email: {e}")
 
     try:
-        what = "interview and assessment" if (posting.interview_enabled and posting.assessment_enabled) else "assessment" if posting.assessment_enabled else "interview"
+        what = "assessment" if posting.mode == "mcq" else "voice interview" if posting.mode == "voice_agent" else "interview"
         send_candidate_completion_email(
             to_email=session.candidate_email,
             candidate_name=session.candidate_name,
@@ -132,10 +132,8 @@ def get_posting_info(slug: str, db: Session = Depends(get_db)):
         "company": posting.company,
         "interviewer_name": posting.interviewer_name or "Kelly",
         "is_active": posting.is_active,
-        "interview_enabled": posting.interview_enabled,
-        "assessment_enabled": posting.assessment_enabled,
+        "mode": posting.mode or "chatbot",
         "assessment_seconds_per_question": posting.assessment_seconds_per_question or 60,
-        "voice_enabled": posting.voice_enabled or False,
     }
 
 
@@ -162,7 +160,7 @@ def start_interview(slug: str, payload: InterviewStartRequest, request: Request,
         status="in_progress",
     )
 
-    if posting.interview_enabled:
+    if posting.mode in ("chatbot", "voice_agent"):
         extra_questions = json.loads(posting.extra_questions or "[]")
         interviewer_name = posting.interviewer_name or "Kelly"
         opening = get_next_turn(interviewer_name, posting.job_description, extra_questions, transcript=[], turn_count=0)
@@ -173,7 +171,7 @@ def start_interview(slug: str, payload: InterviewStartRequest, request: Request,
         db.refresh(session)
         return {"session_id": str(session.id), "stage": "interview", "message": opening["message"]}
 
-    # Assessment-only posting — skip straight to the MCQ stage.
+    # mode == "mcq" — skip straight to the assessment stage.
     session.stage = "assessment"
     session.assessment_started_at = datetime.now(timezone.utc)
     db.add(session)
@@ -219,15 +217,6 @@ def send_message(
     next_turn = get_next_turn(interviewer_name, posting.job_description, extra_questions, transcript, session.turn_count)
 
     if next_turn["action"] == "conclude":
-        if posting.assessment_enabled:
-            closing = f"{next_turn['message']} Next up: a short skills assessment ({len(json.loads(posting.assessment_questions or '[]'))} questions). Your camera will be used to take periodic snapshots during it — please stay on this page until it's done."
-            transcript.append({"role": "assistant", "content": closing})
-            session.transcript = json.dumps(transcript)
-            session.stage = "assessment"
-            session.assessment_started_at = datetime.now(timezone.utc)
-            db.commit()
-            return {"message": closing, "status": "in_progress", "turn_count": session.turn_count, "awaiting_cv": False, "next_stage": "assessment"}
-
         cv_msg = cv_request_message(interviewer_name)
         transcript.append({"role": "assistant", "content": cv_msg})
         session.transcript = json.dumps(transcript)
