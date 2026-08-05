@@ -136,9 +136,7 @@ export default function HRDashboard() {
   const [iJD, setIJD] = useState('')
   const [iExtraQuestions, setIExtraQuestions] = useState('')
   const [iInterviewerName, setIInterviewerName] = useState('')
-  const [iInterviewEnabled, setIInterviewEnabled] = useState(true)
-  const [iAssessmentEnabled, setIAssessmentEnabled] = useState(false)
-  const [iVoiceEnabled, setIVoiceEnabled] = useState(false)
+  const [iMode, setIMode] = useState<'chatbot'|'mcq'|'voice_agent'>('chatbot')
   const [iAssessmentSource, setIAssessmentSource] = useState<'ai'|'bank'>('ai')
   const [iAssessmentCounts, setIAssessmentCounts] = useState({ dsa: 5, job_desc: 5, problem_solving: 4, teamwork: 3, hr: 3 })
   const [iSecondsPerQuestion, setISecondsPerQuestion] = useState(60)
@@ -315,13 +313,12 @@ export default function HRDashboard() {
 
   const createInterviewPosting = async () => {
     if (!iTitle.trim() || !iJD.trim()) { setIError('Role title and job description are required.'); return }
-    if (!iInterviewEnabled && !iAssessmentEnabled) { setIError('Enable at least the interview or the assessment.'); return }
-    if (iAssessmentEnabled && iAssessmentSource === 'ai') {
+    if (iMode === 'mcq' && iAssessmentSource === 'ai') {
       const total = Object.values(iAssessmentCounts).reduce((a,b)=>a+b,0)
       if (total < 10 || total > 50) { setIError(`Total questions across categories must be 10–50 (currently ${total}).`); return }
     }
     let bank: { question: string; options: string[]; correct_index: number; topic?: string }[] | undefined
-    if (iAssessmentEnabled && iAssessmentSource === 'bank') {
+    if (iMode === 'mcq' && iAssessmentSource === 'bank') {
       bank = parseBankText(iAssessmentBankText)
       if (bank.length < 10) { setIError(`Question bank needs at least 10 valid questions (found ${bank.length}). Check the format.`); return }
     }
@@ -332,23 +329,21 @@ export default function HRDashboard() {
       const posting = await api.createInterviewPosting({
         title: iTitle.trim(), company: iCompany.trim() || undefined, job_description: iJD.trim(), extra_questions: extra,
         interviewer_name: iInterviewerName.trim() || undefined,
-        interview_enabled: iInterviewEnabled,
-        assessment_enabled: iAssessmentEnabled,
-        assessment_source: iAssessmentEnabled ? iAssessmentSource : undefined,
-        assessment_count_dsa: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.dsa : undefined,
-        assessment_count_job_desc: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.job_desc : undefined,
-        assessment_count_problem_solving: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.problem_solving : undefined,
-        assessment_count_teamwork: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.teamwork : undefined,
-        assessment_count_hr: iAssessmentEnabled && iAssessmentSource === 'ai' ? iAssessmentCounts.hr : undefined,
-        assessment_seconds_per_question: iAssessmentEnabled ? iSecondsPerQuestion : undefined,
+        mode: iMode,
+        assessment_source: iMode === 'mcq' ? iAssessmentSource : undefined,
+        assessment_count_dsa: iMode === 'mcq' && iAssessmentSource === 'ai' ? iAssessmentCounts.dsa : undefined,
+        assessment_count_job_desc: iMode === 'mcq' && iAssessmentSource === 'ai' ? iAssessmentCounts.job_desc : undefined,
+        assessment_count_problem_solving: iMode === 'mcq' && iAssessmentSource === 'ai' ? iAssessmentCounts.problem_solving : undefined,
+        assessment_count_teamwork: iMode === 'mcq' && iAssessmentSource === 'ai' ? iAssessmentCounts.teamwork : undefined,
+        assessment_count_hr: iMode === 'mcq' && iAssessmentSource === 'ai' ? iAssessmentCounts.hr : undefined,
+        assessment_seconds_per_question: iMode === 'mcq' ? iSecondsPerQuestion : undefined,
         notify_hr_on_completion: iNotifyOnCompletion,
-        voice_enabled: iVoiceEnabled,
         assessment_bank: bank,
       })
       setShowInterviewForm(false)
       setITitle(''); setICompany(''); setIJD(''); setIExtraQuestions(''); setIInterviewerName('')
-      setIInterviewEnabled(true); setIAssessmentEnabled(false); setIAssessmentSource('ai'); setIAssessmentCounts({ dsa: 5, job_desc: 5, problem_solving: 4, teamwork: 3, hr: 3 }); setIAssessmentBankText('')
-      setISecondsPerQuestion(60); setINotifyOnCompletion(true); setIVoiceEnabled(false)
+      setIMode('chatbot'); setIAssessmentSource('ai'); setIAssessmentCounts({ dsa: 5, job_desc: 5, problem_solving: 4, teamwork: 3, hr: 3 }); setIAssessmentBankText('')
+      setISecondsPerQuestion(60); setINotifyOnCompletion(true)
       loadInterviewPostings()
       openPosting(posting)
     } catch (e:any) {
@@ -1157,24 +1152,26 @@ export default function HRDashboard() {
             value={iExtraQuestions} onChange={e=>setIExtraQuestions(e.target.value)}
             style={s(inputSt, { minHeight:70, resize:'vertical', marginBottom:10, fontFamily:'Inter,sans-serif' })} />
 
-          <div style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,.5)', marginBottom:8, marginTop:6 }}>Stages (enable at least one)</div>
-          <div style={{ display:'flex', gap:16, marginBottom:14 }}>
-            <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer' }}>
-              <input type="checkbox" checked={iInterviewEnabled} onChange={e=>setIInterviewEnabled(e.target.checked)} />
-              Conversational Interview
-            </label>
-            <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer' }}>
-              <input type="checkbox" checked={iAssessmentEnabled} onChange={e=>setIAssessmentEnabled(e.target.checked)} />
-              MCQ Assessment (proctored)
-            </label>
+          <div style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,.5)', marginBottom:8, marginTop:6 }}>Interview Mode — pick one</div>
+          <div style={{ display:'flex', gap:10, marginBottom:16, overflowX:'auto', paddingBottom:4 }}>
+            {([
+              { id:'chatbot' as const, icon:'💬', title:'Chatbot AI Interview', desc:'Text conversational interview — education, skills, project deep-dives.' },
+              { id:'mcq' as const, icon:'📝', title:'MCQ Assessment', desc:'Proctored multiple-choice test — timed, webcam + tab-switch monitored.' },
+              { id:'voice_agent' as const, icon:'🎙', title:'Voice AI Agent', desc:'Standalone real-time voice interview — candidate talks, AI listens and responds.' },
+            ]).map(m => (
+              <div key={m.id} onClick={()=>setIMode(m.id)}
+                style={{ flex:'1 1 0', minWidth:150, cursor:'pointer', borderRadius:10, padding:'14px 12px',
+                  border:`1.5px solid ${iMode===m.id ? '#e2b04a' : 'rgba(255,255,255,.08)'}`,
+                  background: iMode===m.id ? 'rgba(226,176,74,.08)' : '#161614',
+                  transition:'border-color .15s, background .15s' }}>
+                <div style={{ fontSize:20, marginBottom:6 }}>{m.icon}</div>
+                <div style={{ fontSize:12.5, fontWeight:700, marginBottom:4, color: iMode===m.id ? '#e2b04a' : '#fff' }}>{m.title}</div>
+                <div style={{ fontSize:10.5, color:'rgba(255,255,255,.4)', lineHeight:1.4 }}>{m.desc}</div>
+              </div>
+            ))}
           </div>
 
-          <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, cursor:'pointer', marginBottom:14 }}>
-            <input type="checkbox" checked={iVoiceEnabled} onChange={e=>setIVoiceEnabled(e.target.checked)} />
-            🎙 Voice mode — deliver the interview and/or MCQs by voice instead of text/click
-          </label>
-
-          {iAssessmentEnabled && (
+          {iMode === 'mcq' && (
             <div style={s(card, { background:'#161614', marginBottom:14 })}>
               <div style={{ fontSize:12, fontWeight:600, marginBottom:10 }}>Assessment Setup</div>
               <div style={{ display:'flex', gap:16, marginBottom:12 }}>
@@ -1274,9 +1271,9 @@ export default function HRDashboard() {
                 {p.company && <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:2 }}>{p.company}</div>}
                 <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginBottom:6 }}>Interviewer: {p.interviewer_name} · {p.candidate_count} candidate{p.candidate_count===1?'':'s'} interviewed</div>
                 <div style={{ display:'flex', gap:5, marginBottom:8 }}>
-                  {p.interview_enabled && <span style={{ fontSize:9.5, fontWeight:700, padding:'2px 7px', borderRadius:100, background:'rgba(226,176,74,.1)', color:'#e2b04a' }}>INTERVIEW</span>}
-                  {p.assessment_enabled && <span style={{ fontSize:9.5, fontWeight:700, padding:'2px 7px', borderRadius:100, background:'rgba(19,194,142,.1)', color:'#13c28e' }}>MCQ ×{p.assessment_question_count}</span>}
-                  {p.voice_enabled && <span style={{ fontSize:9.5, fontWeight:700, padding:'2px 7px', borderRadius:100, background:'rgba(139,92,246,.12)', color:'#a78bfa' }}>🎙 VOICE</span>}
+                  {p.mode === 'chatbot' && <span style={{ fontSize:9.5, fontWeight:700, padding:'2px 7px', borderRadius:100, background:'rgba(226,176,74,.1)', color:'#e2b04a' }}>💬 CHATBOT</span>}
+                  {p.mode === 'mcq' && <span style={{ fontSize:9.5, fontWeight:700, padding:'2px 7px', borderRadius:100, background:'rgba(19,194,142,.1)', color:'#13c28e' }}>📝 MCQ ×{p.assessment_question_count}</span>}
+                  {p.mode === 'voice_agent' && <span style={{ fontSize:9.5, fontWeight:700, padding:'2px 7px', borderRadius:100, background:'rgba(139,92,246,.12)', color:'#a78bfa' }}>🎙 VOICE AGENT</span>}
                 </div>
                 <div style={{ display:'flex', gap:6 }}>
                   <button onClick={(e)=>{e.stopPropagation(); copyInterviewLink(p.public_link, p.public_slug)}}
