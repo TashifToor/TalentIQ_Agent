@@ -278,13 +278,12 @@ export const api = {
   // --- AI Chatbot Interviewer — HR side (authenticated) ---
   createInterviewPosting: (payload: {
     title: string; company?: string; job_description: string; extra_questions: string[]; interviewer_name?: string;
-    interview_enabled: boolean; assessment_enabled: boolean;
+    mode: 'chatbot' | 'mcq' | 'voice_agent';
     assessment_source?: 'ai' | 'bank';
     assessment_count_dsa?: number; assessment_count_job_desc?: number; assessment_count_problem_solving?: number;
     assessment_count_teamwork?: number; assessment_count_hr?: number;
     assessment_bank?: { question: string; options: string[]; correct_index: number; topic?: string }[];
     assessment_seconds_per_question?: number; notify_hr_on_completion?: boolean;
-    voice_enabled?: boolean;
   }) =>
     apiFetch("/interview/postings", { method: "POST", body: JSON.stringify(payload) }),
 
