@@ -5,7 +5,7 @@ import { api } from '@/lib/api'
 
 type Msg = { role: 'assistant' | 'candidate'; content: string }
 type Question = { id: string; index: number; total: number; question: string; options: string[]; seconds_allowed: number }
-type Posting = { title: string; company?: string; interviewer_name: string; is_active: boolean; interview_enabled: boolean; assessment_enabled: boolean; voice_enabled: boolean }
+type Posting = { title: string; company?: string; interviewer_name: string; is_active: boolean; mode: 'chatbot' | 'mcq' | 'voice_agent' }
 
 const SNAPSHOT_INTERVAL_MS = 45000
 
@@ -50,8 +50,8 @@ export default function PublicInterviewPage() {
   const streamRef = useRef<MediaStream | null>(null)
   const snapshotTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // voice mode: TTS + mic recording
-  const voiceMode = !!posting?.voice_enabled
+  // voice mode: standalone Voice AI Agent — TTS + mic recording, its own mode (never combined with MCQ)
+  const voiceMode = posting?.mode === 'voice_agent'
   const [speaking, setSpeaking] = useState(false)
   const [micState, setMicState] = useState<'idle' | 'recording' | 'transcribing'>('idle')
   const [micError, setMicError] = useState('')
@@ -60,7 +60,6 @@ export default function PublicInterviewPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const spokenMessageCountRef = useRef(0)
-  const spokenQuestionIdRef = useRef<string | null>(null)
 
   // CV upload
   const [uploadingCv, setUploadingCv] = useState(false)
@@ -122,27 +121,13 @@ export default function PublicInterviewPage() {
     }
   }, [messages, voiceMode, stage, speak])
 
-  // Speak each assessment question (with its options) exactly once when it loads.
-  useEffect(() => {
-    if (!voiceMode || stage !== 'assessment' || !question) return
-    if (spokenQuestionIdRef.current === question.id) return
-    spokenQuestionIdRef.current = question.id
-    const optionsSpeech = question.options.map((opt, i) => `Option ${String.fromCharCode(65 + i)}: ${opt}.`).join(' ')
-    speak(`Question ${question.index} of ${question.total}. ${question.question} ${optionsSpeech}`)
-  }, [question, voiceMode, stage, speak])
-
-  // ── Mic recording (used for both the voice interview and voice-answering MCQs) ──
+  // ── Mic recording — voice_agent mode only (MCQ mode never uses voice) ──
   const ensureMicStream = useCallback(async (): Promise<MediaStream> => {
-    // Reuse the assessment camera stream's audio track if we're already in
-    // that stage with mic access, otherwise request/reuse an audio-only stream.
-    if (stage === 'assessment' && streamRef.current && streamRef.current.getAudioTracks().length > 0) {
-      return new MediaStream(streamRef.current.getAudioTracks())
-    }
     if (micStreamRef.current) return micStreamRef.current
     const s = await navigator.mediaDevices.getUserMedia({ audio: true })
     micStreamRef.current = s
     return s
-  }, [stage])
+  }, [])
 
   const startRecording = async () => {
     setMicError('')
@@ -173,38 +158,14 @@ export default function PublicInterviewPage() {
         const text = (res.text || '').trim()
         setLastHeard(text)
         if (!text) { setMicError("Didn't catch that — please try again."); setMicState('idle'); return }
-
-        if (stage === 'interview') {
-          setMicState('idle')
-          await sendMessage(text)
-        } else if (stage === 'assessment' && question) {
-          const matched = matchSpokenAnswer(text, question.options)
-          setMicState('idle')
-          if (matched === null) {
-            setMicError(`Didn't catch a clear option in "${text}" — try saying the letter, e.g. "B", or tap an option instead.`)
-          } else {
-            setSelectedOption(matched)
-          }
-        }
+        setMicState('idle')
+        await sendMessage(text)
       } catch (e: any) {
         setMicError(e?.message || 'Could not transcribe that — please try again.')
         setMicState('idle')
       }
     }
     recorder.stop()
-  }
-
-  const matchSpokenAnswer = (text: string, options: string[]): number | null => {
-    const clean = text.trim().toLowerCase()
-    // "B" / "option B" / "answer is B" style
-    const letterMatch = clean.match(/\b([abcd])\b/)
-    if (letterMatch) return letterMatch[1].charCodeAt(0) - 97
-    // fuzzy substring match against option text
-    for (let i = 0; i < options.length; i++) {
-      const opt = options[i].toLowerCase()
-      if (clean.includes(opt) || opt.includes(clean)) return i
-    }
-    return null
   }
 
   useEffect(() => {
@@ -283,7 +244,7 @@ export default function PublicInterviewPage() {
   const requestCameraAndBeginAssessment = async () => {
     setCameraState('requesting')
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 }, audio: voiceMode })
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } })
       streamRef.current = stream
       if (videoRef.current) videoRef.current.srcObject = stream
       setCameraState('granted')
@@ -495,25 +456,27 @@ export default function PublicInterviewPage() {
             <svg width="18" height="18" viewBox="0 0 16 16" fill="#0a0a08"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg>
           </div>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>{posting.title}</div>
-          {posting.company && <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)', marginBottom: 6 }}>{posting.company}</div>}
-          {posting.interview_enabled && (
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', marginBottom: 16 }}>You'll be interviewed by {posting.interviewer_name}, our AI screening interviewer{voiceMode ? ' — by voice' : ''}.</div>
-          )}
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,.5)', lineHeight: 1.7, marginBottom: 12 }}>
-            {posting.interview_enabled && posting.assessment_enabled && "This role has two parts: a short conversational interview, then a timed skills assessment. Answer naturally, and give specific, concrete examples where you can."}
-            {posting.interview_enabled && !posting.assessment_enabled && "You're about to start a short AI-conducted screening interview for this role. It's conversational — answer naturally, and give specific, concrete examples where you can."}
-            {!posting.interview_enabled && posting.assessment_enabled && "This role requires a short multiple-choice skills assessment."}
-          </div>
-          {voiceMode && (
-            <div style={{ fontSize: 12, color: '#13c28e', background: 'rgba(19,194,142,.08)', border: '1px solid rgba(19,194,142,.15)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, lineHeight: 1.6 }}>
-              🎙 This is a voice interview — {posting.interviewer_name} will speak the questions aloud, and you'll respond by tapping the mic and talking. Please allow microphone access when prompted, and use headphones if you can.
-            </div>
-          )}
-          {posting.assessment_enabled && (
-            <div style={{ fontSize: 12, color: '#e2b04a', background: 'rgba(226,176,74,.08)', border: '1px solid rgba(226,176,74,.15)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, lineHeight: 1.6 }}>
-              📷 The assessment is proctored — your camera will take periodic snapshots, and leaving this tab is flagged for the hiring team.
-            </div>
-          )}
+          {posting.company && <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)', marginBottom: 16 }}>{posting.company}</div>}
+
+          {(() => {
+            const modeInfo = {
+              chatbot: { icon: '💬', title: 'Chatbot AI Interview', color: '#e2b04a',
+                desc: `You're about to start a short AI-conducted screening interview with ${posting.interviewer_name}. It's conversational, by text — answer naturally, and give specific, concrete examples where you can.` },
+              voice_agent: { icon: '🎙', title: 'Voice AI Agent', color: '#13c28e',
+                desc: `You'll be interviewed by ${posting.interviewer_name} — by voice, in real time. It'll ask questions out loud, you respond by talking. Please allow microphone access when prompted, and use headphones if you can.` },
+              mcq: { icon: '📝', title: 'MCQ Assessment', color: '#a78bfa',
+                desc: 'This role requires a short, timed multiple-choice skills assessment. It is proctored — your camera will take periodic snapshots, and leaving this tab is flagged for the hiring team.' },
+            }[posting.mode]
+            return (
+              <div style={{ borderRadius: 10, padding: '14px 16px', marginBottom: 16, border: `1.5px solid ${modeInfo.color}55`, background: `${modeInfo.color}14` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 18 }}>{modeInfo.icon}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: modeInfo.color }}>{modeInfo.title}</span>
+                </div>
+                <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', lineHeight: 1.6 }}>{modeInfo.desc}</div>
+              </div>
+            )
+          })()}
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginBottom: 20 }}>Once started, please go through to the end; it can't be skipped or paused partway.</div>
           <input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} style={{ ...inputSt, marginBottom: 10 }} />
           <input placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} style={{ ...inputSt, marginBottom: 14 }} />
@@ -600,10 +563,10 @@ export default function PublicInterviewPage() {
             <div style={{ ...card, maxWidth: 420, textAlign: 'center' }}>
               <div style={{ fontSize: 28, marginBottom: 10 }}>📷</div>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Camera access needed</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', lineHeight: 1.6, marginBottom: 16 }}>This assessment is proctored — please allow camera access to begin. It's used only for periodic snapshots, never continuous recording.{voiceMode ? ' Microphone access will be requested at the same time, for voice answers.' : ''}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', lineHeight: 1.6, marginBottom: 16 }}>This assessment is proctored — please allow camera access to begin. It's used only for periodic snapshots, never continuous recording.</div>
               <button onClick={requestCameraAndBeginAssessment} disabled={cameraState === 'requesting'}
                 style={{ width: '100%', padding: '12px 20px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
-                {cameraState === 'requesting' ? 'Requesting access...' : `Allow Camera${voiceMode ? ' & Mic' : ''} & Begin`}
+                {cameraState === 'requesting' ? 'Requesting access...' : 'Allow Camera & Begin'}
               </button>
             </div>
           ) : cameraState === 'denied' ? (
@@ -622,11 +585,6 @@ export default function PublicInterviewPage() {
               <div style={{ height: 3, background: 'rgba(255,255,255,.06)', borderRadius: 2, marginBottom: 20, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${(question.index / question.total) * 100}%`, background: 'linear-gradient(90deg,#0b7c5e,#13c28e)', transition: 'width .4s' }} />
               </div>
-              {voiceMode && speaking && (
-                <div style={{ fontSize: 11, color: '#13c28e', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#13c28e', animation: 'pulse 1s infinite' }} /> Reading question aloud...
-                </div>
-              )}
               <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, marginBottom: 18 }}>{question.question}</div>
               {question.options.map((opt, i) => (
                 <div key={i} onClick={() => setSelectedOption(i)}
@@ -639,15 +597,6 @@ export default function PublicInterviewPage() {
                   <span style={{ fontWeight: 700, marginRight: 8 }}>{String.fromCharCode(65 + i)}.</span>{opt}
                 </div>
               ))}
-              {voiceMode && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '14px 0', padding: '10px 0', borderTop: '1px solid rgba(255,255,255,.06)', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-                  {micButton(44)}
-                  <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.4)', lineHeight: 1.5 }}>
-                    {micState === 'recording' ? 'Listening — tap again to stop' : micState === 'transcribing' ? 'Transcribing...' : 'Or tap to answer by voice (say the letter, e.g. "B")'}
-                  </div>
-                </div>
-              )}
-              {micError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 10 }}>{micError}</div>}
               {assessmentError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 10 }}>{assessmentError}</div>}
               <button onClick={() => submitAnswer()} disabled={selectedOption === null || answering}
                 style={{ width: '100%', marginTop: 8, padding: '12px 20px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: (selectedOption === null || answering) ? 'default' : 'pointer', opacity: (selectedOption === null || answering) ? 0.5 : 1, fontFamily: 'Inter,sans-serif' }}>
