@@ -1,9 +1,12 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Literal, Optional
 from datetime import datetime
 
 
 # ── HR side ──────────────────────────────────────────────────────
+
+InterviewMode = Literal["chatbot", "mcq", "voice_agent"]
+
 
 class BankQuestion(BaseModel):
     question: str
@@ -19,9 +22,8 @@ class InterviewPostingCreate(BaseModel):
     extra_questions: List[str] = []
     interviewer_name: Optional[str] = None
 
-    interview_enabled: bool = True
-    assessment_enabled: bool = False
-    assessment_source: Optional[str] = None          # "ai" | "bank" — required if assessment_enabled
+    mode: InterviewMode = "chatbot"
+    assessment_source: Optional[str] = None          # "ai" | "bank" — required when mode == "mcq"
     assessment_bank: Optional[List[BankQuestion]] = None  # used when source == "bank"
 
     # used when source == "ai" — HR controls exactly how many questions per category
@@ -32,7 +34,6 @@ class InterviewPostingCreate(BaseModel):
     assessment_count_hr: int = 0
     assessment_seconds_per_question: int = 60
     notify_hr_on_completion: bool = True
-    voice_enabled: bool = False
 
 
 class InterviewPostingResponse(BaseModel):
@@ -42,13 +43,11 @@ class InterviewPostingResponse(BaseModel):
     job_description: str
     extra_questions: List[str]
     interviewer_name: str
-    interview_enabled: bool
-    assessment_enabled: bool
+    mode: InterviewMode
     assessment_source: Optional[str] = None
     assessment_question_count: int = 0
     assessment_seconds_per_question: int = 60
     notify_hr_on_completion: bool = True
-    voice_enabled: bool = False
     public_slug: str
     public_link: str
     is_active: bool
@@ -97,10 +96,8 @@ class PublicPostingInfo(BaseModel):
     company: Optional[str] = None
     interviewer_name: str
     is_active: bool
-    interview_enabled: bool
-    assessment_enabled: bool
+    mode: InterviewMode
     assessment_seconds_per_question: int = 60
-    voice_enabled: bool = False
 
 
 class InterviewStartRequest(BaseModel):
