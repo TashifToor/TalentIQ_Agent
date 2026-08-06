@@ -71,16 +71,16 @@ export default function AssessmentConfig({ data, onChange }: { data: BuilderForm
                 value={data.assessmentBankText} onChange={e => onChange({ assessmentBankText: e.target.value })}
                 style={{ ...inputSt, minHeight: 140, resize: 'vertical', fontFamily: 'monospace', fontSize: 12 }} className="premium-input accent-teal" />
             </div>
-        )}
+          )}
 
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 12, color: 'rgba(255,255,255,.5)' }}>⏱ Seconds per question</span>
             <input type="number" min={5} max={600} value={data.secondsPerQuestion}
-            onChange={e => onChange({ secondsPerQuestion: Math.max(5, Math.min(600, Number(e.target.value) || 60)) })}
-            style={{ ...inputSt, width: 90, padding: '7px 10px' }} className="premium-input accent-teal" />
+              onChange={e => onChange({ secondsPerQuestion: Math.max(5, Math.min(600, Number(e.target.value) || 60)) })}
+              style={{ ...inputSt, width: 90, padding: '7px 10px' }} className="premium-input accent-teal" />
+          </div>
         </div>
-        </div>
-    </GlassCard>
+      </GlassCard>
     </div>
-)
+  )
 }
