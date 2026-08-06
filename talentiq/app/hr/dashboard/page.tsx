@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
+import InterviewBuilderWizard from '@/components/interviews/InterviewBuilderWizard'
 
 type Candidate = {
   filename: string
@@ -131,19 +132,6 @@ export default function HRDashboard() {
   const [interviewCandidatesLoading, setInterviewCandidatesLoading] = useState(false)
   const [selectedReport, setSelectedReport] = useState<any>(null)
   const [showInterviewForm, setShowInterviewForm] = useState(false)
-  const [iTitle, setITitle] = useState('')
-  const [iCompany, setICompany] = useState('')
-  const [iJD, setIJD] = useState('')
-  const [iExtraQuestions, setIExtraQuestions] = useState('')
-  const [iInterviewerName, setIInterviewerName] = useState('')
-  const [iMode, setIMode] = useState<'chatbot'|'mcq'|'voice_agent'>('chatbot')
-  const [iAssessmentSource, setIAssessmentSource] = useState<'ai'|'bank'>('ai')
-  const [iAssessmentCounts, setIAssessmentCounts] = useState({ dsa: 5, job_desc: 5, problem_solving: 4, teamwork: 3, hr: 3 })
-  const [iSecondsPerQuestion, setISecondsPerQuestion] = useState(60)
-  const [iNotifyOnCompletion, setINotifyOnCompletion] = useState(true)
-  const [iAssessmentBankText, setIAssessmentBankText] = useState('')
-  const [iSaving, setISaving] = useState(false)
-  const [iError, setIError] = useState('')
   const [copiedSlug, setCopiedSlug] = useState('')
 
   // Policy docs state
@@ -286,71 +274,10 @@ export default function HRDashboard() {
       .finally(() => setInterviewCandidatesLoading(false))
   }
 
-  const parseBankText = (text: string): { question: string; options: string[]; correct_index: number; topic?: string }[] => {
-    // Blocks separated by blank lines. Format per block:
-    //   Question text?
-    //   A) option
-    //   B) option
-    //   C) option
-    //   D) option
-    //   Correct: B
-    const blocks = text.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean)
-    const parsed: { question: string; options: string[]; correct_index: number; topic?: string }[] = []
-    for (const block of blocks) {
-      const lines = block.split('\n').map(l => l.trim()).filter(Boolean)
-      if (lines.length < 6) continue
-      const question = lines[0]
-      const options = lines.slice(1, 5).map(l => l.replace(/^[A-Da-d][\).\-:]\s*/, ''))
-      const correctLine = lines.find(l => /^correct/i.test(l))
-      const letter = correctLine?.match(/[A-Da-d]/)?.[0]?.toUpperCase()
-      const correct_index = letter ? letter.charCodeAt(0) - 65 : -1
-      if (options.length === 4 && correct_index >= 0 && correct_index <= 3) {
-        parsed.push({ question, options, correct_index })
-      }
-    }
-    return parsed
-  }
-
-  const createInterviewPosting = async () => {
-    if (!iTitle.trim() || !iJD.trim()) { setIError('Role title and job description are required.'); return }
-    if (iMode === 'mcq' && iAssessmentSource === 'ai') {
-      const total = Object.values(iAssessmentCounts).reduce((a,b)=>a+b,0)
-      if (total < 10 || total > 50) { setIError(`Total questions across categories must be 10–50 (currently ${total}).`); return }
-    }
-    let bank: { question: string; options: string[]; correct_index: number; topic?: string }[] | undefined
-    if (iMode === 'mcq' && iAssessmentSource === 'bank') {
-      bank = parseBankText(iAssessmentBankText)
-      if (bank.length < 10) { setIError(`Question bank needs at least 10 valid questions (found ${bank.length}). Check the format.`); return }
-    }
-    setISaving(true)
-    setIError('')
-    try {
-      const extra = iExtraQuestions.split('\n').map(q=>q.trim()).filter(Boolean)
-      const posting = await api.createInterviewPosting({
-        title: iTitle.trim(), company: iCompany.trim() || undefined, job_description: iJD.trim(), extra_questions: extra,
-        interviewer_name: iInterviewerName.trim() || undefined,
-        mode: iMode,
-        assessment_source: iMode === 'mcq' ? iAssessmentSource : undefined,
-        assessment_count_dsa: iMode === 'mcq' && iAssessmentSource === 'ai' ? iAssessmentCounts.dsa : undefined,
-        assessment_count_job_desc: iMode === 'mcq' && iAssessmentSource === 'ai' ? iAssessmentCounts.job_desc : undefined,
-        assessment_count_problem_solving: iMode === 'mcq' && iAssessmentSource === 'ai' ? iAssessmentCounts.problem_solving : undefined,
-        assessment_count_teamwork: iMode === 'mcq' && iAssessmentSource === 'ai' ? iAssessmentCounts.teamwork : undefined,
-        assessment_count_hr: iMode === 'mcq' && iAssessmentSource === 'ai' ? iAssessmentCounts.hr : undefined,
-        assessment_seconds_per_question: iMode === 'mcq' ? iSecondsPerQuestion : undefined,
-        notify_hr_on_completion: iNotifyOnCompletion,
-        assessment_bank: bank,
-      })
-      setShowInterviewForm(false)
-      setITitle(''); setICompany(''); setIJD(''); setIExtraQuestions(''); setIInterviewerName('')
-      setIMode('chatbot'); setIAssessmentSource('ai'); setIAssessmentCounts({ dsa: 5, job_desc: 5, problem_solving: 4, teamwork: 3, hr: 3 }); setIAssessmentBankText('')
-      setISecondsPerQuestion(60); setINotifyOnCompletion(true)
-      loadInterviewPostings()
-      openPosting(posting)
-    } catch (e:any) {
-      setIError(e?.message || 'Could not create interview posting.')
-    } finally {
-      setISaving(false)
-    }
+  const handleInterviewCreated = (posting: any) => {
+    setShowInterviewForm(false)
+    loadInterviewPostings()
+    openPosting(posting)
   }
 
   const deleteInterviewPosting = async (postingId:string) => {
@@ -1131,118 +1058,17 @@ export default function HRDashboard() {
           <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:26, fontWeight:600, marginBottom:4 }}>AI Interviewer</div>
           <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>Paste a JD, get a shareable link, let candidates interview themselves</div>
         </div>
-        <button onClick={()=>{ setShowInterviewForm(v=>!v); setIError('') }}
-          style={{ padding:'10px 18px', borderRadius:8, border:'none', background:'#e2b04a', color:'#0a0a08', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
-          {showInterviewForm ? 'Cancel' : '+ New Interview Link'}
-        </button>
+        {!showInterviewForm && (
+          <button onClick={()=>setShowInterviewForm(true)}
+            style={{ padding:'10px 18px', borderRadius:8, border:'none', background:'#e2b04a', color:'#0a0a08', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'Inter,sans-serif' }}>
+            + New Interview Link
+          </button>
+        )}
       </div>
 
       {showInterviewForm && (
-        <div style={s(card, { marginTop:20, marginBottom:24 })}>
-          <div style={{ fontSize:13, fontWeight:600, marginBottom:14 }}>New AI Interview</div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
-            <input placeholder="Role title (e.g. Backend Engineer)" value={iTitle} onChange={e=>setITitle(e.target.value)} style={inputSt} />
-            <input placeholder="Company (optional)" value={iCompany} onChange={e=>setICompany(e.target.value)} style={inputSt} />
-          </div>
-          <input placeholder="Interviewer name (optional — e.g. Kelly, Alex). Leave blank for a random one."
-            value={iInterviewerName} onChange={e=>setIInterviewerName(e.target.value)} style={s(inputSt, { marginBottom:10 })} />
-          <textarea placeholder="Paste the full job description here..." value={iJD} onChange={e=>setIJD(e.target.value)}
-            style={s(inputSt, { minHeight:130, resize:'vertical', marginBottom:10, fontFamily:'Inter,sans-serif' })} />
-          <textarea placeholder={"Extra questions HR wants covered (optional, one per line)\ne.g. Are you willing to relocate to Lahore?\nWhat's your notice period?"}
-            value={iExtraQuestions} onChange={e=>setIExtraQuestions(e.target.value)}
-            style={s(inputSt, { minHeight:70, resize:'vertical', marginBottom:10, fontFamily:'Inter,sans-serif' })} />
-
-          <div style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,.5)', marginBottom:8, marginTop:6 }}>Interview Mode — pick one</div>
-          <div style={{ display:'flex', gap:10, marginBottom:16, overflowX:'auto', paddingBottom:4 }}>
-            {([
-              { id:'chatbot' as const, icon:'💬', title:'Chatbot AI Interview', desc:'Text conversational interview — education, skills, project deep-dives.' },
-              { id:'mcq' as const, icon:'📝', title:'MCQ Assessment', desc:'Proctored multiple-choice test — timed, webcam + tab-switch monitored.' },
-              { id:'voice_agent' as const, icon:'🎙', title:'Voice AI Agent', desc:'Standalone real-time voice interview — candidate talks, AI listens and responds.' },
-            ]).map(m => (
-              <div key={m.id} onClick={()=>setIMode(m.id)}
-                style={{ flex:'1 1 0', minWidth:150, cursor:'pointer', borderRadius:10, padding:'14px 12px',
-                  border:`1.5px solid ${iMode===m.id ? '#e2b04a' : 'rgba(255,255,255,.08)'}`,
-                  background: iMode===m.id ? 'rgba(226,176,74,.08)' : '#161614',
-                  transition:'border-color .15s, background .15s' }}>
-                <div style={{ fontSize:20, marginBottom:6 }}>{m.icon}</div>
-                <div style={{ fontSize:12.5, fontWeight:700, marginBottom:4, color: iMode===m.id ? '#e2b04a' : '#fff' }}>{m.title}</div>
-                <div style={{ fontSize:10.5, color:'rgba(255,255,255,.4)', lineHeight:1.4 }}>{m.desc}</div>
-              </div>
-            ))}
-          </div>
-
-          {iMode === 'mcq' && (
-            <div style={s(card, { background:'#161614', marginBottom:14 })}>
-              <div style={{ fontSize:12, fontWeight:600, marginBottom:10 }}>Assessment Setup</div>
-              <div style={{ display:'flex', gap:16, marginBottom:12 }}>
-                <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5, cursor:'pointer' }}>
-                  <input type="radio" name="assessSource" checked={iAssessmentSource==='ai'} onChange={()=>setIAssessmentSource('ai')} />
-                  AI generates questions
-                </label>
-                <label style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5, cursor:'pointer' }}>
-                  <input type="radio" name="assessSource" checked={iAssessmentSource==='bank'} onChange={()=>setIAssessmentSource('bank')} />
-                  I'll provide my own questions
-                </label>
-              </div>
-
-              {iAssessmentSource === 'ai' ? (
-                <div>
-                  <label style={{ fontSize:12, color:'rgba(255,255,255,.5)', display:'block', marginBottom:10 }}>How many questions per category?</label>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
-                    {([
-                      ['dsa', 'DSA'],
-                      ['job_desc', 'Job Description (language/framework)'],
-                      ['problem_solving', 'Problem Solving'],
-                      ['teamwork', 'Team Work (git/collaboration)'],
-                      ['hr', 'HR (e.g. "why should we hire you")'],
-                    ] as const).map(([key, label]) => (
-                      <div key={key}>
-                        <label style={{ fontSize:11, color:'rgba(255,255,255,.4)', display:'block', marginBottom:4 }}>{label}</label>
-                        <input type="number" min={0} max={50} value={iAssessmentCounts[key]}
-                          onChange={e=>setIAssessmentCounts(prev=>({ ...prev, [key]: Math.max(0, Math.min(50, Number(e.target.value)||0)) }))}
-                          style={s(inputSt, { marginBottom:0 })} />
-                      </div>
-                    ))}
-                  </div>
-                  {(() => {
-                    const total = Object.values(iAssessmentCounts).reduce((a,b)=>a+b,0)
-                    const ok = total >= 10 && total <= 50
-                    return <div style={{ fontSize:12, fontWeight:600, color: ok ? '#13c28e' : '#ef4444' }}>Total: {total} questions {!ok && '(must be 10–50)'}</div>
-                  })()}
-                  <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:8 }}>Generated once when you create this link — same set for every candidate.</div>
-                </div>
-              ) : (
-                <div>
-                  <div style={{ fontSize:11, color:'rgba(255,255,255,.4)', marginBottom:8, lineHeight:1.6 }}>
-                    One question per block, blank line between blocks:<br/>
-                    <code style={{ color:'rgba(255,255,255,.5)' }}>Question text?<br/>A) option<br/>B) option<br/>C) option<br/>D) option<br/>Correct: B</code>
-                  </div>
-                  <textarea placeholder={"What does 'git rebase -i' let you do?\nA) Delete the repo\nB) Interactively edit commit history\nC) Push to a remote\nD) Clone a branch\nCorrect: B"}
-                    value={iAssessmentBankText} onChange={e=>setIAssessmentBankText(e.target.value)}
-                    style={s(inputSt, { minHeight:140, resize:'vertical', marginBottom:0, fontFamily:'monospace', fontSize:12 })} />
-                </div>
-              )}
-
-              <div style={{ marginTop:14, paddingTop:14, borderTop:'1px solid rgba(255,255,255,.06)' }}>
-                <label style={{ fontSize:12, color:'rgba(255,255,255,.5)', display:'block', marginBottom:6 }}>Seconds allowed per question</label>
-                <input type="number" min={5} max={600} value={iSecondsPerQuestion}
-                  onChange={e=>setISecondsPerQuestion(Math.max(5, Math.min(600, Number(e.target.value)||60)))}
-                  style={s(inputSt, { width:100, marginBottom:0 })} />
-                <div style={{ fontSize:11, color:'rgba(255,255,255,.3)', marginTop:6 }}>Countdown per question — unanswered when time runs out scores 0 for that question.</div>
-              </div>
-            </div>
-          )}
-
-          <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12.5, cursor:'pointer', marginBottom:14 }}>
-            <input type="checkbox" checked={iNotifyOnCompletion} onChange={e=>setINotifyOnCompletion(e.target.checked)} />
-            Email me when a candidate completes this
-          </label>
-
-          {iError && <div style={{ fontSize:12, color:'#ef4444', marginBottom:10 }}>{iError}</div>}
-          <button onClick={createInterviewPosting} disabled={iSaving}
-            style={{ padding:'10px 20px', borderRadius:8, border:'none', background:'#13c28e', color:'#0a0a08', fontSize:13, fontWeight:700, cursor: iSaving?'default':'pointer', opacity: iSaving ? 0.6 : 1, fontFamily:'Inter,sans-serif' }}>
-            {iSaving ? 'Creating...' : 'Continue → Generate Link'}
-          </button>
+        <div style={{ marginTop:24, marginBottom:24 }}>
+          <InterviewBuilderWizard onCreated={handleInterviewCreated} onCancel={()=>setShowInterviewForm(false)} />
         </div>
       )}
 
