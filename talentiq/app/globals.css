@@ -101,3 +101,75 @@ body { font-family: 'Syne', system-ui, sans-serif; overflow-x: hidden; line-heig
   background:linear-gradient(90deg,var(--gold) 0%,var(--teal2) 60%,transparent 100%);
   border-radius:inherit;
 }
+
+/* ── AI Interview Builder — motion system ──────────────────────── */
+
+/* Card hover elevation + border glow (mode selection cards) */
+@keyframes cardGlowPulse { 0%,100%{opacity:.55} 50%{opacity:1} }
+.card-glow-ring { animation: cardGlowPulse 3s ease-in-out infinite; }
+
+/* Voice AI flagship — mic pulse */
+@keyframes voicePulse { 0%{box-shadow:0 0 0 0 rgba(167,139,250,.45)} 70%{box-shadow:0 0 0 22px rgba(167,139,250,0)} 100%{box-shadow:0 0 0 0 rgba(167,139,250,0)} }
+.voice-pulse { animation: voicePulse 2.2s ease-out infinite; }
+
+/* Waveform bars (voice config identity) */
+@keyframes waveBar { 0%,100%{transform:scaleY(.3)} 50%{transform:scaleY(1)} }
+.wave-bar { animation: waveBar 1.1s ease-in-out infinite; transform-origin: center; }
+
+/* Scale-in for step transitions / modals */
+@keyframes scaleIn { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:scale(1)} }
+.scale-in { animation: scaleIn .35s var(--ease) both; }
+
+/* Wizard step transition — slide + fade, direction-agnostic */
+@keyframes wizardIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+.wizard-step-in { animation: wizardIn .45s var(--ease) both; }
+
+/* Floating ambient glow (background blobs behind premium cards) */
+@keyframes floatingGlow { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(14px,-10px) scale(1.06)} }
+.floating-glow { animation: floatingGlow 8s ease-in-out infinite; }
+
+/* Loading skeleton shimmer */
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* Glassmorphism primitives — dark theme (matches --dark/--dark2 palette used in HR + candidate dashboards) */
+.glass-card {
+  background: rgba(22,22,20,.55);
+  border: 1px solid rgba(255,255,255,.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.glass-card-light {
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(255,255,255,.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Responsive layout helpers for the Interview Builder */
+.builder-3col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.builder-2col { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; }
+.builder-with-copilot { display: flex; gap: 24px; align-items: flex-start; }
+@media (max-width: 980px) {
+  .builder-3col { grid-template-columns: 1fr 1fr; }
+  .builder-2col { grid-template-columns: 1fr; }
+  .builder-with-copilot { flex-direction: column; }
+}
+@media (max-width: 640px) {
+  .builder-3col { grid-template-columns: 1fr; }
+}
+
+/* Error shake */
+@keyframes shakeX { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
+.shake { animation: shakeX .4s ease; }
+
+/* Premium input focus glow — applied via .premium-input class alongside existing inline styles */
+.premium-input { transition: border-color .2s var(--ease), box-shadow .2s var(--ease); }
+.premium-input:focus { border-color: #e2b04a !important; box-shadow: 0 0 0 3px rgba(226,176,74,.15); outline: none; }
+.premium-input.accent-purple:focus { border-color: #a78bfa !important; box-shadow: 0 0 0 3px rgba(167,139,250,.15); }
+.premium-input.accent-teal:focus { border-color: #13c28e !important; box-shadow: 0 0 0 3px rgba(19,194,142,.15); }
+
+/* Success checkmark draw-in (link generated screen) */
+@keyframes checkDraw { from{stroke-dashoffset:48} to{stroke-dashoffset:0} }
+.check-draw { stroke-dasharray: 48; stroke-dashoffset: 48; animation: checkDraw .6s var(--ease) .15s forwards; }
+@keyframes successRingPop { 0%{transform:scale(.7);opacity:0} 60%{transform:scale(1.08);opacity:1} 100%{transform:scale(1)} }
+.success-ring { animation: successRingPop .5s var(--ease) both; }
