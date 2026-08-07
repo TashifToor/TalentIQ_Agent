@@ -1,10 +1,11 @@
 'use client'
 import { useState } from 'react'
 import { api } from '@/lib/api'
-import { StepHeader, AnimatedButton } from './shared/primitives'
-import { BuilderFormData, DEFAULT_FORM_DATA, parseBankText } from './shared/formData'
-import { getModeDefinition, InterviewMode } from './shared/modeData'
-import ModeSelectionScreen from './ModeSelectionScreen'
+import { StepHeader, AnimatedButton } from '@/components/shared/primitives'
+import { BuilderFormData, DEFAULT_FORM_DATA, parseBankText } from '@/components/modules/interview-engine/formData'
+import { getModeDefinition, InterviewMode } from '@/components/modules/interview-engine/modeData'
+import ModeSelectionScreen from '@/components/modules/interview-engine/ModeSelectionScreen'
+import CopilotPanel from './copilot/CopilotPanel'
 import ChatConfig from './chat/ChatConfig'
 import AssessmentConfig from './assessment/AssessmentConfig'
 import VoiceConfig from './voice/VoiceConfig'
@@ -100,7 +101,7 @@ export default function InterviewBuilderWizard({
   }
 
   if (step === 'select') {
-    return <ModeSelectionScreen onSelect={selectMode} />
+    return <ModeSelectionScreen onSelect={selectMode} sidePanel={<CopilotPanel context="Pick a mode on the left — I'll help you configure it once I'm live." />} />
   }
 
   const mode = getModeDefinition(data.mode)
