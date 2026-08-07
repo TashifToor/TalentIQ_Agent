@@ -1,6 +1,6 @@
 'use client'
-import { GlassCard, GradientBadge } from '../shared/primitives'
-import { BuilderFormData } from '../shared/formData'
+import { GlassCard, GradientBadge } from '@/components/shared/primitives'
+import { BuilderFormData } from '@/components/modules/interview-engine/formData'
 
 const inputSt = { background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: 'rgba(255,255,255,.85)', outline: 'none', width: '100%' } as const
 
