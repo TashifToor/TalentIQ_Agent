@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import InterviewBuilderWizard from '@/components/interviews/InterviewBuilderWizard'
+import CopilotPanel from '@/components/modules/copilot/CopilotPanel'
 
 type Candidate = {
   filename: string
@@ -1255,6 +1256,15 @@ export default function HRDashboard() {
               </>
             )}
           </div>
+
+          {selectedReport && (
+            <CopilotPanel
+              context="candidate_review"
+              report={selectedReport}
+              candidateName={selectedReport.candidate_name}
+              peers={interviewCandidates.map((c:any) => ({ name: c.candidate_name, score: c.ai_score ?? c.assessment_score ?? null }))}
+            />
+          )}
         </div>
       )}
     </div>
