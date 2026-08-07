@@ -66,11 +66,16 @@ GENERAL SHAPE OF THE INTERVIEW (adapt naturally, don't announce these as rigid s
 5. Weave in the HR's extra questions (if any) naturally wherever they fit, rather than saving them all for the end."""
 
 
-def get_next_turn(interviewer_name: str, job_description: str, extra_questions: list[str], transcript: list[dict], turn_count: int) -> dict:
+def get_next_turn(interviewer_name: str, job_description: str, extra_questions: list[str], transcript: list[dict], turn_count: int, min_turns: int = MIN_TURNS, max_turns: int = MAX_TURNS) -> dict:
     """
     Given the conversation so far, returns the interviewer's next message and
     whether the interview should conclude. Returns:
         {"message": str, "action": "continue" | "conclude"}
+
+    min_turns/max_turns default to the module constants (recruiter flow) —
+    pass overrides to let another caller (e.g. candidate Practice sessions,
+    which have a candidate-selected target length) honor a different range
+    without duplicating this function.
     """
     if turn_count == 0:
         # Hardcoded, not LLM-generated — guarantees every interview always
@@ -82,13 +87,13 @@ def get_next_turn(interviewer_name: str, job_description: str, extra_questions: 
         }
 
     history = _format_transcript(transcript)
-    force_conclude = turn_count >= MAX_TURNS
-    force_continue = turn_count < MIN_TURNS
+    force_conclude = turn_count >= max_turns
+    force_continue = turn_count < min_turns
 
     if force_conclude:
         guidance = "You MUST conclude now — this is the final turn regardless of coverage. Thank the candidate warmly and let them know the conversation part of the interview is complete."
     elif force_continue:
-        guidance = f"You must continue — at least {MIN_TURNS} candidate answers are required before the interview can end, and you're not there yet. Do not conclude no matter how the conversation is going."
+        guidance = f"You must continue — at least {min_turns} candidate answers are required before the interview can end, and you're not there yet. Do not conclude no matter how the conversation is going."
     else:
         guidance = "Decide whether you have enough substantive coverage of the JD's key requirements (and the HR extra questions, if any) to conclude, or whether there are still important gaps to probe. Only conclude once genuinely satisfied, not just because a few questions were asked."
 
@@ -114,9 +119,9 @@ Respond ONLY with valid JSON, no markdown, no backticks:
         action = "continue"
 
     # Hard server-side enforcement — never trust the LLM's action alone
-    if turn_count < MIN_TURNS:
+    if turn_count < min_turns:
         action = "continue"
-    elif turn_count >= MAX_TURNS:
+    elif turn_count >= max_turns:
         action = "conclude"
 
     return {"message": message, "action": action}
