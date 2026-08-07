@@ -5,7 +5,7 @@ import { StepHeader, AnimatedButton } from '@/components/shared/primitives'
 import { BuilderFormData, DEFAULT_FORM_DATA, parseBankText } from '@/components/modules/interview-engine/formData'
 import { getModeDefinition, InterviewMode } from '@/components/modules/interview-engine/modeData'
 import ModeSelectionScreen from '@/components/modules/interview-engine/ModeSelectionScreen'
-import CopilotPanel from './copilot/CopilotPanel'
+import CopilotPanel from '@/components/modules/copilot/CopilotPanel'
 import ChatConfig from './chat/ChatConfig'
 import AssessmentConfig from './assessment/AssessmentConfig'
 import VoiceConfig from './voice/VoiceConfig'
@@ -101,7 +101,7 @@ export default function InterviewBuilderWizard({
   }
 
   if (step === 'select') {
-    return <ModeSelectionScreen onSelect={selectMode} sidePanel={<CopilotPanel context="Pick a mode on the left — I'll help you configure it once I'm live." />} />
+    return <ModeSelectionScreen onSelect={selectMode} sidePanel={<CopilotPanel context="job_creation" defaultCollapsed />} />
   }
 
   const mode = getModeDefinition(data.mode)
@@ -117,15 +117,18 @@ export default function InterviewBuilderWizard({
       <StepHeader title={titles[step].title} subtitle={titles[step].subtitle} step={stepIndex + 1} totalSteps={STEP_ORDER.length} onBack={goBack} />
 
       {step === 'configure' && (
-        <>
-          {data.mode === 'chatbot' && <ChatConfig data={data} onChange={patch} />}
-          {data.mode === 'mcq' && <AssessmentConfig data={data} onChange={patch} />}
-          {data.mode === 'voice_agent' && <VoiceConfig data={data} onChange={patch} />}
-          {configError && <div className="shake" style={{ fontSize: 12, color: '#ef4444', marginTop: 14 }}>{configError}</div>}
-          <div style={{ marginTop: 20, maxWidth: 260 }}>
-            <AnimatedButton onClick={continueFromConfigure} fullWidth>Continue to AI Review →</AnimatedButton>
+        <div className="builder-with-copilot">
+          <div style={{ flex: 1 }}>
+            {data.mode === 'chatbot' && <ChatConfig data={data} onChange={patch} />}
+            {data.mode === 'mcq' && <AssessmentConfig data={data} onChange={patch} />}
+            {data.mode === 'voice_agent' && <VoiceConfig data={data} onChange={patch} />}
+            {configError && <div className="shake" style={{ fontSize: 12, color: '#ef4444', marginTop: 14 }}>{configError}</div>}
+            <div style={{ marginTop: 20, maxWidth: 260 }}>
+              <AnimatedButton onClick={continueFromConfigure} fullWidth>Continue to AI Review →</AnimatedButton>
+            </div>
           </div>
-        </>
+          <CopilotPanel context="interview_builder" jd={data.jd} />
+        </div>
       )}
 
       {step === 'ai_review' && (
