@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { GlassCard, AnimatedButton, GradientBadge } from './shared/primitives'
-import { getModeDefinition } from './shared/modeData'
+import { GlassCard, AnimatedButton, GradientBadge } from '@/components/shared/primitives'
+import { getModeDefinition } from '@/components/modules/interview-engine/modeData'
 
 export default function LinkGeneratedStep({ posting, onDone }: { posting: any; onDone: () => void }) {
   const [copied, setCopied] = useState(false)
