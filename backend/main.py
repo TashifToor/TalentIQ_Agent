@@ -19,7 +19,9 @@ from routes.cv_builder import router as cv_builder_router
 from routes.organization import router as org_router
 from routes.interview import router as interview_router
 from routes.interview_public import router as interview_public_router
+from routes.practice import router as practice_router
 from models.interview import InterviewPosting, InterviewSession
+from models.practice import PracticeSession
 from models.user import User  
 from models.chat import Chat
 from models.job import Job
@@ -83,6 +85,7 @@ app.include_router(cv_builder_router)
 app.include_router(org_router)
 app.include_router(interview_router)
 app.include_router(interview_public_router)
+app.include_router(practice_router)
 
 @app.get("/")
 def root():
