@@ -1,11 +1,11 @@
 'use client'
-import { GlassCard, EmptyState, GradientBadge } from '../shared/primitives'
+import { GlassCard, EmptyState, GradientBadge } from '@/components/shared/primitives'
 
 /**
  * Reserved slot for the AI Hiring Copilot (Phase 3).
- * Renders alongside the wizard now as a "Coming Soon" panel so no
- * redesign is needed later — Phase 3 just fills `children`/content here
- * with: JD Optimizer, AI Recommendations, Interview Planner, etc.
+ * Renders alongside the HR wizard now as a "Coming Soon" panel so no
+ * redesign is needed later — Phase 3 just fills content here with:
+ * JD Optimizer, AI Recommendations, Interview Planner, etc.
  */
 export default function CopilotPanel({ context }: { context?: string }) {
   return (
