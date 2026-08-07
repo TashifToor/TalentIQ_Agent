@@ -1,7 +1,7 @@
 'use client'
-import { MetricCard, EmptyState, GlassCard } from './shared/primitives'
-import { BuilderFormData } from './shared/formData'
-import { getModeDefinition } from './shared/modeData'
+import { MetricCard, EmptyState, GlassCard } from '@/components/shared/primitives'
+import { BuilderFormData } from '@/components/modules/interview-engine/formData'
+import { getModeDefinition } from '@/components/modules/interview-engine/modeData'
 
 // Small, honest heuristic — not an LLM call. Real semantic skill-detection
 // and rubric generation is Phase-3 Hiring Copilot territory; this just
