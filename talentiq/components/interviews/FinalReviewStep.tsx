@@ -1,7 +1,7 @@
 'use client'
-import { GlassCard, MetricCard, AnimatedButton } from './shared/primitives'
-import { BuilderFormData } from './shared/formData'
-import { getModeDefinition } from './shared/modeData'
+import { GlassCard, MetricCard, AnimatedButton } from '@/components/shared/primitives'
+import { BuilderFormData } from '@/components/modules/interview-engine/formData'
+import { getModeDefinition } from '@/components/modules/interview-engine/modeData'
 
 export default function FinalReviewStep({
   data, onChange, onGenerate, saving, error,
