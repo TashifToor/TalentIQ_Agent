@@ -12,8 +12,22 @@ const COMMON_SKILLS = [
   'SQL', 'GraphQL', 'REST', 'Celery', 'Java', 'Go', 'Rust', 'C++', 'Git', 'CI/CD', 'Linux',
 ]
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function skillPattern(s: string): RegExp {
+  // \b only makes sense at a word/non-word transition — a skill like "C++"
+  // ends in a non-word char, so a trailing \b would silently never match.
+  const startsWithWordChar = /\w/.test(s[0])
+  const endsWithWordChar = /\w/.test(s[s.length - 1])
+  const prefix = startsWithWordChar ? '\\b' : ''
+  const suffix = endsWithWordChar ? '\\b' : ''
+  return new RegExp(`${prefix}${escapeRegex(s)}${suffix}`, 'i')
+}
+
 function detectSkills(jd: string): string[] {
-  const found = COMMON_SKILLS.filter(s => new RegExp(`\\b${s.replace('.', '\\.')}\\b`, 'i').test(jd))
+  const found = COMMON_SKILLS.filter(s => skillPattern(s).test(jd))
   return found.slice(0, 8)
 }
 
