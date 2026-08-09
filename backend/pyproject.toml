@@ -40,4 +40,5 @@ dependencies = [
     "torch>=2.4.0",
     "transformers>=4.44.0",
     "uvicorn[standard]>=0.48.0",
+    "websockets>=12.0",
 ]
