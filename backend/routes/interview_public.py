@@ -50,12 +50,18 @@ def _get_session(posting: InterviewPosting, session_id: str, db: Session) -> Int
     return session
 
 
-def _assessment_question_out(posting: InterviewPosting, index: int) -> AssessmentQuestionOut | None:
+def _assessment_question_out(posting: InterviewPosting, session: InterviewSession, index: int) -> AssessmentQuestionOut | None:
     questions = json.loads(posting.assessment_questions or "[]")
     if index >= len(questions):
         return None
     q = questions[index]
-    return AssessmentQuestionOut(id=q["id"], index=index + 1, total=len(questions), question=q["question"], options=q["options"], seconds_allowed=posting.assessment_seconds_per_question or 60)
+    seconds_allowed = posting.assessment_seconds_per_question or 60
+    if session.current_question_started_at:
+        elapsed = (datetime.now(timezone.utc) - session.current_question_started_at).total_seconds()
+        seconds_remaining = max(0, int(seconds_allowed - elapsed))
+    else:
+        seconds_remaining = seconds_allowed
+    return AssessmentQuestionOut(id=q["id"], index=index + 1, total=len(questions), question=q["question"], options=q["options"], seconds_allowed=seconds_allowed, seconds_remaining=seconds_remaining)
 
 
 def _finalize(session: InterviewSession, posting: InterviewPosting, transcript: list, db: Session):
@@ -136,7 +142,20 @@ def get_posting_info(slug: str, db: Session = Depends(get_db)):
         "is_active": posting.is_active,
         "mode": posting.mode or "chatbot",
         "assessment_seconds_per_question": posting.assessment_seconds_per_question or 60,
+        "assessment_question_count": len(json.loads(posting.assessment_questions or "[]")),
     }
+
+
+# ── GET /interview/public/{slug}/{session_id} — session recovery, no duplicate session created ──
+@router.get("/{slug}/{session_id}", response_model=InterviewSessionStateResponse)
+def get_session_state(slug: str, session_id: str, db: Session = Depends(get_db)):
+    posting = _get_active_posting(slug, db)
+    session = _get_session(posting, session_id, db)
+    return InterviewSessionStateResponse(
+        session_id=str(session.id), status=session.status, stage=session.stage,
+        awaiting_cv=session.awaiting_cv or False, transcript=json.loads(session.transcript or "[]"),
+        turn_count=session.turn_count or 0, assessment_current_index=session.assessment_current_index or 0,
+    )
 
 
 # ── POST /interview/public/{slug}/start — candidate enters name+email ───
@@ -176,6 +195,7 @@ def start_interview(slug: str, payload: InterviewStartRequest, request: Request,
     # mode == "mcq" — skip straight to the assessment stage.
     session.stage = "assessment"
     session.assessment_started_at = datetime.now(timezone.utc)
+    session.current_question_started_at = datetime.now(timezone.utc)
     db.add(session)
     db.commit()
     db.refresh(session)
@@ -421,7 +441,7 @@ def get_current_assessment_question(slug: str, session_id: str, db: Session = De
     if session.stage != "assessment" or session.status == "completed":
         raise HTTPException(status_code=400, detail="The assessment isn't active for this session.")
 
-    q = _assessment_question_out(posting, session.assessment_current_index or 0)
+    q = _assessment_question_out(posting, session, session.assessment_current_index or 0)
     if not q:
         raise HTTPException(status_code=400, detail="No more questions.")
     return q
@@ -449,17 +469,27 @@ def answer_assessment_question(
     if not allowed:
         raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s.")
 
-    current_q = _assessment_question_out(posting, session.assessment_current_index or 0)
+    current_q = _assessment_question_out(posting, session, session.assessment_current_index or 0)
     if not current_q or current_q.id != payload.question_id:
         raise HTTPException(status_code=400, detail="This isn't the current question — refresh and try again.")
 
+    # Server-authoritative timeout — a manipulated client clock/timer can't
+    # buy extra time. A small grace window absorbs normal network latency.
+    GRACE_SECONDS = 2
+    selected_index = payload.selected_index
+    if session.current_question_started_at:
+        elapsed = (datetime.now(timezone.utc) - session.current_question_started_at).total_seconds()
+        if elapsed > (posting.assessment_seconds_per_question or 60) + GRACE_SECONDS:
+            selected_index = -1
+
     answers = json.loads(session.assessment_answers or "[]")
-    answers.append({"question_id": payload.question_id, "selected_index": payload.selected_index})
+    answers.append({"question_id": payload.question_id, "selected_index": selected_index})
     session.assessment_answers = json.dumps(answers)
     session.assessment_current_index = (session.assessment_current_index or 0) + 1
+    session.current_question_started_at = datetime.now(timezone.utc)
     db.commit()
 
-    next_q = _assessment_question_out(posting, session.assessment_current_index)
+    next_q = _assessment_question_out(posting, session, session.assessment_current_index)
     if next_q is None:
         return _finish_assessment_and_advance(session, posting, db)
 
