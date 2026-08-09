@@ -2,6 +2,7 @@ import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from models.database import get_db
@@ -14,7 +15,7 @@ from schemas.practice import (
     PracticeAssessmentAnswerRequest, PracticeAssessmentAnswerResponse,
     PracticeTranscribeResponse, PracticeReportResponse, PracticeHistoryItem,
 )
-from core.interviewer import get_next_turn, generate_report
+from core.interviewer import get_next_turn, stream_next_turn, generate_report
 from core.assessment import generate_assessment_questions, score_assessment, MIN_QUESTIONS, MAX_QUESTIONS
 from core.voice import transcribe_audio
 
@@ -156,6 +157,65 @@ def send_practice_message(session_id: str, payload: PracticeMessageRequest, db: 
 
     db.commit()
     return PracticeTurnResponse(message=turn["message"], action=turn["action"], stage=session.stage, turn_count=session.turn_count)
+
+
+@router.post("/sessions/{session_id}/message/stream")
+def send_practice_message_stream(session_id: str, payload: PracticeMessageRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """
+    SSE variant of /message — same validation and same DB writes, but the
+    interviewer's reply is genuinely streamed token-by-token from Groq as
+    it's generated, instead of being returned as one blob after the fact.
+    Event format (one JSON object per `data:` line):
+        {"type":"delta","text":"..."}   — zero or more
+        {"type":"done","action":"continue"|"conclude","stage":"...","turn_count":N}  — exactly once, last
+        {"type":"error","detail":"..."} — only on failure, ends the stream
+    """
+    session = _get_owned_session(session_id, user, db)
+    if session.mode == "mcq":
+        raise HTTPException(status_code=409, detail="This session is an MCQ assessment — use the assessment/answer endpoint.")
+    if session.status != "in_progress" or session.stage != "interview":
+        raise HTTPException(status_code=409, detail="This session isn't accepting messages right now.")
+    if not payload.message.strip():
+        raise HTTPException(status_code=400, detail="Message can't be empty.")
+
+    transcript = json.loads(session.transcript or "[]")
+    transcript.append({"role": "candidate", "content": payload.message.strip()})
+    session.turn_count += 1
+    skills = json.loads(session.skills_focus or "[]")
+    min_turns, max_turns = _turns_for_length(session.length_minutes)
+    jd = _synth_job_description(session)
+
+    def event_stream():
+        full_message = ""
+        action = "continue"
+        try:
+            for event in stream_next_turn(session.interviewer_name, jd, skills, transcript, session.turn_count, min_turns=min_turns, max_turns=max_turns):
+                if event["type"] == "delta":
+                    yield f"data: {json.dumps({'type': 'delta', 'text': event['text']})}\n\n"
+                else:
+                    full_message = event["message"]
+                    action = event["action"]
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'detail': str(e)})}\n\n"
+            return
+
+        transcript.append({"role": "assistant", "content": full_message})
+        session.transcript = json.dumps(transcript)
+
+        if action == "conclude":
+            report = generate_report(session.interviewer_name, jd, skills, transcript, cv_text=session.resume_text)
+            session.ai_score = report.get("candidate_score")
+            session.final_verdict = report.get("final_verdict")
+            session.experience_assessment = report.get("experience_assessment")
+            session.deep_analysis = report.get("deep_analysis")
+            session.stage = "done"
+            session.status = "completed"
+            session.completed_at = datetime.now(timezone.utc)
+
+        db.commit()
+        yield f"data: {json.dumps({'type': 'done', 'action': action, 'stage': session.stage, 'turn_count': session.turn_count})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 @router.post("/sessions/{session_id}/assessment/answer", response_model=PracticeAssessmentAnswerResponse)
