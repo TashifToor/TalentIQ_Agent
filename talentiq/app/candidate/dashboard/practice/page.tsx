@@ -1,37 +1,55 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import ModeSelectionScreen from '@/components/modules/interview-engine/ModeSelectionScreen'
-import { InterviewMode } from '@/components/modules/interview-engine/modeData'
+import ReadinessScreen from '@/components/modules/interview-engine/ReadinessScreen'
+import { getModeDefinition, InterviewMode } from '@/components/modules/interview-engine/modeData'
 import PracticeConfigForm, { PracticeConfigValues } from '@/components/modules/practice/PracticeConfigForm'
 import PracticeChatInterface from '@/components/modules/practice/PracticeChatInterface'
 import PracticeAssessmentInterface from '@/components/modules/practice/PracticeAssessmentInterface'
 import PracticeVoiceInterface from '@/components/modules/practice/PracticeVoiceInterface'
 import RealtimeVoiceInterface from '@/components/modules/voice-engine/RealtimeVoiceInterface'
 import AIFeedbackReport from '@/components/modules/reports/AIFeedbackReport'
-import { AnimatedButton, GlassCard } from '@/components/shared/primitives'
+import { AnimatedButton, GlassCard, LoadingSkeleton } from '@/components/shared/primitives'
 import { api } from '@/lib/api'
 
-type Step = 'select' | 'configure' | 'session' | 'report'
+type Step = 'select' | 'configure' | 'readiness' | 'session' | 'processing' | 'report'
+
+const EVALUATION_AREAS: Record<InterviewMode, string[]> = {
+  chatbot: ['Communication clarity', 'Technical depth', 'Real project experience'],
+  mcq: ['Accuracy across categories', 'Speed under time pressure'],
+  voice_agent: ['Spoken communication', 'Technical reasoning', 'Real project experience'],
+}
 
 export default function InterviewPracticePage() {
   const [step, setStep] = useState<Step>('select')
   const [mode, setMode] = useState<InterviewMode | null>(null)
-  const [session, setSession] = useState<any>(null)   // PracticeSessionStateResponse
-  const [report, setReport] = useState<any>(null)      // PracticeReportResponse
+  const [pendingConfig, setPendingConfig] = useState<PracticeConfigValues | null>(null)
+  const [session, setSession] = useState<any>(null)
+  const [report, setReport] = useState<any>(null)
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState('')
-  const [reportLoading, setReportLoading] = useState(false)
+  const [processingAttempts, setProcessingAttempts] = useState(0)
   const [useRealtimeVoice, setUseRealtimeVoice] = useState(true)
+  const [resumable, setResumable] = useState<any>(null)
+
+  useEffect(() => {
+    api.getPracticeHistory().then((items: any[]) => {
+      const inProgress = items?.find(i => i.status === 'in_progress')
+      if (inProgress) setResumable(inProgress)
+    }).catch(() => {})
+  }, [])
 
   const chooseMode = (m: InterviewMode) => { setMode(m); setStep('configure') }
 
-  const startSession = async (values: PracticeConfigValues) => {
-    if (!mode) return
+  const collectConfig = (values: PracticeConfigValues) => { setPendingConfig(values); setStep('readiness') }
+
+  const confirmStart = async () => {
+    if (!mode || !pendingConfig) return
     setStarting(true)
     setStartError('')
     try {
-      const s = await api.createPracticeSession({ mode, ...values })
+      const s = await api.createPracticeSession({ mode, ...pendingConfig })
       setSession(s)
       setStep('session')
     } catch (err: any) {
@@ -41,23 +59,55 @@ export default function InterviewPracticePage() {
     }
   }
 
-  const handleComplete = async () => {
-    if (!session) return
-    setReportLoading(true)
+  const resumeSession = async (sessionId: string) => {
     try {
-      const r = await api.getPracticeReport(session.id)
-      setReport(r)
-      setStep('report')
+      const s = await api.getPracticeSession(sessionId)
+      setSession(s)
+      setMode(s.mode)
+      setStep('session')
     } catch {
-      // Session did complete server-side even if the report fetch hiccups —
-      // let them retry from here rather than losing the finished session.
-      setStep('report')
-    } finally {
-      setReportLoading(false)
+      setResumable(null)
     }
   }
 
-  const startOver = () => { setStep('select'); setMode(null); setSession(null); setReport(null); setStartError('') }
+  const fetchReport = async (): Promise<boolean> => {
+    if (!session) return false
+    try {
+      const r = await api.getPracticeReport(session.id)
+      // A report is genuinely ready once the model has actually written something —
+      // an empty shell (no score, no analysis) means finalize hasn't landed yet.
+      const hasContent = r.ai_score != null || r.assessment_score != null || r.deep_analysis || r.experience_assessment
+      if (r.status === 'completed' && hasContent) {
+        setReport(r)
+        setStep('report')
+        return true
+      }
+      return false
+    } catch {
+      return false
+    }
+  }
+
+  const handleComplete = async () => {
+    setStep('processing')
+    setProcessingAttempts(0)
+    const ready = await fetchReport()
+    if (!ready) setProcessingAttempts(1)
+  }
+
+  useEffect(() => {
+    if (step !== 'processing' || processingAttempts === 0 || processingAttempts > 6) return
+    const t = setTimeout(async () => {
+      const ready = await fetchReport()
+      if (!ready) setProcessingAttempts(a => a + 1)
+    }, 1500)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processingAttempts, step])
+
+  const startOver = () => {
+    setStep('select'); setMode(null); setPendingConfig(null); setSession(null); setReport(null); setStartError(''); setProcessingAttempts(0)
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.88)' }}>
@@ -71,17 +121,39 @@ export default function InterviewPracticePage() {
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px' }}>
         {step === 'select' && (
-          <ModeSelectionScreen
-            eyebrow="AI Career Coach"
-            heading="Practice Your Interview Skills"
-            subheading="Same AI engines recruiters use — practice risk-free before the real thing."
-            ctaLabel="Start Practice →"
-            onSelect={chooseMode}
-          />
+          <>
+            {resumable && (
+              <GlassCard style={{ maxWidth: 560, margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Resume your {getModeDefinition(resumable.mode).title.toLowerCase()}?</div>
+                  <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>{resumable.target_role} — in progress</div>
+                </div>
+                <AnimatedButton onClick={() => resumeSession(resumable.id)}>Resume →</AnimatedButton>
+              </GlassCard>
+            )}
+            <ModeSelectionScreen
+              eyebrow="AI Career Coach"
+              heading="Practice Your Interview Skills"
+              subheading="Same AI engines recruiters use — practice risk-free before the real thing."
+              ctaLabel="Start Practice →"
+              onSelect={chooseMode}
+            />
+          </>
         )}
 
         {step === 'configure' && mode && (
-          <PracticeConfigForm mode={mode} onStart={startSession} starting={starting} error={startError} onBack={() => setStep('select')} />
+          <PracticeConfigForm mode={mode} onStart={collectConfig} starting={false} error="" onBack={() => setStep('select')} />
+        )}
+
+        {step === 'readiness' && mode && pendingConfig && (
+          <ReadinessScreen
+            mode={mode}
+            title={pendingConfig.target_role}
+            evaluationAreas={EVALUATION_AREAS[mode]}
+            onStart={confirmStart}
+            starting={starting}
+            startError={startError}
+          />
         )}
 
         {step === 'session' && session && mode === 'chatbot' && (
@@ -104,8 +176,22 @@ export default function InterviewPracticePage() {
           <PracticeVoiceInterface sessionId={session.id} initialTranscript={session.transcript} interviewerName={session.interviewer_name} onComplete={handleComplete} />
         )}
 
-        {step === 'session' && reportLoading && (
-          <div style={{ textAlign: 'center', marginTop: 20, fontSize: 12.5, color: 'rgba(255,255,255,.35)' }}>Wrapping up your session...</div>
+        {step === 'processing' && (
+          <div className="scale-in" style={{ maxWidth: 420, margin: '60px auto 0', textAlign: 'center' }}>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Interview submitted</div>
+            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.4)', marginBottom: 20 }}>
+              {processingAttempts > 6 ? 'Taking longer than usual — you can check back from your history.' : 'Your report is being prepared...'}
+            </div>
+            {processingAttempts <= 6 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 280, margin: '0 auto' }}>
+                <LoadingSkeleton height={12} /><LoadingSkeleton height={12} width="80%" /><LoadingSkeleton height={12} width="60%" />
+              </div>
+            ) : (
+              <Link href="/candidate/dashboard/practice/history">
+                <AnimatedButton>Go to Practice History →</AnimatedButton>
+              </Link>
+            )}
+          </div>
         )}
 
         {step === 'report' && report && (
