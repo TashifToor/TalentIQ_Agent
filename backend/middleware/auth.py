@@ -24,22 +24,28 @@ async def create_access_token(user_id:int)->str:
     }
     return jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
 
+def decode_user_token(token: str, db: Session) -> User:
+    """Shared JWT decode + user lookup — used by get_current_user (REST, header-based)
+    and by WebSocket endpoints (which auth via a first `{"type":"auth"}` message instead,
+    since browsers cannot set Authorization headers on a WS handshake)."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="invalid Token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token expired or invalid")
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
 async def get_current_user(
     credentials:HTTPAuthorizationCredentials=Depends(Security),
     db:Session=Depends(get_db),
                      )->User:
-    token=credentials.credentials
-    try:
-        payload=jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
-        user_id=payload.get("user_id")
-        if not user_id:
-            raise HTTPException(status_code=401,detail="invalid Token")
-    except JWTError:
-        raise HTTPException(status_code=401,detail="Token expired or invalid")
-    user=db.query(User).filter(User.id==user_id).first()
-    if not user:
-        raise HTTPException(status_code=401,detail="User not found")
-    return user
+    return decode_user_token(credentials.credentials, db)
 
 
 async def get_current_user_optional(
