@@ -4,7 +4,7 @@ import tempfile
 import shutil
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status, WebSocket
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,7 @@ from models.database import get_db
 from models.interview import InterviewPosting, InterviewSession
 from models.user import User
 from core.interviewer import get_next_turn, stream_next_turn, generate_report, cv_request_message
+from core.voice_session import VoiceSession
 from core.assessment import score_assessment
 from core.voice import transcribe_audio
 from core.redis_client import check_rate_limit
@@ -254,6 +255,70 @@ def send_message_stream(
             yield f"data: {json.dumps({'type': 'done', 'message': full_message, 'status': 'in_progress', 'turn_count': session.turn_count, 'awaiting_cv': False})}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@router.websocket("/{slug}/{session_id}/voice/ws")
+async def public_interview_voice_ws(websocket: WebSocket, slug: str, session_id: str, db: Session = Depends(get_db)):
+    """
+    Real-time voice for recruiter-created public interviews. Security model
+    matches the REST endpoints exactly: the slug + session_id (both
+    unguessable UUIDs) are the credential — candidates here have no user
+    accounts to JWT-authenticate. The client still opens with
+    {"type":"auth"} for wire-protocol symmetry with the practice WS, but
+    it's a handshake ack, not a token check.
+    Falls back to the existing REST /message + /transcribe endpoints if
+    this connection can't be established; those are untouched.
+
+    Note: on conclude, this does NOT call generate_report() directly —
+    exactly like the REST/SSE flow, it sets awaiting_cv=True so the
+    existing CV-upload/skip endpoints (unchanged) run the real
+    finalize/scoring step, same as every other interview mode today.
+    """
+    await websocket.accept()
+    try:
+        first = json.loads(await websocket.receive_text())
+        if first.get("type") != "auth":
+            await websocket.close(code=4400)
+            return
+    except Exception:
+        await websocket.close(code=4400)
+        return
+
+    try:
+        posting = _get_active_posting(slug, db)
+        session = _get_session(posting, session_id, db)
+    except HTTPException as e:
+        await websocket.send_text(json.dumps({"type": "error", "detail": e.detail}))
+        await websocket.close(code=4404)
+        return
+
+    if session.status == "completed" or session.awaiting_cv or session.stage != "interview":
+        await websocket.send_text(json.dumps({"type": "error", "detail": "This interview isn't in a live voice-answerable state right now."}))
+        await websocket.close(code=4409)
+        return
+
+    extra_questions = json.loads(posting.extra_questions or "[]")
+    interviewer_name = posting.interviewer_name or "Kelly"
+
+    async def on_turn(transcript: list, turn_count: int):
+        session.transcript = json.dumps(transcript)
+        session.turn_count = turn_count
+        db.commit()
+
+    async def on_conclude(transcript: list):
+        cv_msg = cv_request_message(interviewer_name)
+        transcript.append({"role": "assistant", "content": cv_msg})
+        session.transcript = json.dumps(transcript)
+        session.awaiting_cv = True
+        db.commit()
+        return None  # not finalized yet — candidate still needs to upload/skip CV via the existing REST step
+
+    voice_session = VoiceSession(
+        websocket, interviewer_name=interviewer_name, job_description=posting.job_description,
+        extra_questions=extra_questions, transcript=json.loads(session.transcript or "[]"), turn_count=session.turn_count or 0,
+        min_turns=6, max_turns=12, on_turn=on_turn, on_conclude=on_conclude,
+    )
+    await voice_session.run()
 
 
 # ── POST /interview/public/{slug}/{session_id}/message — candidate answers (interview stage) ──
