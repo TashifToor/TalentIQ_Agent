@@ -23,6 +23,7 @@ from schemas.interview import (
     InterviewMessageRequest, InterviewMessageResponse,
     AssessmentQuestionOut, AssessmentAnswerRequest, AssessmentAnswerResponse, AssessmentFlagRequest,
     TerminateResponse, VoiceTranscribeResponse,
+    InterviewSessionStateResponse,
 )
 
 router = APIRouter(prefix="/interview/public", tags=["AI Interviewer — Public"])
