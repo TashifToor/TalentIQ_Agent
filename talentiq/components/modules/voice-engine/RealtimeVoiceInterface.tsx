@@ -1,269 +1,116 @@
 'use client'
-import { ClientControlMsg, ServerControlMsg } from './wsProtocol'
-import { VoiceState } from './stateMachine'
+import { useEffect, useRef, useState } from 'react'
+import { GlassCard, GradientBadge } from '@/components/shared/primitives'
+import { VoiceState, VOICE_STATE_LABEL } from './stateMachine'
+import { RealtimeVoiceClient } from './realtimeClient'
+import { API_BASE_URL } from '@/lib/api'
 
-const SAMPLE_RATE = 16000
-const MAX_RECONNECT_ATTEMPTS = 3
-const BARGE_IN_AMPLITUDE_THRESHOLD = 0.045   // tune against real mics/rooms — deliberately conservative to avoid false triggers
-const BARGE_IN_SUSTAIN_MS = 220              // amplitude must stay above threshold this long before we call it real speech, not a cough/click
-
-export interface RealtimeVoiceCallbacks {
-  onState: (state: VoiceState) => void
-  onTranscriptPartial: (text: string) => void
-  onTranscriptFinal: (text: string) => void
-  onAiTextDelta: (text: string) => void
-  onAiQuestion: (text: string) => void
+export interface RealtimeVoiceInterfaceProps {
+  wsPath: string          // e.g. `/practice/sessions/${id}/voice/ws` or `/interview/public/${slug}/${sessionId}/voice/ws`
+  authToken: string | null // JWT for practice sessions; null for anonymous public-interview candidates
+  initialQuestion?: string
   onCompleted: (reportReady: boolean) => void
-  onError: (detail: string) => void
-  /** Fired when the connection can't be established/maintained after retries — caller should fall back to push-to-talk. */
-  onFallback: () => void
+  onFallback: () => void  // parent should swap in the existing push-to-talk component
 }
 
-/**
- * NOT using browser speechSynthesis on this path — audio comes from the
- * server (Cartesia) as raw PCM16 frames and is played via Web Audio API,
- * which is what makes instant playback cancellation (barge-in) possible.
- */
-export class RealtimeVoiceClient {
-  private ws: WebSocket | null = null
-  private micStream: MediaStream | null = null
-  private audioCtx: AudioContext | null = null
-  private micProcessor: ScriptProcessorNode | null = null
-  private micSource: MediaStreamAudioSourceNode | null = null
-  private analyser: AnalyserNode | null = null
-  private analyserData: Uint8Array<ArrayBuffer> | null = null
-  private bargeInRafId: number | null = null
-  private bargeInAboveSince: number | null = null
+const STATE_TONE: Record<VoiceState, 'gold' | 'purple' | 'teal' | 'neutral'> = {
+  ai_speaking: 'gold',
+  listening: 'neutral',
+  candidate_speaking: 'purple',
+  thinking: 'neutral',
+  reconnecting: 'neutral',
+  completed: 'teal',
+}
 
-  private playCtx: AudioContext | null = null
-  private playQueue: AudioBufferSourceNode[] = []
-  private nextPlayTime = 0
+export default function RealtimeVoiceInterface({ wsPath, authToken, initialQuestion, onCompleted, onFallback }: RealtimeVoiceInterfaceProps) {
+  const [voiceState, setVoiceState] = useState<VoiceState>('ai_speaking')
+  const [currentQuestion, setCurrentQuestion] = useState(initialQuestion || '')
+  const [partialAnswer, setPartialAnswer] = useState('')
+  const [finalAnswers, setFinalAnswers] = useState<string[]>([])
+  const [error, setError] = useState('')
+  const clientRef = useRef<RealtimeVoiceClient | null>(null)
 
-  private reconnectAttempts = 0
-  private closedByCaller = false
-  private currentState: VoiceState = 'listening'
+  useEffect(() => {
+    const proto = API_BASE_URL.startsWith('https') ? 'wss' : 'ws'
+    const wsUrl = `${proto}://${API_BASE_URL.replace(/^https?:\/\//, '')}${wsPath}`
 
-  constructor(private wsUrl: string, private token: string | null, private cb: RealtimeVoiceCallbacks) {}
+    const client = new RealtimeVoiceClient(wsUrl, authToken, {
+      onState: setVoiceState,
+      onTranscriptPartial: text => setPartialAnswer(text),
+      onTranscriptFinal: text => { setFinalAnswers(a => [...a, text]); setPartialAnswer('') },
+      onAiTextDelta: () => {},
+      onAiQuestion: text => setCurrentQuestion(text),
+      onCompleted: reportReady => onCompleted(reportReady),
+      onError: detail => setError(detail),
+      onFallback: () => onFallback(),
+    })
+    clientRef.current = client
+    client.connect()
 
-  async connect(): Promise<void> {
-    this.closedByCaller = false
-    try {
-      this.micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, sampleRate: SAMPLE_RATE } })
-    } catch {
-      this.cb.onError('Microphone permission denied.')
-      this.cb.onFallback()
-      return
-    }
-    this._openSocket()
-  }
+    return () => client.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wsPath])
 
-  private _openSocket() {
-    this.ws = new WebSocket(this.wsUrl)
-    this.ws.binaryType = 'arraybuffer'
+  const isAiSpeaking = voiceState === 'ai_speaking'
+  const isCandidateSpeaking = voiceState === 'candidate_speaking'
+  const isThinking = voiceState === 'thinking'
+  const isReconnecting = voiceState === 'reconnecting'
 
-    this.ws.onopen = () => {
-      this._send({ type: 'auth', token: this.token })
-    }
+  return (
+    <div style={{ maxWidth: 620, margin: '0 auto' }}>
+      <div style={{ textAlign: 'center', marginBottom: 14, display: 'flex', justifyContent: 'center', gap: 8 }}>
+        <GradientBadge label="Real-time voice" tone="purple" icon="⚡" />
+        <GradientBadge label={VOICE_STATE_LABEL[voiceState]} tone={STATE_TONE[voiceState]} />
+      </div>
 
-    this.ws.onmessage = (evt) => {
-      if (evt.data instanceof ArrayBuffer) {
-        this._playAudioChunk(evt.data)
-        return
-      }
-      let msg: ServerControlMsg
-      try { msg = JSON.parse(evt.data) } catch { return }
-      this._handleServerMessage(msg)
-    }
+      {/* Primary surface: AI question → candidate answer. Not a transcript log. */}
+      <GlassCard style={{ marginBottom: 16, minHeight: 180 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: currentQuestion ? 18 : 0 }}>
+          <div className={isAiSpeaking ? 'voice-pulse' : ''} style={{
+            width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 15,
+            background: 'linear-gradient(135deg,#7c3aed,#a78bfa)',
+          }}>🎙</div>
+          <div style={{ fontSize: 14.5, lineHeight: 1.6, color: '#fff', fontWeight: 600, paddingTop: 4 }}>
+            {currentQuestion || 'Connecting...'}
+          </div>
+        </div>
 
-    this.ws.onclose = () => {
-      if (this.closedByCaller) return
-      this._attemptReconnect()
-    }
+        {(isCandidateSpeaking || isThinking || partialAnswer) && (
+          <div className="scale-in" style={{ borderTop: '1px solid rgba(255,255,255,.06)', paddingTop: 14, display: 'flex', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 13, background: 'rgba(226,176,74,.15)' }}>🗣</div>
+            <div style={{ fontSize: 13.5, lineHeight: 1.6, color: partialAnswer ? 'rgba(255,255,255,.7)' : 'rgba(255,255,255,.3)', paddingTop: 5, fontStyle: partialAnswer ? 'normal' : 'italic' }}>
+              {partialAnswer || (isThinking ? 'Thinking through your answer...' : 'Listening...')}
+            </div>
+          </div>
+        )}
+      </GlassCard>
 
-    this.ws.onerror = () => {
-      // onclose fires right after — reconnect handled there
-    }
-  }
+      <div style={{ textAlign: 'center', marginBottom: 10 }}>
+        <div className={isCandidateSpeaking ? 'voice-pulse' : ''} style={{
+          width: 56, height: 56, borderRadius: '50%', margin: '0 auto', display: 'grid', placeItems: 'center',
+          background: isCandidateSpeaking ? 'linear-gradient(135deg,#a78bfa,#7c3aed)' : isAiSpeaking ? 'linear-gradient(135deg,#e2b04a,#c5931f)' : 'rgba(255,255,255,.06)',
+        }}>
+          <span style={{ fontSize: 22 }}>{isReconnecting ? '⏳' : isAiSpeaking ? '🔊' : isCandidateSpeaking ? '🎙' : isThinking ? '🧠' : '👂'}</span>
+        </div>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)', marginTop: 8 }}>
+          {isAiSpeaking && 'Speak anytime to interrupt'}
+          {isCandidateSpeaking && 'Listening — pause when done'}
+          {voiceState === 'listening' && 'Waiting for you to speak'}
+          {isThinking && 'Processing your answer'}
+          {isReconnecting && 'Reconnecting...'}
+        </div>
+      </div>
 
-  private _attemptReconnect() {
-    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      this.cb.onError('Lost connection to the voice engine.')
-      this.cb.onFallback()
-      return
-    }
-    this.reconnectAttempts++
-    this._setState('reconnecting')
-    const delay = 600 * this.reconnectAttempts
-    setTimeout(() => { if (!this.closedByCaller) this._openSocket() }, delay)
-  }
+      {finalAnswers.length > 0 && (
+        <details style={{ marginTop: 12 }}>
+          <summary style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', cursor: 'pointer' }}>Transcript so far ({finalAnswers.length} answers)</summary>
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {finalAnswers.map((a, i) => <div key={i} style={{ fontSize: 11.5, color: 'rgba(255,255,255,.4)' }}>{i + 1}. {a}</div>)}
+          </div>
+        </details>
+      )}
 
-  private _handleServerMessage(msg: ServerControlMsg) {
-    switch (msg.type) {
-      case 'authenticated':
-        this.reconnectAttempts = 0
-        this._startMicStreaming()
-        break
-      case 'state':
-        this._setState(msg.state)
-        break
-      case 'transcript_partial':
-        this.cb.onTranscriptPartial(msg.text)
-        break
-      case 'transcript_final':
-        this.cb.onTranscriptFinal(msg.text)
-        break
-      case 'ai_text_delta':
-        this.cb.onAiTextDelta(msg.text)
-        break
-      case 'ai_question':
-        this.cb.onAiQuestion(msg.text)
-        break
-      case 'completed':
-        this.cb.onCompleted(msg.report_ready)
-        this.disconnect()
-        break
-      case 'error':
-        this.cb.onError(msg.detail)
-        break
-    }
-  }
-
-  private _setState(state: VoiceState) {
-    this.currentState = state
-    this.cb.onState(state)
-    if (state === 'ai_speaking') this._armBargeInDetection()
-    else this._disarmBargeInDetection()
-  }
-
-  // ── mic capture → binary WS frames ──────────────────────────
-
-  private _startMicStreaming() {
-    if (!this.micStream) return
-    this.audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE })
-    this.micSource = this.audioCtx.createMediaStreamSource(this.micStream)
-
-    // ScriptProcessorNode is deprecated but universally supported and needs
-    // no separately-served worklet file — pragmatic choice here; migrating
-    // to AudioWorkletNode is the natural next step for main-thread perf.
-    this.micProcessor = this.audioCtx.createScriptProcessor(4096, 1, 1)
-    this.micProcessor.onaudioprocess = (e) => {
-      const float32 = e.inputBuffer.getChannelData(0)
-      const pcm16 = new Int16Array(float32.length)
-      for (let i = 0; i < float32.length; i++) {
-        const s = Math.max(-1, Math.min(1, float32[i]))
-        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff
-      }
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        this.ws.send(pcm16.buffer)
-      }
-    }
-    this.micSource.connect(this.micProcessor)
-    this.micProcessor.connect(this.audioCtx.destination) // required by some browsers to keep the node alive; output is not audible (mic passthrough would be, but we don't route to speakers)
-
-    // Separate analyser tap for barge-in amplitude detection
-    this.analyser = this.audioCtx.createAnalyser()
-    this.analyser.fftSize = 512
-    this.analyserData = new Uint8Array(this.analyser.frequencyBinCount)
-    this.micSource.connect(this.analyser)
-  }
-
-  // ── barge-in: watch mic amplitude while AI is speaking ──────
-
-  private _armBargeInDetection() {
-    if (this.bargeInRafId != null || !this.analyser || !this.analyserData) return
-    this.bargeInAboveSince = null
-    const tick = () => {
-      if (this.currentState !== 'ai_speaking' || !this.analyser || !this.analyserData) {
-        this.bargeInRafId = null
-        return
-      }
-      this.analyser.getByteTimeDomainData(this.analyserData)
-      let sumSquares = 0
-      for (let i = 0; i < this.analyserData.length; i++) {
-        const v = (this.analyserData[i] - 128) / 128
-        sumSquares += v * v
-      }
-      const rms = Math.sqrt(sumSquares / this.analyserData.length)
-
-      if (rms > BARGE_IN_AMPLITUDE_THRESHOLD) {
-        if (this.bargeInAboveSince == null) this.bargeInAboveSince = performance.now()
-        else if (performance.now() - this.bargeInAboveSince > BARGE_IN_SUSTAIN_MS) {
-          this._triggerBargeIn()
-          return
-        }
-      } else {
-        this.bargeInAboveSince = null
-      }
-      this.bargeInRafId = requestAnimationFrame(tick)
-    }
-    this.bargeInRafId = requestAnimationFrame(tick)
-  }
-
-  private _disarmBargeInDetection() {
-    if (this.bargeInRafId != null) {
-      cancelAnimationFrame(this.bargeInRafId)
-      this.bargeInRafId = null
-    }
-    this.bargeInAboveSince = null
-  }
-
-  private _triggerBargeIn() {
-    this._stopPlaybackImmediately()
-    this._send({ type: 'barge_in' })
-    this._disarmBargeInDetection()
-  }
-
-  // ── playback (Web Audio API, not speechSynthesis) ───────────
-
-  private _playAudioChunk(buf: ArrayBuffer) {
-    if (!this.playCtx) {
-      this.playCtx = new AudioContext({ sampleRate: SAMPLE_RATE })
-      this.nextPlayTime = this.playCtx.currentTime
-    }
-    const pcm16 = new Int16Array(buf)
-    const float32 = new Float32Array(pcm16.length)
-    for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / (pcm16[i] < 0 ? 0x8000 : 0x7fff)
-
-    const audioBuffer = this.playCtx.createBuffer(1, float32.length, SAMPLE_RATE)
-    audioBuffer.copyToChannel(float32, 0)
-
-    const source = this.playCtx.createBufferSource()
-    source.buffer = audioBuffer
-    source.connect(this.playCtx.destination)
-
-    const startAt = Math.max(this.nextPlayTime, this.playCtx.currentTime)
-    source.start(startAt)
-    this.nextPlayTime = startAt + audioBuffer.duration
-    this.playQueue.push(source)
-    source.onended = () => { this.playQueue = this.playQueue.filter(s => s !== source) }
-  }
-
-  private _stopPlaybackImmediately() {
-    for (const source of this.playQueue) {
-      try { source.stop() } catch { /* already stopped */ }
-    }
-    this.playQueue = []
-    if (this.playCtx) this.nextPlayTime = this.playCtx.currentTime
-  }
-
-  // ── lifecycle ────────────────────────────────────────────────
-
-  private _send(msg: ClientControlMsg) {
-    if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(msg))
-  }
-
-  disconnect() {
-    this.closedByCaller = true
-    this._disarmBargeInDetection()
-    this._stopPlaybackImmediately()
-    try { this._send({ type: 'stop' }) } catch { /* noop */ }
-    this.ws?.close()
-    this.ws = null
-    this.micProcessor?.disconnect()
-    this.micSource?.disconnect()
-    this.analyser?.disconnect()
-    this.audioCtx?.close().catch(() => {})
-    this.playCtx?.close().catch(() => {})
-    this.micStream?.getTracks().forEach(t => t.stop())
-  }
+      {error && <div style={{ fontSize: 12, color: '#ef4444', textAlign: 'center', marginTop: 12 }}>{error}</div>}
+    </div>
+  )
 }
