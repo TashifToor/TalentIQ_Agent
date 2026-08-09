@@ -1,37 +1,42 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useReducer, useRef, useEffect, useState } from 'react'
 import { GlassCard, GradientBadge, AnimatedButton } from '@/components/shared/primitives'
+import { voiceReducer, VOICE_STATE_LABEL } from '@/components/modules/voice-engine/stateMachine'
+import { BrowserTtsProvider, BatchSttProvider } from '@/components/modules/voice-engine/providers'
 import { api } from '@/lib/api'
 
 interface Msg { role: 'assistant' | 'candidate'; content: string }
+
+const tts = new BrowserTtsProvider()
 
 export default function PracticeVoiceInterface({
   sessionId, initialTranscript, interviewerName, onComplete,
 }: { sessionId: string; initialTranscript: Msg[]; interviewerName: string; onComplete: () => void }) {
   const [transcript, setTranscript] = useState<Msg[]>(initialTranscript)
-  const [recording, setRecording] = useState(false)
-  const [processing, setProcessing] = useState(false)
+  const [voiceState, dispatch] = useReducer(voiceReducer, 'ai_speaking')
   const [error, setError] = useState('')
   const [typedFallback, setTypedFallback] = useState('')
   const [showTypeFallback, setShowTypeFallback] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
+  const stt = useRef(new BatchSttProvider(blob => api.transcribePracticeAudio(sessionId, blob)))
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [transcript])
 
-  const speak = (text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return
-    window.speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(text)
-    u.rate = 1
-    window.speechSynthesis.speak(u)
+  const speak = (text: string, onDone?: () => void) => {
+    const playback = tts.speak(text)
+    playback.onDone(() => onDone?.())
   }
 
   useEffect(() => {
-    // Speak the opening message once, on mount
+    // Speak the opening message once, on mount — matches initial voiceState 'ai_speaking'
     const last = initialTranscript[initialTranscript.length - 1]
-    if (last?.role === 'assistant') speak(last.content)
+    if (last?.role === 'assistant') {
+      speak(last.content, () => dispatch({ type: 'AI_FINISHED_SPEAKING' }))
+    } else {
+      dispatch({ type: 'AI_FINISHED_SPEAKING' })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -49,7 +54,7 @@ export default function PracticeVoiceInterface({
       }
       recorder.start()
       mediaRecorderRef.current = recorder
-      setRecording(true)
+      dispatch({ type: 'CANDIDATE_STARTED' })
     } catch {
       setError('Could not access your microphone — check permissions, or type your answer below instead.')
       setShowTypeFallback(true)
@@ -58,20 +63,23 @@ export default function PracticeVoiceInterface({
 
   const stopRecording = () => {
     mediaRecorderRef.current?.stop()
-    setRecording(false)
+    dispatch({ type: 'CANDIDATE_FINISHED' })
   }
 
   const handleRecordedAnswer = async (blob: Blob) => {
-    setProcessing(true)
     try {
-      const { text } = await api.transcribePracticeAudio(sessionId, blob)
-      if (!text?.trim()) { setError('Could not hear a clear answer — try again or type it instead.'); setShowTypeFallback(true); return }
+      const { text } = await stt.current.transcribe(blob)
+      if (!text?.trim()) {
+        setError('Could not hear a clear answer — try again or type it instead.')
+        setShowTypeFallback(true)
+        dispatch({ type: 'ERROR' })
+        return
+      }
       await submitAnswer(text.trim())
     } catch (err: any) {
       setError(err.message || 'Transcription failed — try again or type your answer.')
       setShowTypeFallback(true)
-    } finally {
-      setProcessing(false)
+      dispatch({ type: 'ERROR' })
     }
   }
 
@@ -80,10 +88,17 @@ export default function PracticeVoiceInterface({
     try {
       const res = await api.sendPracticeMessage(sessionId, text)
       setTranscript(t => [...t, { role: 'assistant', content: res.message }])
-      speak(res.message)
-      if (res.action === 'conclude') setTimeout(onComplete, 1200)
+      dispatch({ type: 'REPLY_READY' })
+      speak(res.message, () => {
+        dispatch({ type: 'AI_FINISHED_SPEAKING' })
+        if (res.action === 'conclude') {
+          dispatch({ type: 'INTERVIEW_CONCLUDED' })
+          setTimeout(onComplete, 600)
+        }
+      })
     } catch (err: any) {
       setError(err.message || 'Could not send your answer.')
+      dispatch({ type: 'ERROR' })
     }
   }
 
@@ -92,15 +107,19 @@ export default function PracticeVoiceInterface({
     if (!text) return
     setTypedFallback('')
     setShowTypeFallback(false)
-    setProcessing(true)
+    dispatch({ type: 'CANDIDATE_FINISHED' }) // typed answers still route through "thinking" while the reply is fetched
     await submitAnswer(text)
-    setProcessing(false)
   }
+
+  const recording = voiceState === 'candidate_speaking'
+  const processing = voiceState === 'thinking'
+  const aiSpeaking = voiceState === 'ai_speaking'
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', marginBottom: 8 }}>
+      <div style={{ textAlign: 'center', marginBottom: 8, display: 'flex', justifyContent: 'center', gap: 8 }}>
         <GradientBadge label="Push-to-talk — not real-time" tone="neutral" icon="ℹ" />
+        <GradientBadge label={VOICE_STATE_LABEL[voiceState]} tone={aiSpeaking ? 'gold' : recording ? 'purple' : 'neutral'} />
       </div>
 
       <GlassCard style={{ marginBottom: 16 }}>
@@ -122,17 +141,17 @@ export default function PracticeVoiceInterface({
       <div style={{ textAlign: 'center', marginBottom: 14 }}>
         <button
           onClick={recording ? stopRecording : startRecording}
-          disabled={processing}
+          disabled={processing || aiSpeaking}
           className={recording ? 'voice-pulse' : ''}
           style={{
-            width: 72, height: 72, borderRadius: '50%', border: 'none', cursor: processing ? 'default' : 'pointer',
+            width: 72, height: 72, borderRadius: '50%', border: 'none', cursor: (processing || aiSpeaking) ? 'default' : 'pointer',
             background: recording ? 'linear-gradient(135deg,#ef4444,#f87171)' : 'linear-gradient(135deg,#7c3aed,#a78bfa)',
-            display: 'grid', placeItems: 'center', opacity: processing ? .5 : 1,
+            display: 'grid', placeItems: 'center', opacity: (processing || aiSpeaking) ? .5 : 1,
           }}>
-          <span style={{ fontSize: 26 }}>{processing ? '⏳' : recording ? '⏹' : '🎙'}</span>
+          <span style={{ fontSize: 26 }}>{processing ? '⏳' : aiSpeaking ? '🔊' : recording ? '⏹' : '🎙'}</span>
         </button>
         <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.4)', marginTop: 10 }}>
-          {processing ? 'Transcribing...' : recording ? 'Recording — tap to stop' : 'Tap to record your answer'}
+          {VOICE_STATE_LABEL[voiceState]}
         </div>
       </div>
 
