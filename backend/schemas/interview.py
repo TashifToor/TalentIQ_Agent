@@ -98,6 +98,19 @@ class PublicPostingInfo(BaseModel):
     is_active: bool
     mode: InterviewMode
     assessment_seconds_per_question: int = 60
+    assessment_question_count: int = 0   # real, only meaningful for mode == "mcq"
+
+
+class InterviewSessionStateResponse(BaseModel):
+    """Recovery endpoint — lets a refreshed/reconnected client restore exactly
+    where it left off, without creating a duplicate session."""
+    session_id: str
+    status: str                # in_progress | completed
+    stage: str                 # interview | assessment | done
+    awaiting_cv: bool
+    transcript: List[dict] = []
+    turn_count: int = 0
+    assessment_current_index: int = 0
 
 
 class InterviewStartRequest(BaseModel):
@@ -135,6 +148,7 @@ class AssessmentQuestionOut(BaseModel):
     question: str
     options: List[str]
     seconds_allowed: int = 60
+    seconds_remaining: int = 60   # server-authoritative — computed from current_question_started_at, not client clock
 
 
 class AssessmentAnswerRequest(BaseModel):
