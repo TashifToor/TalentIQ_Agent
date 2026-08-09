@@ -310,6 +310,8 @@ export const api = {
   // --- AI Chatbot Interviewer — public candidate side (no login) ---
   getPublicInterviewPosting: (slug: string) => apiFetch(`/interview/public/${slug}`),
 
+  getPublicInterviewSession: (slug: string, sessionId: string) => apiFetch(`/interview/public/${slug}/${sessionId}`),
+
   startPublicInterview: (slug: string, candidate_name: string, candidate_email: string) =>
     apiFetch(`/interview/public/${slug}/start`, {
       method: "POST",
