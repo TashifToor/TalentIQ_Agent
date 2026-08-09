@@ -3,10 +3,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import RealtimeVoiceInterface from '@/components/modules/voice-engine/RealtimeVoiceInterface'
+import ReadinessScreen from '@/components/modules/interview-engine/ReadinessScreen'
 
 type Msg = { role: 'assistant' | 'candidate'; content: string }
-type Question = { id: string; index: number; total: number; question: string; options: string[]; seconds_allowed: number }
-type Posting = { title: string; company?: string; interviewer_name: string; is_active: boolean; mode: 'chatbot' | 'mcq' | 'voice_agent' }
+type Question = { id: string; index: number; total: number; question: string; options: string[]; seconds_allowed: number; seconds_remaining: number }
+type Posting = { title: string; company?: string; interviewer_name: string; is_active: boolean; mode: 'chatbot' | 'mcq' | 'voice_agent'; assessment_seconds_per_question?: number; assessment_question_count?: number }
 
 const SNAPSHOT_INTERVAL_MS = 45000
 
@@ -22,6 +23,8 @@ export default function PublicInterviewPage() {
   const [email, setEmail] = useState('')
   const [startError, setStartError] = useState('')
   const [starting, setStarting] = useState(false)
+  const [showReadiness, setShowReadiness] = useState(false)
+  const [recovering, setRecovering] = useState(true)
 
   const [sessionId, setSessionId] = useState('')
   const [useRealtimeVoice, setUseRealtimeVoice] = useState(true)
@@ -76,16 +79,27 @@ export default function PublicInterviewPage() {
       .finally(() => setLoadingPosting(false))
 
     const saved = sessionStorage.getItem(`interview_session_${slug}`)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        setSessionId(parsed.sessionId)
-        setMessages(parsed.messages || [])
-        setStatus(parsed.status)
-        setStage(parsed.stage || 'interview')
-        setAwaitingCv(!!parsed.awaitingCv)
-      } catch {}
-    }
+    if (!saved) { setRecovering(false); return }
+    let parsed: any
+    try { parsed = JSON.parse(saved) } catch { sessionStorage.removeItem(`interview_session_${slug}`); setRecovering(false); return }
+
+    // Verify against the server before trusting the cache — a completed or
+    // no-longer-valid session must never silently resume as if in-progress.
+    api.getPublicInterviewSession(slug, parsed.sessionId)
+      .then((s: any) => {
+        if (s.status === 'completed') {
+          sessionStorage.removeItem(`interview_session_${slug}`)
+          setStatus('completed')
+        } else {
+          setSessionId(s.session_id)
+          setMessages(s.transcript?.length ? s.transcript : (parsed.messages || []))
+          setStatus(s.status)
+          setStage(s.stage === 'assessment' ? 'assessment' : 'interview')
+          setAwaitingCv(!!s.awaiting_cv)
+        }
+      })
+      .catch(() => { sessionStorage.removeItem(`interview_session_${slug}`) })
+      .finally(() => setRecovering(false))
   }, [slug])
 
   useEffect(() => {
@@ -271,6 +285,15 @@ export default function PublicInterviewPage() {
     }
   }
 
+  const continueToReadiness = () => {
+    if (!name.trim() || !email.trim() || !email.includes('@')) {
+      setStartError('Please enter your name and a valid email.')
+      return
+    }
+    setStartError('')
+    setShowReadiness(true)
+  }
+
   const startInterview = async () => {
     if (!name.trim() || !email.trim() || !email.includes('@')) {
       setStartError('Please enter your name and a valid email.')
@@ -328,8 +351,20 @@ export default function PublicInterviewPage() {
     setAnswering(true)
     setAssessmentError('')
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
-    try {
-      const res: any = await api.answerAssessmentQuestion(slug, sessionId, question.id, indexToSend)
+    const questionId = question.id
+
+    let res: any = null
+    let ok = false
+    for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+      try {
+        res = await api.answerAssessmentQuestion(slug, sessionId, questionId, indexToSend)
+        ok = true
+      } catch (e: any) {
+        if (attempt < 2) await new Promise(r => setTimeout(r, 500 * (attempt + 1)))
+        else setAssessmentError(e?.message || 'Could not submit your answer — retrying...')
+      }
+    }
+    if (ok) {
       if (res.status === 'completed') {
         stopCamera()
         setAwaitingCv(true)
@@ -338,17 +373,25 @@ export default function PublicInterviewPage() {
         setQuestion(res.next_question)
         setSelectedOption(null)
       }
-    } catch (e: any) {
-      setAssessmentError(e?.message || 'Could not submit your answer. Please try again.')
-    } finally {
-      setAnswering(false)
+      setAssessmentError('')
     }
+    setAnswering(false)
   }
 
-  // Countdown timer — resets on every new question, auto-submits -1 (counts as wrong) at zero.
+  // Tapping an option submits immediately — no separate "Next Question" click needed.
+  const selectAndSubmit = (i: number) => {
+    if (answering) return
+    setSelectedOption(i)
+    submitAnswer(i)
+  }
+
+  // Countdown timer — starts from the server's real remaining time (so a
+  // refresh/resume doesn't hand back a full clock), auto-submits -1 at
+  // zero. The server independently re-checks elapsed time on submit, so
+  // this client timer is a UX convenience, not the actual enforcement.
   useEffect(() => {
     if (!question || terminated) return
-    setTimeLeft(question.seconds_allowed)
+    setTimeLeft(question.seconds_remaining ?? question.seconds_allowed)
     timerRef.current = setInterval(() => {
       setTimeLeft(t => {
         if (t === null) return null
@@ -419,8 +462,8 @@ export default function PublicInterviewPage() {
     </button>
   )
 
-  if (loadingPosting) {
-    return <div style={{ ...base, display: 'grid', placeItems: 'center' }}><div style={{ color: 'rgba(255,255,255,.3)', fontSize: 13 }}>Loading...</div></div>
+  if (loadingPosting || recovering) {
+    return <div style={{ ...base, display: 'grid', placeItems: 'center' }}><div style={{ color: 'rgba(255,255,255,.3)', fontSize: 13 }}>{recovering ? 'Restoring your session...' : 'Loading...'}</div></div>
   }
 
   if (notFound || !posting || !posting.is_active) {
@@ -451,6 +494,30 @@ export default function PublicInterviewPage() {
 
   // ── Landing / candidate details form ──
   if (status === 'idle') {
+    if (showReadiness) {
+      const m = posting.mode
+      return (
+        <div style={{ ...base, display: 'grid', placeItems: 'center', padding: 20 }}>
+          <div style={{ width: '100%' }}>
+            <ReadinessScreen
+              mode={m}
+              title={posting.title}
+              company={posting.company}
+              interviewerName={posting.interviewer_name}
+              questionCount={m === 'mcq' ? posting.assessment_question_count : undefined}
+              evaluationAreas={
+                m === 'mcq' ? ['Accuracy across categories', 'Speed under time pressure']
+                : m === 'voice_agent' ? ['Spoken communication', 'Technical reasoning', 'Real project experience']
+                : ['Communication clarity', 'Technical depth', 'Real project experience']
+              }
+              onStart={startInterview}
+              starting={starting}
+              startError={startError}
+            />
+          </div>
+        </div>
+      )
+    }
     return (
       <div style={{ ...base, display: 'grid', placeItems: 'center', padding: 20 }}>
         <div style={{ ...card, maxWidth: 440, width: '100%' }}>
@@ -483,9 +550,9 @@ export default function PublicInterviewPage() {
           <input placeholder="Full name" value={name} onChange={e => setName(e.target.value)} style={{ ...inputSt, marginBottom: 10 }} />
           <input placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} style={{ ...inputSt, marginBottom: 14 }} />
           {startError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12 }}>{startError}</div>}
-          <button onClick={startInterview} disabled={starting}
+          <button onClick={continueToReadiness} disabled={starting}
             style={{ width: '100%', padding: '12px 20px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: starting ? 'default' : 'pointer', opacity: starting ? 0.6 : 1, fontFamily: 'Inter,sans-serif' }}>
-            {starting ? 'Starting...' : 'Start'}
+            Continue
           </button>
         </div>
       </div>
@@ -589,21 +656,19 @@ export default function PublicInterviewPage() {
               </div>
               <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.6, marginBottom: 18 }}>{question.question}</div>
               {question.options.map((opt, i) => (
-                <div key={i} onClick={() => setSelectedOption(i)}
+                <div key={i} onClick={() => selectAndSubmit(i)}
                   style={{
-                    padding: '12px 14px', borderRadius: 8, marginBottom: 8, cursor: 'pointer', fontSize: 13, lineHeight: 1.5,
+                    padding: '12px 14px', borderRadius: 8, marginBottom: 8, cursor: answering ? 'default' : 'pointer', fontSize: 13, lineHeight: 1.5,
                     border: `1px solid ${selectedOption === i ? '#13c28e' : 'rgba(255,255,255,.08)'}`,
                     background: selectedOption === i ? 'rgba(19,194,142,.08)' : '#161614',
                     color: selectedOption === i ? '#13c28e' : 'rgba(255,255,255,.75)',
+                    opacity: answering && selectedOption !== i ? 0.5 : 1, transition: 'all .15s',
                   }}>
                   <span style={{ fontWeight: 700, marginRight: 8 }}>{String.fromCharCode(65 + i)}.</span>{opt}
                 </div>
               ))}
               {assessmentError && <div style={{ fontSize: 12, color: '#ef4444', marginTop: 10 }}>{assessmentError}</div>}
-              <button onClick={() => submitAnswer()} disabled={selectedOption === null || answering}
-                style={{ width: '100%', marginTop: 8, padding: '12px 20px', borderRadius: 8, border: 'none', background: '#13c28e', color: '#0a0a08', fontSize: 13, fontWeight: 700, cursor: (selectedOption === null || answering) ? 'default' : 'pointer', opacity: (selectedOption === null || answering) ? 0.5 : 1, fontFamily: 'Inter,sans-serif' }}>
-                {answering ? 'Submitting...' : question.index === question.total ? 'Finish Assessment' : 'Next Question'}
-              </button>
+              {answering && <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', marginTop: 10, textAlign: 'center' }}>{question.index === question.total ? 'Finishing...' : 'Saving...'}</div>}
             </div>
           )}
         </div>
