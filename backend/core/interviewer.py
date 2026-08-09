@@ -66,6 +66,87 @@ GENERAL SHAPE OF THE INTERVIEW (adapt naturally, don't announce these as rigid s
 5. Weave in the HR's extra questions (if any) naturally wherever they fit, rather than saving them all for the end."""
 
 
+def stream_next_turn(interviewer_name: str, job_description: str, extra_questions: list[str], transcript: list[dict], turn_count: int, min_turns: int = MIN_TURNS, max_turns: int = MAX_TURNS):
+    """
+    Streaming counterpart to get_next_turn(). Genuinely streams from Groq
+    (llm.stream(...), not a simulated delay) and yields dicts as it goes:
+        {"type": "delta", "text": "<chunk>"}   — zero or more, in order
+        {"type": "done", "message": "<full text>", "action": "continue"|"conclude"}  — exactly once, last
+
+    Same force-continue/force-conclude server-side enforcement as
+    get_next_turn — the LLM can't override min_turns/max_turns either way.
+
+    Implementation note: the model is asked to end its reply with a bare
+    CONTINUE or CONCLUDE marker on its own line. That line is buffered
+    (held back, not yielded as a delta) until we know whether it's the
+    marker or real trailing content — so the marker itself is never shown
+    to the candidate, at the cost of ~one line's worth of buffering delay
+    at the very end of each message.
+    """
+    history = _format_transcript(transcript)
+    force_conclude = turn_count >= max_turns
+    force_continue = turn_count < min_turns
+
+    if force_conclude:
+        guidance = "You MUST conclude now — this is the final turn regardless of coverage. Thank the candidate warmly and let them know the conversation part of the interview is complete."
+    elif force_continue:
+        guidance = f"You must continue — at least {min_turns} candidate answers are required before the interview can end, and you're not there yet. Do not conclude no matter how the conversation is going."
+    else:
+        guidance = "Decide whether you have enough substantive coverage of the JD's key requirements (and the HR extra questions, if any) to conclude, or whether there are still important gaps to probe. Only conclude once genuinely satisfied, not just because a few questions were asked."
+
+    prompt = f"""{_system_context(interviewer_name, job_description, extra_questions)}
+
+<conversation_so_far>
+{history}
+</conversation_so_far>
+
+{guidance}
+
+Respond with your next message as plain conversational text — no JSON, no markdown, no backticks.
+After your message, on its own final line, write exactly one word: CONTINUE or CONCLUDE."""
+
+    buffer = ""
+    full_lines: list[str] = []
+    try:
+        for chunk in llm.stream(prompt):
+            piece = getattr(chunk, "content", "") or ""
+            if not piece:
+                continue
+            buffer += piece
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                full_lines.append(line)
+                yield {"type": "delta", "text": line + "\n"}
+    except Exception as e:
+        print(f"[Interviewer] streaming error: {e}")
+        yield {"type": "delta", "text": "Sorry, I lost my train of thought — could you say that again?"}
+        yield {"type": "done", "message": "Sorry, I lost my train of thought — could you say that again?", "action": "continue"}
+        return
+
+    marker = buffer.strip().upper()
+    if marker in ("CONTINUE", "CONCLUDE"):
+        action = "conclude" if marker == "CONCLUDE" else "continue"
+    else:
+        # Model didn't end with a clean marker line — treat any leftover text
+        # as real content (don't silently drop it) and default to continue.
+        if buffer.strip():
+            full_lines.append(buffer)
+            yield {"type": "delta", "text": buffer}
+        action = "continue"
+
+    message = "\n".join(full_lines).strip()
+    if not message:
+        message = "Could you tell me more about that?"
+
+    # Hard server-side enforcement — never trust the LLM's marker alone
+    if turn_count < min_turns:
+        action = "continue"
+    elif turn_count >= max_turns:
+        action = "conclude"
+
+    yield {"type": "done", "message": message, "action": action}
+
+
 def get_next_turn(interviewer_name: str, job_description: str, extra_questions: list[str], transcript: list[dict], turn_count: int, min_turns: int = MIN_TURNS, max_turns: int = MAX_TURNS) -> dict:
     """
     Given the conversation so far, returns the interviewer's next message and
