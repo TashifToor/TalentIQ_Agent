@@ -384,4 +384,41 @@ export const api = {
 
   skipPublicInterviewCV: (slug: string, sessionId: string) =>
     apiFetch(`/interview/public/${slug}/${sessionId}/skip-cv`, { method: "POST" }),
+
+  // --- Practice Sessions (candidate-owned, authenticated — separate domain from recruiter interviews) ---
+  createPracticeSession: (payload: {
+    mode: 'chatbot' | 'mcq' | 'voice_agent'; target_role: string;
+    experience_level?: string; difficulty?: string; length_minutes?: number;
+    skills_focus?: string[]; job_description?: string; resume_text?: string;
+  }) => apiFetch("/practice/sessions", { method: "POST", body: JSON.stringify(payload) }),
+
+  getPracticeSession: (sessionId: string) => apiFetch(`/practice/sessions/${sessionId}`),
+
+  sendPracticeMessage: (sessionId: string, message: string) =>
+    apiFetch(`/practice/sessions/${sessionId}/message`, { method: "POST", body: JSON.stringify({ message }) }),
+
+  answerPracticeQuestion: (sessionId: string, questionId: string, selectedIndex: number) =>
+    apiFetch(`/practice/sessions/${sessionId}/assessment/answer`, {
+      method: "POST", body: JSON.stringify({ question_id: questionId, selected_index: selectedIndex }),
+    }),
+
+  transcribePracticeAudio: async (sessionId: string, blob: Blob): Promise<{ text: string }> => {
+    const formData = new FormData()
+    formData.append("file", blob, "answer.webm")
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") || "" : ""
+    const res = await fetch(`${API_BASE_URL}/practice/sessions/${sessionId}/transcribe`, {
+      method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Could not transcribe audio." }))
+      throw buildApiError(err)
+    }
+    return res.json()
+  },
+
+  getPracticeReport: (sessionId: string) => apiFetch(`/practice/sessions/${sessionId}/report`),
+
+  getPracticeHistory: () => apiFetch("/practice/history"),
+
+  deletePracticeSession: (sessionId: string) => apiFetch(`/practice/sessions/${sessionId}`, { method: "DELETE" }),
 };
