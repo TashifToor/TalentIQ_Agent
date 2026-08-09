@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { api } from '@/lib/api'
+import RealtimeVoiceInterface from '@/components/modules/voice-engine/RealtimeVoiceInterface'
 
 type Msg = { role: 'assistant' | 'candidate'; content: string }
 type Question = { id: string; index: number; total: number; question: string; options: string[]; seconds_allowed: number }
@@ -23,6 +24,7 @@ export default function PublicInterviewPage() {
   const [starting, setStarting] = useState(false)
 
   const [sessionId, setSessionId] = useState('')
+  const [useRealtimeVoice, setUseRealtimeVoice] = useState(true)
   const [status, setStatus] = useState<'idle' | 'in_progress' | 'completed'>('idle')
   const [stage, setStage] = useState<'interview' | 'assessment'>('interview')
   const [awaitingCv, setAwaitingCv] = useState(false)
@@ -610,6 +612,21 @@ export default function PublicInterviewPage() {
   }
 
   // ── Conversational interview stage — voice mode ──
+  if (voiceMode && useRealtimeVoice && stage === 'interview' && !awaitingCv && status === 'in_progress') {
+    const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant')
+    return (
+      <div style={{ ...base, display: 'flex', flexDirection: 'column', height: '100vh', justifyContent: 'center', padding: 20 }}>
+        <RealtimeVoiceInterface
+          wsPath={`/interview/public/${slug}/${sessionId}/voice/ws`}
+          authToken={null}
+          initialQuestion={lastAssistant?.content}
+          onCompleted={(reportReady) => { if (!reportReady) setAwaitingCv(true); else setStatus('completed') }}
+          onFallback={() => setUseRealtimeVoice(false)}
+        />
+      </div>
+    )
+  }
+
   if (voiceMode) {
     const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant')
     const lastCandidate = [...messages].reverse().find(m => m.role === 'candidate')
