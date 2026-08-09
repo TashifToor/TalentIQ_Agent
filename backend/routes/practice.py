@@ -1,14 +1,14 @@
 import json
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from models.database import get_db
 from models.practice import PracticeSession
 from models.user import User
-from middleware.auth import get_current_user
+from middleware.auth import get_current_user, decode_user_token
 from schemas.practice import (
     PracticeSessionCreate, PracticeSessionStateResponse, PracticeQuestionPublic,
     PracticeMessageRequest, PracticeTurnResponse,
@@ -18,6 +18,7 @@ from schemas.practice import (
 from core.interviewer import get_next_turn, stream_next_turn, generate_report
 from core.assessment import generate_assessment_questions, score_assessment, MIN_QUESTIONS, MAX_QUESTIONS
 from core.voice import transcribe_audio
+from core.voice_session import VoiceSession
 
 router = APIRouter(prefix="/practice", tags=["Practice Sessions"])
 
@@ -273,6 +274,72 @@ def get_practice_report(session_id: str, db: Session = Depends(get_db), user: Us
         created_at=session.created_at.isoformat() if session.created_at else "",
         completed_at=session.completed_at.isoformat() if session.completed_at else None,
     )
+
+
+@router.websocket("/sessions/{session_id}/voice/ws")
+async def practice_voice_ws(websocket: WebSocket, session_id: str, db: Session = Depends(get_db)):
+    """
+    Real-time voice — browser streams mic audio in as binary frames,
+    receives {"type":...} JSON control messages plus binary synthesized
+    audio frames back. First message from the client MUST be
+    {"type":"auth","token":"<jwt>"} (browsers can't set Authorization
+    headers on a WS handshake) — connection is closed if that fails.
+    Falls back to the existing REST /message + /transcribe endpoints if
+    this connection can't be established; those are untouched.
+    """
+    await websocket.accept()
+    try:
+        first = json.loads(await websocket.receive_text())
+        if first.get("type") != "auth" or not first.get("token"):
+            await websocket.send_text(json.dumps({"type": "error", "detail": "First message must be {type: 'auth', token: ...}"}))
+            await websocket.close(code=4401)
+            return
+        user = decode_user_token(first["token"], db)
+    except HTTPException as e:
+        await websocket.send_text(json.dumps({"type": "error", "detail": e.detail}))
+        await websocket.close(code=4401)
+        return
+    except Exception:
+        await websocket.close(code=4400)
+        return
+
+    session = db.query(PracticeSession).filter(PracticeSession.id == session_id).first()
+    if not session or session.user_id != user.id:
+        await websocket.send_text(json.dumps({"type": "error", "detail": "Practice session not found or not yours."}))
+        await websocket.close(code=4404)
+        return
+    if session.mode != "voice_agent" or session.status != "in_progress" or session.stage != "interview":
+        await websocket.send_text(json.dumps({"type": "error", "detail": "This session isn't a live voice interview right now."}))
+        await websocket.close(code=4409)
+        return
+
+    skills = json.loads(session.skills_focus or "[]")
+    min_turns, max_turns = _turns_for_length(session.length_minutes)
+    jd = _synth_job_description(session)
+
+    async def on_turn(transcript: list, turn_count: int):
+        session.transcript = json.dumps(transcript)
+        session.turn_count = turn_count
+        db.commit()
+
+    async def on_conclude(transcript: list):
+        report = generate_report(session.interviewer_name, jd, skills, transcript, cv_text=session.resume_text)
+        session.ai_score = report.get("candidate_score")
+        session.final_verdict = report.get("final_verdict")
+        session.experience_assessment = report.get("experience_assessment")
+        session.deep_analysis = report.get("deep_analysis")
+        session.stage = "done"
+        session.status = "completed"
+        session.completed_at = datetime.now(timezone.utc)
+        db.commit()
+        return report
+
+    voice_session = VoiceSession(
+        websocket, interviewer_name=session.interviewer_name or "Kelly", job_description=jd,
+        extra_questions=skills, transcript=json.loads(session.transcript or "[]"), turn_count=session.turn_count,
+        min_turns=min_turns, max_turns=max_turns, on_turn=on_turn, on_conclude=on_conclude,
+    )
+    await voice_session.run()
 
 
 @router.get("/history", response_model=list[PracticeHistoryItem])
