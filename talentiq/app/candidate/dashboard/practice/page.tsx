@@ -95,6 +95,7 @@ export default function InterviewPracticePage() {
             wsPath={`/practice/sessions/${session.id}/voice/ws`}
             authToken={typeof window !== 'undefined' ? localStorage.getItem('token') : null}
             initialQuestion={session.transcript?.[session.transcript.length - 1]?.role === 'assistant' ? session.transcript[session.transcript.length - 1].content : undefined}
+            interviewerName={session.interviewer_name}
             onCompleted={handleComplete}
             onFallback={() => setUseRealtimeVoice(false)}
           />
