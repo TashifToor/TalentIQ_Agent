@@ -81,6 +81,7 @@ class VoiceSession:
         self._current_tts: Optional[CartesiaStreamingTtsProvider] = None
         self._turn_task: Optional[asyncio.Task] = None
         self._closed = False
+        self._tts_active = False  # True only while actively generating/streaming AI speech — guards barge-in from racing the post-TTS persistence step
 
     async def _send(self, payload: dict) -> None:
         try:
@@ -99,6 +100,7 @@ class VoiceSession:
             self._stt = await AssemblyAIStreamingSttProvider(SAMPLE_RATE).connect()
         except Exception as e:
             await self._send({"type": "error", "detail": f"Streaming STT unavailable: {e}"})
+            await self.ws.close(code=1011)
             return
 
         stt_reader_task = asyncio.create_task(self._read_stt_events())
@@ -149,7 +151,12 @@ class VoiceSession:
         # "auth" is handled by the route before VoiceSession.run() is ever called
 
     async def _barge_in(self) -> None:
-        """Real barge-in: cancel in-flight TTS synthesis and the streaming LLM task, switch state immediately."""
+        """Real barge-in: cancel in-flight TTS synthesis and the streaming LLM task, switch state immediately.
+        Only takes effect while TTS is actually active — once AI speech has
+        finished and we're persisting the transcript, a late barge-in must
+        not cancel that (would risk losing the exchange or double-advancing)."""
+        if not self._tts_active:
+            return
         if self._current_tts:
             await self._current_tts.cancel()
         if self._turn_task and not self._turn_task.done():
@@ -187,6 +194,7 @@ class VoiceSession:
         full_text = ""
         action = "continue"
         tts: Optional[CartesiaStreamingTtsProvider] = None
+        self._tts_active = True
         try:
             tts = await CartesiaStreamingTtsProvider(SAMPLE_RATE).connect()
             self._current_tts = tts
@@ -217,24 +225,43 @@ class VoiceSession:
             await self._send({"type": "error", "detail": f"LLM/TTS error: {e}"})
         finally:
             self._current_tts = None
+            self._tts_active = False  # AI has finished speaking (or failed) — from here on, a barge-in has nothing left to interrupt
 
         if not full_text:
             await self._send_state("listening")
             return
 
+        # Shielded: once we've decided to persist this turn, a late/racing
+        # barge-in (already blocked by _tts_active above, but asyncio
+        # cancellation can still land here in rare timing edge cases) must
+        # not interrupt the DB write and leave state inconsistent.
+        await asyncio.shield(self._persist_and_advance(full_text, action))
+
+    async def _persist_and_advance(self, full_text: str, action: str) -> None:
         self.transcript.append({"role": "assistant", "content": full_text})
         await self.on_turn(self.transcript, self.turn_count)
 
         if action == "conclude":
-            report = await self.on_conclude(self.transcript)
-            await self._send({"type": "completed", "report_ready": report is not None})
-            await self._send_state("completed")
-            self._closed = True
+            try:
+                report = await self.on_conclude(self.transcript)
+                await self._send({"type": "completed", "report_ready": report is not None})
+                await self._send_state("completed")
+                self._closed = True
+            except Exception as e:
+                # Report generation failed — the session was NOT marked
+                # completed by on_conclude in this case (it only commits
+                # status="completed" after generate_report succeeds), so
+                # nothing fake gets shown. Tell the client plainly instead
+                # of hanging forever; the REST fallback can still finish
+                # via the existing SSE/REST completion path.
+                await self._send({"type": "error", "detail": f"Could not finalize the interview: {e}"})
+                await self._send_state("listening")
         else:
             await self._send_state("listening")
 
     async def _speak_text(self, text: str, is_question: bool = False) -> None:
         tts: Optional[CartesiaStreamingTtsProvider] = None
+        self._tts_active = True
         try:
             tts = await CartesiaStreamingTtsProvider(SAMPLE_RATE).connect()
             self._current_tts = tts
@@ -250,6 +277,7 @@ class VoiceSession:
             await self._send({"type": "error", "detail": f"TTS error: {e}"})
         finally:
             self._current_tts = None
+            self._tts_active = False
             await self._send_state("listening")
 
     async def _forward_audio(self, tts: CartesiaStreamingTtsProvider) -> None:
