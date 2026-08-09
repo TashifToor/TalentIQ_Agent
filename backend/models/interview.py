@@ -70,6 +70,7 @@ class InterviewSession(Base):
     assessment_photos =        Column(Text, default="[]")   # JSON list[str] — relative file paths of periodic webcam captures
     assessment_started_at =    Column(DateTime(timezone=True), nullable=True)
     assessment_completed_at =  Column(DateTime(timezone=True), nullable=True)
+    current_question_started_at = Column(DateTime(timezone=True), nullable=True)  # server-authoritative — set each time a question is served, checked on answer to enforce the real time limit regardless of client clock
     terminated_reason =        Column(String, nullable=True)  # e.g. "left_page_during_assessment" — set when a session is force-ended for suspected cheating
 
     ai_score =                 Column(Integer, nullable=True)
