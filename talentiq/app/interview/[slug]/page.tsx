@@ -620,6 +620,7 @@ export default function PublicInterviewPage() {
           wsPath={`/interview/public/${slug}/${sessionId}/voice/ws`}
           authToken={null}
           initialQuestion={lastAssistant?.content}
+          interviewerName={posting.interviewer_name}
           onCompleted={(reportReady) => { if (!reportReady) setAwaitingCv(true); else setStatus('completed') }}
           onFallback={() => setUseRealtimeVoice(false)}
         />
