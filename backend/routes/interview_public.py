@@ -5,12 +5,13 @@ import shutil
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from models.database import get_db
 from models.interview import InterviewPosting, InterviewSession
 from models.user import User
-from core.interviewer import get_next_turn, generate_report, cv_request_message
+from core.interviewer import get_next_turn, stream_next_turn, generate_report, cv_request_message
 from core.assessment import score_assessment
 from core.voice import transcribe_audio
 from core.redis_client import check_rate_limit
@@ -178,6 +179,81 @@ def start_interview(slug: str, payload: InterviewStartRequest, request: Request,
     db.commit()
     db.refresh(session)
     return {"session_id": str(session.id), "stage": "assessment", "message": None}
+
+
+# ── POST /interview/public/{slug}/{session_id}/message/stream — SSE variant, real Groq streaming ──
+@router.post("/{slug}/{session_id}/message/stream")
+def send_message_stream(
+    slug: str,
+    session_id: str,
+    payload: InterviewMessageRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Same validation, rate-limit, and DB writes as /message — the interviewer's
+    reply is genuinely streamed token-by-token instead of returned as one
+    blob. On conclude, behaves identically to /message: appends the CV-request
+    message and sets awaiting_cv (does NOT finalize/score here — that still
+    happens at CV upload/skip, exactly as today).
+    Events: {"type":"delta","text":"..."} then exactly one
+    {"type":"done","message":"...","status":"in_progress","turn_count":N,"awaiting_cv":bool}
+    or {"type":"error","detail":"..."}.
+    """
+    posting = _get_active_posting(slug, db)
+    session = _get_session(posting, session_id, db)
+
+    if session.status == "completed":
+        raise HTTPException(status_code=400, detail="This interview has already been completed.")
+    if session.awaiting_cv:
+        raise HTTPException(status_code=400, detail="Please upload your CV or skip that step to finish up.")
+    if session.stage != "interview":
+        raise HTTPException(status_code=400, detail="The conversational interview stage isn't active for this session.")
+
+    answer = payload.message.strip()
+    if len(answer) < 2:
+        raise HTTPException(status_code=400, detail="Please provide an actual answer to continue.")
+
+    ip = request.client.host if request.client else "unknown"
+    allowed, wait_seconds = check_rate_limit(f"interview-msg:{session_id}", cooldown_seconds=2)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before sending your next message.")
+
+    transcript = json.loads(session.transcript or "[]")
+    transcript.append({"role": "candidate", "content": answer})
+    session.turn_count = (session.turn_count or 0) + 1
+
+    extra_questions = json.loads(posting.extra_questions or "[]")
+    interviewer_name = posting.interviewer_name or "Kelly"
+
+    def event_stream():
+        full_message = ""
+        action = "continue"
+        try:
+            for event in stream_next_turn(interviewer_name, posting.job_description, extra_questions, transcript, session.turn_count):
+                if event["type"] == "delta":
+                    yield f"data: {json.dumps({'type': 'delta', 'text': event['text']})}\n\n"
+                else:
+                    full_message = event["message"]
+                    action = event["action"]
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'detail': str(e)})}\n\n"
+            return
+
+        if action == "conclude":
+            cv_msg = cv_request_message(interviewer_name)
+            transcript.append({"role": "assistant", "content": cv_msg})
+            session.transcript = json.dumps(transcript)
+            session.awaiting_cv = True
+            db.commit()
+            yield f"data: {json.dumps({'type': 'done', 'message': cv_msg, 'status': 'in_progress', 'turn_count': session.turn_count, 'awaiting_cv': True})}\n\n"
+        else:
+            transcript.append({"role": "assistant", "content": full_message})
+            session.transcript = json.dumps(transcript)
+            db.commit()
+            yield f"data: {json.dumps({'type': 'done', 'message': full_message, 'status': 'in_progress', 'turn_count': session.turn_count, 'awaiting_cv': False})}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
 # ── POST /interview/public/{slug}/{session_id}/message — candidate answers (interview stage) ──
