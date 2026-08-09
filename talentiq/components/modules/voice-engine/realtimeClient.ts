@@ -31,7 +31,7 @@ export class RealtimeVoiceClient {
   private micProcessor: ScriptProcessorNode | null = null
   private micSource: MediaStreamAudioSourceNode | null = null
   private analyser: AnalyserNode | null = null
-  private analyserData: Uint8Array<ArrayBuffer> | null = null
+  private analyserData: Uint8Array | null = null
   private bargeInRafId: number | null = null
   private bargeInAboveSince: number | null = null
 
@@ -89,6 +89,7 @@ export class RealtimeVoiceClient {
   private _attemptReconnect() {
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       this.cb.onError('Lost connection to the voice engine.')
+      this._cleanupResources() // release mic/audio before the caller opens its own fallback stream
       this.cb.onFallback()
       return
     }
@@ -178,7 +179,7 @@ export class RealtimeVoiceClient {
         this.bargeInRafId = null
         return
       }
-      this.analyser.getByteTimeDomainData(this.analyserData)
+      this.analyser.getByteTimeDomainData(this.analyserData as Uint8Array<ArrayBuffer>)
       let sumSquares = 0
       for (let i = 0; i < this.analyserData.length; i++) {
         const v = (this.analyserData[i] - 128) / 128
@@ -263,16 +264,26 @@ export class RealtimeVoiceClient {
 
   disconnect() {
     this.closedByCaller = true
-    this._disarmBargeInDetection()
-    this._stopPlaybackImmediately()
     try { this._send({ type: 'stop' }) } catch { /* noop */ }
     this.ws?.close()
     this.ws = null
+    this._cleanupResources()
+  }
+
+  private _cleanupResources() {
+    this._disarmBargeInDetection()
+    this._stopPlaybackImmediately()
     this.micProcessor?.disconnect()
     this.micSource?.disconnect()
     this.analyser?.disconnect()
+    this.micProcessor = null
+    this.micSource = null
+    this.analyser = null
     this.audioCtx?.close().catch(() => {})
     this.playCtx?.close().catch(() => {})
+    this.audioCtx = null
+    this.playCtx = null
     this.micStream?.getTracks().forEach(t => t.stop())
+    this.micStream = null
   }
 }
