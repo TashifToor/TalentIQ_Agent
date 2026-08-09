@@ -7,6 +7,7 @@ import PracticeConfigForm, { PracticeConfigValues } from '@/components/modules/p
 import PracticeChatInterface from '@/components/modules/practice/PracticeChatInterface'
 import PracticeAssessmentInterface from '@/components/modules/practice/PracticeAssessmentInterface'
 import PracticeVoiceInterface from '@/components/modules/practice/PracticeVoiceInterface'
+import RealtimeVoiceInterface from '@/components/modules/voice-engine/RealtimeVoiceInterface'
 import AIFeedbackReport from '@/components/modules/reports/AIFeedbackReport'
 import { AnimatedButton, GlassCard } from '@/components/shared/primitives'
 import { api } from '@/lib/api'
@@ -21,6 +22,7 @@ export default function InterviewPracticePage() {
   const [starting, setStarting] = useState(false)
   const [startError, setStartError] = useState('')
   const [reportLoading, setReportLoading] = useState(false)
+  const [useRealtimeVoice, setUseRealtimeVoice] = useState(true)
 
   const chooseMode = (m: InterviewMode) => { setMode(m); setStep('configure') }
 
@@ -88,7 +90,16 @@ export default function InterviewPracticePage() {
         {step === 'session' && session && mode === 'mcq' && (
           <PracticeAssessmentInterface sessionId={session.id} initialQuestions={session.assessment_questions} initialIndex={session.assessment_current_index} onComplete={handleComplete} />
         )}
-        {step === 'session' && session && mode === 'voice_agent' && (
+        {step === 'session' && session && mode === 'voice_agent' && useRealtimeVoice && (
+          <RealtimeVoiceInterface
+            wsPath={`/practice/sessions/${session.id}/voice/ws`}
+            authToken={typeof window !== 'undefined' ? localStorage.getItem('token') : null}
+            initialQuestion={session.transcript?.[session.transcript.length - 1]?.role === 'assistant' ? session.transcript[session.transcript.length - 1].content : undefined}
+            onCompleted={handleComplete}
+            onFallback={() => setUseRealtimeVoice(false)}
+          />
+        )}
+        {step === 'session' && session && mode === 'voice_agent' && !useRealtimeVoice && (
           <PracticeVoiceInterface sessionId={session.id} initialTranscript={session.transcript} interviewerName={session.interviewer_name} onComplete={handleComplete} />
         )}
 
