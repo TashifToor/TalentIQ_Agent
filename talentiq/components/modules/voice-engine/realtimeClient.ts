@@ -31,7 +31,7 @@ export class RealtimeVoiceClient {
   private micProcessor: ScriptProcessorNode | null = null
   private micSource: MediaStreamAudioSourceNode | null = null
   private analyser: AnalyserNode | null = null
-  private analyserData: Uint8Array | null = null
+  private analyserData: Uint8Array<ArrayBuffer> | null = null
   private bargeInRafId: number | null = null
   private bargeInAboveSince: number | null = null
 
@@ -42,6 +42,7 @@ export class RealtimeVoiceClient {
   private reconnectAttempts = 0
   private closedByCaller = false
   private currentState: VoiceState = 'listening'
+  private muted = false
 
   constructor(private wsUrl: string, private token: string | null, private cb: RealtimeVoiceCallbacks) {}
 
@@ -153,7 +154,7 @@ export class RealtimeVoiceClient {
         const s = Math.max(-1, Math.min(1, float32[i]))
         pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff
       }
-      if (this.ws?.readyState === WebSocket.OPEN) {
+      if (this.ws?.readyState === WebSocket.OPEN && !this.muted) {
         this.ws.send(pcm16.buffer)
       }
     }
@@ -177,7 +178,7 @@ export class RealtimeVoiceClient {
         this.bargeInRafId = null
         return
       }
-      this.analyser.getByteTimeDomainData(this.analyserData as Uint8Array<ArrayBuffer>)
+      this.analyser.getByteTimeDomainData(this.analyserData)
       let sumSquares = 0
       for (let i = 0; i < this.analyserData.length; i++) {
         const v = (this.analyserData[i] - 128) / 128
@@ -247,6 +248,14 @@ export class RealtimeVoiceClient {
   }
 
   // ── lifecycle ────────────────────────────────────────────────
+
+  setMuted(muted: boolean) {
+    this.muted = muted
+  }
+
+  isMuted(): boolean {
+    return this.muted
+  }
 
   private _send(msg: ClientControlMsg) {
     if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(msg))
