@@ -15,7 +15,43 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const NAV_LINKS = ['Interview Modes', 'Voice AI', 'How it works', 'Get started']
+  const NAV_LINKS = ['For HR', 'For Candidates', 'Pricing', 'How it works']
+
+  // Placeholder pricing — not finalized. Swap these two objects once billing is confirmed;
+  // nothing else in the Pricing section needs to change.
+  const PLANS = [
+    {
+      audience: 'HR / Recruiter Plan', price: '$79', period: '/ month', accent: 'gold',
+      tagline: 'For teams that want to hire faster, with evidence.',
+      cta: 'Start Hiring', href: '/auth/signup/hr',
+      features: [
+        'AI interview creation (chat, assessment, voice)',
+        'Candidate & resume screening',
+        'AI candidate evaluation & feedback reports',
+        'Hiring Copilot',
+        'Candidate comparison',
+        'Bulk candidate screening',
+        'Interview links & candidate management',
+        'Interview analytics (on the roadmap)',
+        'Team / multi-member workspace (on the roadmap)',
+      ],
+    },
+    {
+      audience: 'Candidate Plan', price: '$12', period: '/ month', accent: 'teal',
+      tagline: 'For people who want to walk in prepared.',
+      cta: 'Improve My Resume', href: '/auth/signup/candidate',
+      features: [
+        'CV / resume builder',
+        'Resume analyzer & ATS score',
+        'Resume optimization suggestions',
+        'AI interview practice (chat, assessment, voice)',
+        'Interview feedback after every session',
+        'Practice history',
+        'Candidate profile',
+        'Career preparation tools',
+      ],
+    },
+  ]
 
   const MODES = [
     {
@@ -63,8 +99,8 @@ export default function LandingPage() {
         </div>
 
         <div className="landing-nav-cta" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link href="/auth/login" style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink2)', textDecoration: 'none', padding: '8px 16px', borderRadius: 8 }}>Log in</Link>
-          <Link href="/auth/signup/hr" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', background: 'var(--gold2)', padding: '9px 20px', borderRadius: 8, textDecoration: 'none', transition: 'all .25s' }}>Start hiring</Link>
+          <Link href="/auth/login" style={{ fontSize: 13, fontWeight: 500, color: 'var(--ink2)', textDecoration: 'none', padding: '8px 16px', borderRadius: 8 }}>Sign in</Link>
+          <a href="#pricing" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', background: 'var(--gold2)', padding: '9px 20px', borderRadius: 8, textDecoration: 'none', transition: 'all .25s' }}>Get Started</a>
         </div>
 
         <button className="landing-nav-toggle" onClick={() => setMobileNavOpen(v => !v)} aria-label="Toggle menu"
@@ -79,8 +115,8 @@ export default function LandingPage() {
             <a key={l} href={`#${l.toLowerCase().replace(/ /g, '-')}`} onClick={() => setMobileNavOpen(false)} style={{ fontSize: 15, fontWeight: 500, color: 'var(--ink)', textDecoration: 'none' }}>{l}</a>
           ))}
           <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-            <Link href="/auth/login" style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--ink)', border: '1px solid var(--border)', padding: '11px', borderRadius: 8, textDecoration: 'none' }}>Log in</Link>
-            <Link href="/auth/signup/hr" style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--ink)', background: 'var(--gold2)', padding: '11px', borderRadius: 8, textDecoration: 'none' }}>Start hiring</Link>
+            <Link href="/auth/login" style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--ink)', border: '1px solid var(--border)', padding: '11px', borderRadius: 8, textDecoration: 'none' }}>Sign in</Link>
+            <a href="#pricing" onClick={() => setMobileNavOpen(false)} style={{ flex: 1, textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--ink)', background: 'var(--gold2)', padding: '11px', borderRadius: 8, textDecoration: 'none' }}>Get Started</a>
           </div>
         </div>
       )}
@@ -378,6 +414,156 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* FOR HR — product value */}
+      <section id="for-hr" style={{ padding: '110px 5%' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+          <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>For HR Teams</p>
+          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 24, maxWidth: 640 }}>
+            Everything it takes to go from job description to hire.
+          </h2>
+
+          <div className="reveal" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 56 }}>
+            {['Create', 'Screen', 'Interview', 'Evaluate', 'Hire'].map((s, i, arr) => (
+              <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', background: 'var(--gold-light)', borderRadius: 100, padding: '9px 16px' }}>{s}</span>
+                {i < arr.length - 1 && <span style={{ color: 'var(--ink3)', fontSize: 12 }}>→</span>}
+              </div>
+            ))}
+          </div>
+
+          <div className="reveal landing-hr-value-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 20 }}>
+            {[
+              { t: 'AI Interview Engine', items: ['AI Chat Interview', 'AI Assessment', 'AI Voice Interview'] },
+              { t: 'Resume Intelligence', items: ['Resume parsing', 'CV / resume screening', 'ATS-style analysis', 'Candidate-job matching', 'Skill extraction'] },
+              { t: 'Hiring Copilot', items: ['JD insights', 'Candidate insights', 'Interview recommendations', 'Hiring recommendations'] },
+              { t: 'Candidate Evaluation', items: ['AI scores', 'Assessment breakdown', 'Interview reports', 'Evidence-based insights', 'Candidate comparison'] },
+              { t: 'Bulk Screening', items: ['Screen many candidates efficiently', 'Quickly surface the strongest candidates', 'Cut down repetitive manual review'] },
+              { t: 'Team / Workplace', items: ['Team members', 'Shared candidate evaluation', 'Hiring workflow visibility'], roadmap: true },
+            ].map(g => (
+              <div key={g.t} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 16, padding: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--ink)' }}>{g.t}</h3>
+                  {g.roadmap && <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--ink3)', background: 'var(--paper2)', borderRadius: 100, padding: '3px 8px' }}>Roadmap</span>}
+                </div>
+                {g.items.map(it => (
+                  <div key={it} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: g.roadmap ? 'var(--ink3)' : 'var(--ink2)', marginBottom: 6, alignItems: 'flex-start' }}>
+                    <span style={{ color: g.roadmap ? 'var(--ink3)' : 'var(--gold)', flexShrink: 0 }}>{g.roadmap ? '○' : '◆'}</span>{it}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FOR CANDIDATES — product value */}
+      <section id="for-candidates" style={{ background: 'var(--paper2)', padding: '110px 5%' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+          <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: 14 }}>For Candidates</p>
+          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 24, maxWidth: 640 }}>
+            Prepare before the real interview.
+          </h2>
+
+          <div className="reveal" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 56 }}>
+            {['Resume', 'Practice', 'Improve', 'Interview'].map((s, i, arr) => (
+              <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', background: 'rgba(11,107,87,.1)', borderRadius: 100, padding: '9px 16px' }}>{s}</span>
+                {i < arr.length - 1 && <span style={{ color: 'var(--ink3)', fontSize: 12 }}>→</span>}
+              </div>
+            ))}
+          </div>
+
+          <div className="reveal landing-candidate-value-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20 }}>
+            {[
+              { t: 'Resume Builder', items: ['Build professional CVs', 'Improve structure', 'ATS-friendly formatting'] },
+              { t: 'Resume Intelligence', items: ['ATS score', 'Skill analysis', 'Missing keyword detection'] },
+              { t: 'Interview Practice', items: ['AI chat practice', 'AI assessment practice', 'AI voice practice'] },
+              { t: 'Interview Feedback', items: ['Performance score', 'Strengths & concerns', 'Practice history'] },
+            ].map(g => (
+              <div key={g.t} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 16, padding: 22 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 12 }}>{g.t}</h3>
+                {g.items.map(it => (
+                  <div key={it} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'var(--ink2)', marginBottom: 6, alignItems: 'flex-start' }}>
+                    <span style={{ color: 'var(--teal)', flexShrink: 0 }}>◆</span>{it}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TRADITIONAL vs AI-POWERED HIRING */}
+      <section style={{ padding: '110px 5%' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+          <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>Why It's Different</p>
+          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,44px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48 }}>
+            Traditional hiring <em style={{ fontStyle: 'italic', color: 'var(--ink2)', fontWeight: 400 }}>vs.</em> AI-powered hiring.
+          </h2>
+          <div className="reveal landing-compare-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, background: 'var(--border)', borderRadius: 18, overflow: 'hidden', textAlign: 'left' }}>
+            <div style={{ background: 'var(--paper2)', padding: 32 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ink3)', marginBottom: 18 }}>Traditional</div>
+              {['Manual resume screening', 'Repetitive interviews', 'Subjective evaluation', 'Slow candidate comparison', 'Scattered hiring information'].map(t => (
+                <div key={t} style={{ display: 'flex', gap: 10, fontSize: 13.5, color: 'var(--ink3)', marginBottom: 10, alignItems: 'flex-start' }}>
+                  <span style={{ flexShrink: 0 }}>−</span>{t}
+                </div>
+              ))}
+            </div>
+            <div style={{ background: '#fff', padding: 32 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 18 }}>TalentIQ</div>
+              {['AI-assisted screening', 'Automated interviews', 'Structured evaluation', 'Faster candidate comparison', 'Centralized hiring workflow'].map(t => (
+                <div key={t} style={{ display: 'flex', gap: 10, fontSize: 13.5, color: 'var(--ink)', fontWeight: 500, marginBottom: 10, alignItems: 'flex-start' }}>
+                  <span style={{ color: 'var(--gold)', flexShrink: 0 }}>✓</span>{t}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section id="pricing" style={{ background: 'var(--dark)', padding: '110px 5%' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
+          <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold2)', marginBottom: 14 }}>Pricing</p>
+          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,46px)', color: '#fff', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 16 }}>
+            Simple pricing for both sides of hiring.
+          </h2>
+          <p className="reveal" style={{ fontSize: 14.5, color: 'rgba(255,255,255,.45)', marginBottom: 56 }}>No credit card required to try either plan.</p>
+
+          <div className="reveal landing-pricing-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, textAlign: 'left' }}>
+            {PLANS.map(plan => (
+              <div key={plan.audience} style={{
+                background: plan.accent === 'gold' ? 'var(--dark2)' : '#fff',
+                border: plan.accent === 'gold' ? '1px solid rgba(226,176,74,.25)' : '1px solid var(--border)',
+                borderRadius: 20, padding: 40, position: 'relative',
+              }}>
+                {plan.accent === 'gold' && (
+                  <div style={{ position: 'absolute', top: 24, right: 24, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--gold2)', background: 'rgba(226,176,74,.12)', borderRadius: 100, padding: '5px 12px' }}>Primary</div>
+                )}
+                <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', color: plan.accent === 'gold' ? 'var(--gold2)' : 'var(--teal)', marginBottom: 18 }}>{plan.audience}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
+                  <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 46, fontWeight: 600, color: plan.accent === 'gold' ? '#fff' : 'var(--ink)' }}>{plan.price}</span>
+                  <span style={{ fontSize: 13, color: plan.accent === 'gold' ? 'rgba(255,255,255,.4)' : 'var(--ink3)' }}>{plan.period}</span>
+                </div>
+                <p style={{ fontSize: 13.5, color: plan.accent === 'gold' ? 'rgba(255,255,255,.5)' : 'var(--ink3)', marginBottom: 28, lineHeight: 1.6 }}>{plan.tagline}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 32 }}>
+                  {plan.features.map(f => (
+                    <div key={f} style={{ display: 'flex', gap: 9, fontSize: 12.5, alignItems: 'flex-start', color: plan.accent === 'gold' ? 'rgba(255,255,255,.7)' : 'var(--ink2)' }}>
+                      <span style={{ color: plan.accent === 'gold' ? 'var(--gold2)' : 'var(--teal)', flexShrink: 0 }}>✓</span>{f}
+                    </div>
+                  ))}
+                </div>
+                <Link href={plan.href} style={{
+                  display: 'block', textAlign: 'center', fontSize: 14, fontWeight: 600, padding: '13px 26px', borderRadius: 10, textDecoration: 'none',
+                  background: plan.accent === 'gold' ? 'var(--gold2)' : 'var(--ink)', color: plan.accent === 'gold' ? 'var(--ink)' : '#fff',
+                }}>{plan.cta}</Link>
+              </div>
+            ))}
+          </div>
+          <p className="reveal" style={{ fontSize: 11.5, color: 'rgba(255,255,255,.3)', marginTop: 24 }}>* Pricing shown is illustrative and subject to change before launch.</p>
+        </div>
+      </section>
+
       {/* HR vs CANDIDATE PILLARS */}
       <section style={{ padding: '110px 5%' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }} className="landing-audience-grid">
@@ -485,19 +671,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* FINAL CTA */}
+      {/* FINAL CTA — two-sided */}
       <section style={{ background: 'var(--dark)', padding: '140px 5%', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
         <div className="drift" style={{ position: 'absolute', width: 700, height: 700, borderRadius: '50%', background: 'radial-gradient(circle, rgba(226,176,74,.12) 0%, transparent 70%)', top: '-30%', left: '50%', transform: 'translateX(-50%)', filter: 'blur(90px)' }} />
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 720, margin: '0 auto' }}>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(34px,5vw,58px)', color: '#fff', lineHeight: 1.1, letterSpacing: '-.5px', marginBottom: 20 }}>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto' }}>
+          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(34px,5vw,58px)', color: '#fff', lineHeight: 1.1, letterSpacing: '-.5px', marginBottom: 64 }}>
             The next great hire is already out there.
           </h2>
-          <p className="reveal" style={{ fontSize: 16, color: 'rgba(255,255,255,.55)', lineHeight: 1.7, marginBottom: 44, maxWidth: 500, margin: '0 auto 44px' }}>
-            Give hiring teams the tools to discover them, evaluate them, and make better decisions.
-          </p>
-          <div className="reveal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <Link href="/auth/signup/hr" style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', background: 'var(--gold2)', padding: '15px 32px', borderRadius: 10, textDecoration: 'none' }}>Start Hiring</Link>
-            <Link href="/auth/signup/candidate" style={{ fontSize: 15, fontWeight: 600, color: '#fff', border: '1.5px solid rgba(255,255,255,.2)', padding: '15px 28px', borderRadius: 10, textDecoration: 'none' }}>Practice an Interview</Link>
+          <div className="reveal landing-final-cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, background: 'rgba(255,255,255,.08)', borderRadius: 20, overflow: 'hidden', textAlign: 'left' }}>
+            <div style={{ background: 'var(--dark2)', padding: 40 }}>
+              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: '#fff', lineHeight: 1.3, marginBottom: 24 }}>Build a faster, smarter hiring workflow.</h3>
+              <Link href="/auth/signup/hr" style={{ display: 'inline-flex', fontSize: 14, fontWeight: 600, color: 'var(--ink)', background: 'var(--gold2)', padding: '13px 26px', borderRadius: 10, textDecoration: 'none' }}>Start Hiring</Link>
+            </div>
+            <div style={{ background: 'var(--dark2)', padding: 40 }}>
+              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: '#fff', lineHeight: 1.3, marginBottom: 24 }}>Build a stronger resume. Practice smarter. Walk into interviews prepared.</h3>
+              <Link href="/auth/signup/candidate" style={{ display: 'inline-flex', fontSize: 14, fontWeight: 600, color: '#fff', border: '1.5px solid rgba(255,255,255,.2)', padding: '13px 26px', borderRadius: 10, textDecoration: 'none' }}>Start Preparing</Link>
+            </div>
           </div>
         </div>
       </section>
@@ -515,9 +704,11 @@ export default function LandingPage() {
             </div>
             <div>
               <h5 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 18 }}>Product</h5>
+              <a href="#for-hr" style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,.4)', textDecoration: 'none', marginBottom: 10 }}>For HR</a>
+              <a href="#for-candidates" style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,.4)', textDecoration: 'none', marginBottom: 10 }}>For Candidates</a>
+              <a href="#pricing" style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,.4)', textDecoration: 'none', marginBottom: 10 }}>Pricing</a>
               <a href="#interview-modes" style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,.4)', textDecoration: 'none', marginBottom: 10 }}>Interview Modes</a>
               <a href="#voice-ai" style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,.4)', textDecoration: 'none', marginBottom: 10 }}>Voice AI</a>
-              <a href="#hr-intelligence" style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,.4)', textDecoration: 'none', marginBottom: 10 }}>Hiring Intelligence</a>
               <a href="#how-it-works" style={{ display: 'block', fontSize: 14, color: 'rgba(255,255,255,.4)', textDecoration: 'none', marginBottom: 10 }}>How it works</a>
             </div>
             <div>
@@ -546,6 +737,12 @@ export default function LandingPage() {
           .landing-modes-layout, .landing-hr-grid { grid-template-columns: 1fr !important; }
           .landing-copilot-grid { grid-template-columns: 1fr !important; }
           .landing-security-row { flex-direction: column; align-items: flex-start !important; }
+          .landing-hr-value-grid { grid-template-columns: 1fr 1fr !important; }
+          .landing-candidate-value-grid { grid-template-columns: 1fr 1fr !important; }
+          .landing-compare-grid, .landing-pricing-grid, .landing-final-cta-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 560px) {
+          .landing-hr-value-grid, .landing-candidate-value-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>
