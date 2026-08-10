@@ -158,6 +158,26 @@ body { font-family: 'Syne', system-ui, sans-serif; overflow-x: hidden; line-heig
   .builder-3col { grid-template-columns: 1fr; }
 }
 
+/* Public landing page — previously had zero responsive handling at all */
+.landing-nav-toggle { display: none; }
+@media (max-width: 860px) {
+  .landing-nav-links, .landing-nav-cta { display: none !important; }
+  .landing-nav-toggle { display: block !important; }
+}
+@media (min-width: 861px) {
+  .landing-mobile-menu { display: none !important; }
+}
+@media (max-width: 760px) {
+  .landing-journey-grid, .landing-audience-inner, .landing-cta-grid { grid-template-columns: 1fr !important; }
+  .landing-modes-grid { grid-template-columns: 1fr !important; }
+  .landing-footer-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .landing-hero-ctas { flex-direction: column; align-items: stretch !important; }
+  .landing-hero-ctas a { text-align: center; justify-content: center; }
+}
+@media (min-width: 761px) and (max-width: 980px) {
+  .landing-modes-grid { grid-template-columns: 1fr 1fr !important; }
+}
+
 /* Error shake */
 @keyframes shakeX { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)} }
 .shake { animation: shakeX .4s ease; }
