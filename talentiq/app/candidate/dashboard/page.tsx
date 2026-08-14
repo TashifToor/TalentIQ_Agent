@@ -3,6 +3,8 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import UpgradeModal from '@/components/UpgradeModal'
 import { api, ApiError } from '@/lib/api'
+import CopilotPanel from '@/components/modules/copilot/CopilotPanel'
+import { PracticeHistoryItem } from '@/components/modules/copilot/candidateHomeInsights'
 
 const ICONS: Record<string, JSX.Element> = {
   dashboard: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
@@ -38,6 +40,7 @@ export default function CandidateDashboard() {
   const [jd, setJd] = useState('')
   const [scansLeft, setScansLeft] = useState(3)
   const [history, setHistory] = useState<any[]>([])
+  const [practiceHistory, setPracticeHistory] = useState<PracticeHistoryItem[] | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const SCAN_STEPS = [
@@ -55,6 +58,9 @@ export default function CandidateDashboard() {
       setUser({ name: u?.name || u?.full_name, email: u?.email })
       if (typeof u?.scans_remaining === 'number') setScansLeft(u.scans_remaining)
     }).catch(() => {})
+    api.getPracticeHistory()
+      .then((r: any) => setPracticeHistory(Array.isArray(r) ? r : []))
+      .catch(() => setPracticeHistory([]))
   }, [])
 
   const handlePickFile = () => fileRef.current?.click()
@@ -235,7 +241,8 @@ export default function CandidateDashboard() {
         </div>
 
         {/* Content */}
-        <div className="dark-scroll" style={{ flex: 1, overflowY: 'auto', padding: 28, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="dark-scroll" style={{ flex: 1, overflowY: 'auto', padding: 28, display: 'flex', gap: 20 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Scan Area */}
           <div id="scan-area" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24 }}>
@@ -413,6 +420,14 @@ export default function CandidateDashboard() {
             )}
           </div>
 
+        </div>
+        <CopilotPanel
+          context="candidate_home"
+          candidateHome={{
+            scanResult: result ? { metrics: result.metrics, flags: result.flags, deep_analysis: result.deep_analysis } : null,
+            practiceHistory,
+          }}
+        />
         </div>
       </div>
     </div>
