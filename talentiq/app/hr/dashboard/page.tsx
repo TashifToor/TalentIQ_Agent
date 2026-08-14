@@ -459,7 +459,7 @@ export default function HRDashboard() {
     const newHistory = [entry, ...history.filter(h => !(h.filename === c.filename && h.jobTitle === entry.jobTitle))]
     setHistory(newHistory); saveHistory(newHistory)
     if (c.application_id) {
-      api.updateApplication(c.application_id, status === 'shortlisted' ? 'shortlist' : 'reject').catch(() => {})
+      ;(api as any).updateApplication(c.application_id, status === 'shortlisted' ? 'shortlist' : 'reject').catch(() => {})
     }
   }
 
@@ -467,7 +467,7 @@ export default function HRDashboard() {
     const c = candidates[idx]
     const updated = [...candidates]; updated[idx] = { ...c, status: 'active' }; setCandidates(updated)
     if (c?.application_id) {
-      api.updateApplication(c.application_id, 'reset').catch(() => {})
+      ;(api as any).updateApplication(c.application_id, 'reset').catch(() => {})
     }
   }
 
@@ -485,7 +485,7 @@ export default function HRDashboard() {
     setMoveLoading(true)
     setMoveError('')
     try {
-      const res: any = await api.moveApplicationToInterview(c.application_id, movePostingId, moveEmailInput || c.candidate_email)
+      const res: any = await (api as any).moveApplicationToInterview(c.application_id, movePostingId, moveEmailInput || c.candidate_email)
       setMoveResult({ idx, link: res.public_link, emailed: res.emailed })
       const updated = [...candidates]
       updated[idx] = { ...c, trigger_interview: true, candidate_email: res.candidate_email }
@@ -1388,7 +1388,7 @@ export default function HRDashboard() {
                 {showRanking ? (
                   <TalentIntelligencePanel
                     postingId={selectedPosting.id}
-                    onOpenCandidate={(candidate) => {
+                    onOpenCandidate={(candidate: any) => {
                       setSelectedRanking(candidate)
                       api.getInterviewSessionReport(candidate.id).then(setSelectedReport)
                     }}
