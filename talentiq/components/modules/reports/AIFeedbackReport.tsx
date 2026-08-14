@@ -8,12 +8,19 @@ import { GlassCard, ProgressRing, EmptyState, GradientBadge } from '@/components
  * suggestion; sections with no backing field render an EmptyState.
  */
 export interface AIFeedbackData {
+  id?: string                                         // real — session id (backend/schemas/interview.py InterviewSessionReport)
+  candidate_name?: string                             // real
+  status?: string                                      // real — "in_progress" | "completed"
   ai_score?: number | null                          // real — chatbot/voice interview score
   assessment_score?: number | null                  // real — MCQ overall %
   assessment_breakdown?: Record<string, { correct: number; total: number }> | null  // real — per-category MCQ (dsa/job_desc/problem_solving/teamwork/hr)
   final_verdict?: string | null                      // real
   experience_assessment?: string | null              // real — AI's written take on experience level
   deep_analysis?: string | null                       // real — AI's full written analysis
+  transcript?: { role: string; content: string }[]     // real — full chatbot/voice transcript
+  assessment_flags?: { type: string; detail?: string; at?: string }[]  // real — proctoring events
+  assessment_photos?: string[]                          // real — proctoring snapshot paths
+  terminated_reason?: string | null                     // real
   // Optional resume-match data, shaped like screenCandidate()'s response — pass only if you actually ran it
   resumeMatch?: { score: number; matched: string[]; missing: string[] } | null
 }
