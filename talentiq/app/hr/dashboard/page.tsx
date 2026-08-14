@@ -4,10 +4,15 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import InterviewBuilderWizard from '@/components/interviews/InterviewBuilderWizard'
 import CopilotPanel from '@/components/modules/copilot/CopilotPanel'
+import TalentIntelligencePanel from '@/components/modules/talent-intelligence/TalentIntelligencePanel'
+import TalentPoolPanel from '@/components/modules/talent-intelligence/TalentPoolPanel'
 
 type Candidate = {
   filename: string
   candidate_name?: string
+  candidate_email?: string
+  application_id?: string
+  job_id?: string
   ai_score: number
   matched_skills?: string[]
   missing_skills?: string[]
@@ -22,7 +27,7 @@ type Candidate = {
 }
 
 type HistoryEntry = Candidate & { jobTitle: string; screenedAt: string }
-type Section = 'dashboard' | 'candidates' | 'bulk' | 'shortlist' | 'chatbot' | 'history' | 'open-roles' | 'settings' | 'profile'
+type Section = 'dashboard' | 'candidates' | 'bulk' | 'talent-pool' | 'shortlist' | 'chatbot' | 'history' | 'open-roles' | 'settings' | 'profile'
 
 const STEP_ICONS = ['📋', '💪', '⚠️', '✅']
 const STEP_COLORS_C = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
@@ -134,6 +139,8 @@ export default function HRDashboard() {
   const [interviewCandidates, setInterviewCandidates] = useState<any[]>([])
   const [interviewCandidatesLoading, setInterviewCandidatesLoading] = useState(false)
   const [selectedReport, setSelectedReport] = useState<any>(null)
+  const [selectedRanking, setSelectedRanking] = useState<any>(null)
+  const [showRanking, setShowRanking] = useState(false)
   const [showInterviewForm, setShowInterviewForm] = useState(false)
   const [copiedSlug, setCopiedSlug] = useState('')
   const [interviewError, setInterviewError] = useState('')
@@ -271,6 +278,8 @@ export default function HRDashboard() {
   const openPosting = (posting: any) => {
     setSelectedPosting(posting)
     setSelectedReport(null)
+    setSelectedRanking(null)
+    setShowRanking(false)
     setInterviewCandidatesLoading(true)
     api.getInterviewCandidates(posting.id)
       .then((r: any) => setInterviewCandidates(Array.isArray(r) ? r : []))
@@ -288,7 +297,7 @@ export default function HRDashboard() {
     if (!confirm('Delete this interview link permanently? All candidate transcripts and reports for it will be lost too.')) return
     try {
       await api.deleteInterviewPosting(postingId)
-      if (selectedPosting?.id === postingId) { setSelectedPosting(null); setSelectedReport(null) }
+      if (selectedPosting?.id === postingId) { setSelectedPosting(null); setSelectedReport(null); setSelectedRanking(null) }
       loadInterviewPostings()
     } catch (e: any) {
       setInterviewError(e?.message || 'Could not delete interview link.')
@@ -438,7 +447,7 @@ export default function HRDashboard() {
     }
   }
 
-  // ── Shortlist / Reject ──
+  // ── Shortlist / Reject — persists to the real Application record when one exists (bulk-screened candidates) ──
   const markCandidate = (idx: number, status: 'shortlisted' | 'rejected') => {
     const c = candidates[idx]
     if (!c) return
@@ -449,10 +458,44 @@ export default function HRDashboard() {
     // Save to history
     const newHistory = [entry, ...history.filter(h => !(h.filename === c.filename && h.jobTitle === entry.jobTitle))]
     setHistory(newHistory); saveHistory(newHistory)
+    if (c.application_id) {
+      api.updateApplication(c.application_id, status === 'shortlisted' ? 'shortlist' : 'reject').catch(() => {})
+    }
   }
 
   const undoMark = (idx: number) => {
-    const updated = [...candidates]; updated[idx] = { ...candidates[idx], status: 'active' }; setCandidates(updated)
+    const c = candidates[idx]
+    const updated = [...candidates]; updated[idx] = { ...c, status: 'active' }; setCandidates(updated)
+    if (c?.application_id) {
+      api.updateApplication(c.application_id, 'reset').catch(() => {})
+    }
+  }
+
+  // ── Move to Interview — reuses an existing interview posting's real public link, never a second interview system ──
+  const [moveToInterviewFor, setMoveToInterviewFor] = useState<number | null>(null)
+  const [moveEmailInput, setMoveEmailInput] = useState('')
+  const [movePostingId, setMovePostingId] = useState('')
+  const [moveResult, setMoveResult] = useState<{ idx: number; link: string; emailed: boolean } | null>(null)
+  const [moveError, setMoveError] = useState('')
+  const [moveLoading, setMoveLoading] = useState(false)
+
+  const submitMoveToInterview = async (idx: number) => {
+    const c = candidates[idx]
+    if (!c?.application_id || !movePostingId) return
+    setMoveLoading(true)
+    setMoveError('')
+    try {
+      const res: any = await api.moveApplicationToInterview(c.application_id, movePostingId, moveEmailInput || c.candidate_email)
+      setMoveResult({ idx, link: res.public_link, emailed: res.emailed })
+      const updated = [...candidates]
+      updated[idx] = { ...c, trigger_interview: true, candidate_email: res.candidate_email }
+      setCandidates(updated)
+      setMoveToInterviewFor(null)
+    } catch (e: any) {
+      setMoveError(e?.message || 'Could not move this candidate to interview.')
+    } finally {
+      setMoveLoading(false)
+    }
   }
 
   // ── Chatbot ──
@@ -483,6 +526,7 @@ export default function HRDashboard() {
     { id: 'dashboard', icon: '', label: 'Dashboard' },
     { id: 'candidates', icon: '', label: 'All Candidates', badge: candidates.length || undefined },
     { id: 'bulk', icon: '', label: 'Bulk Screen' },
+    { id: 'talent-pool', icon: '', label: 'Talent Pool' },
     { id: 'open-roles', icon: '', label: 'AI Interviewer', badge: interviewPostings.length || undefined },
     { id: 'shortlist', icon: '', label: 'Shortlist', badge: shortlistedList.length || undefined },
     { id: 'chatbot', icon: '', label: 'Policy Chatbot' },
@@ -526,6 +570,38 @@ export default function HRDashboard() {
             <button onClick={e => { e.stopPropagation(); undoMark(idx) }} style={{ fontSize: 10, color: 'rgba(255,255,255,.3)', background: 'transparent', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Undo</button>
           </div>
         ) : null}
+        {showActions && c.status === 'shortlisted' && c.application_id && !c.trigger_interview && (
+          <button onClick={e => { e.stopPropagation(); setMoveToInterviewFor(moveToInterviewFor === idx ? null : idx); setMoveEmailInput(c.candidate_email || ''); setMovePostingId(''); setMoveError('') }}
+            style={{ width: '100%', marginTop: 6, fontSize: 11, fontWeight: 600, fontFamily: 'Inter,sans-serif', padding: 7, borderRadius: 6, cursor: 'pointer', background: 'rgba(124,58,237,.1)', color: '#a78bfa', border: '1px solid rgba(124,58,237,.2)' }}>
+            → Move to Interview
+          </button>
+        )}
+        {c.trigger_interview && (
+          <div style={{ fontSize: 10.5, fontWeight: 600, color: '#a78bfa', marginTop: 6 }}>→ Sent to interview pipeline</div>
+        )}
+        {moveToInterviewFor === idx && (
+          <div onClick={e => e.stopPropagation()} style={{ marginTop: 10, padding: 12, background: 'rgba(124,58,237,.05)', borderRadius: 8, border: '1px solid rgba(124,58,237,.15)' }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,.5)', marginBottom: 6 }}>Move to which interview posting?</div>
+            <select value={movePostingId} onChange={e => setMovePostingId(e.target.value)} style={{ width: '100%', background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '7px 8px', fontSize: 11.5, color: 'rgba(255,255,255,.8)', marginBottom: 8, fontFamily: 'Inter,sans-serif' }}>
+              <option value="">Select a posting…</option>
+              {interviewPostings.map((p: any) => <option key={p.id} value={p.id}>{p.title}</option>)}
+            </select>
+            {!c.candidate_email && (
+              <input value={moveEmailInput} onChange={e => setMoveEmailInput(e.target.value)} placeholder="Candidate email (required — not on file)" style={{ width: '100%', background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '7px 8px', fontSize: 11.5, color: 'rgba(255,255,255,.8)', marginBottom: 8, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
+            )}
+            {moveError && <div style={{ fontSize: 10.5, color: '#ef4444', marginBottom: 6 }}>{moveError}</div>}
+            <button disabled={!movePostingId || (!c.candidate_email && !moveEmailInput) || moveLoading}
+              onClick={() => submitMoveToInterview(idx)}
+              style={{ width: '100%', fontSize: 11, fontWeight: 700, fontFamily: 'Inter,sans-serif', padding: 8, borderRadius: 6, border: 'none', cursor: 'pointer', background: '#7c3aed', color: '#fff', opacity: (!movePostingId || (!c.candidate_email && !moveEmailInput) || moveLoading) ? .5 : 1 }}>
+              {moveLoading ? 'Sending…' : 'Send Interview Invite'}
+            </button>
+          </div>
+        )}
+        {moveResult?.idx === idx && (
+          <div style={{ marginTop: 8, fontSize: 10.5, color: '#13c28e' }}>
+            {moveResult.emailed ? '✓ Invite emailed to candidate.' : '✓ Posting linked.'} <a href={moveResult.link} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ color: '#a78bfa' }}>Copy link</a>
+          </div>
+        )}
         {selectedKey === c.filename && c.deep_analysis && (
           <div style={{ marginTop: 10, padding: 12, background: 'rgba(255,255,255,.02)', borderRadius: 8, border: '1px solid rgba(255,255,255,.05)' }}>
             <AnalysisCarousel text={c.deep_analysis} />
@@ -536,7 +612,8 @@ export default function HRDashboard() {
   }
 
   const renderDashboard = () => (
-    <div style={{ padding: 28, overflowY: 'auto', height: '100%' }}>
+    <div style={{ padding: 28, overflowY: 'auto', height: '100%', display: 'flex', gap: 20 }}>
+    <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>HR Dashboard</div>
@@ -593,6 +670,17 @@ export default function HRDashboard() {
           <button onClick={() => setSection('bulk')} style={{ fontSize: 13, fontWeight: 700, background: '#13c28e', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Run Bulk Screening</button>
         </div>
       )}
+    </div>
+    <CopilotPanel
+      context="hr_overview"
+      hrOverview={{
+        postings: interviewPostings.map((p: any) => ({ id: p.id, candidateCount: p.candidate_count || 0, isActive: !!p.is_active })),
+        completedInterviews: interviewHistory.map((c: any) => ({ final_verdict: c.final_verdict, ai_score: c.ai_score, assessment_score: c.assessment_score })),
+        bulkCandidates: candidates.map(c => ({ ai_score: c.ai_score, final_verdict: c.final_verdict })),
+        orgMembersCount: org ? orgMembers.length : null,
+        shortlistedCount: shortlistedList.length,
+      }}
+    />
     </div>
   )
 
@@ -671,6 +759,14 @@ export default function HRDashboard() {
           View {candidates.length} Ranked Candidates →
         </button>
       )}
+    </div>
+  )
+
+  const renderTalentPool = () => (
+    <div style={{ padding: 28, overflowY: 'auto', height: '100%' }}>
+      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>Talent Pool</div>
+      <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginBottom: 24 }}>Every screened candidate across all your screening jobs, in one searchable, filterable place</div>
+      <TalentPoolPanel interviewPostings={interviewPostings.map((p: any) => ({ id: p.id, title: p.title }))} />
     </div>
   )
 
@@ -1137,7 +1233,7 @@ export default function HRDashboard() {
               </div>
             ) : selectedReport ? (
               <div>
-                <button onClick={() => setSelectedReport(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 12, cursor: 'pointer', marginBottom: 14, padding: 0, fontFamily: 'Inter,sans-serif' }}>← Back to candidates</button>
+                <button onClick={() => { setSelectedReport(null); setSelectedRanking(null) }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 12, cursor: 'pointer', marginBottom: 14, padding: 0, fontFamily: 'Inter,sans-serif' }}>← Back to candidates</button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
                   <div>
                     <div style={{ fontSize: 18, fontWeight: 600 }}>{selectedReport.candidate_name}</div>
@@ -1161,6 +1257,49 @@ export default function HRDashboard() {
                     display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 100, marginBottom: 16,
                     background: 'rgba(255,255,255,.06)', color: 'rgba(255,255,255,.7)'
                   }}>{selectedReport.final_verdict}</div>
+                )}
+                {selectedRanking && (
+                  <div style={s(card, { marginBottom: 14 })}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 13 }}>📄</span>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.6)' }}>Resume Intelligence</div>
+                    </div>
+                    {selectedRanking.resume_available ? (
+                      <>
+                        <div style={{ display: 'flex', gap: 20, marginBottom: 10 }}>
+                          {selectedRanking.ats_score != null && (
+                            <div>
+                              <div style={{ fontSize: 20, fontWeight: 700, color: selectedRanking.ats_score >= 70 ? '#13c28e' : selectedRanking.ats_score >= 45 ? '#e2b04a' : '#ef4444' }}>{selectedRanking.ats_score}</div>
+                              <div style={{ fontSize: 9, color: 'rgba(255,255,255,.3)' }}>ATS SCORE</div>
+                            </div>
+                          )}
+                          {selectedRanking.skill_match_pct != null && (
+                            <div>
+                              <div style={{ fontSize: 20, fontWeight: 700, color: selectedRanking.skill_match_pct >= 70 ? '#13c28e' : selectedRanking.skill_match_pct >= 45 ? '#e2b04a' : '#ef4444' }}>{selectedRanking.skill_match_pct}%</div>
+                              <div style={{ fontSize: 9, color: 'rgba(255,255,255,.3)' }}>SKILL MATCH</div>
+                            </div>
+                          )}
+                          {selectedRanking.fit_score != null && (
+                            <div>
+                              <div style={{ fontSize: 20, fontWeight: 700, color: '#a78bfa' }}>{selectedRanking.fit_score}</div>
+                              <div style={{ fontSize: 9, color: 'rgba(255,255,255,.3)' }}>OVERALL FIT</div>
+                            </div>
+                          )}
+                        </div>
+                        {selectedRanking.matched_skills.length > 0 && (
+                          <div style={{ fontSize: 11, color: '#13c28e', marginBottom: 4 }}>✓ Matched: {selectedRanking.matched_skills.join(', ')}</div>
+                        )}
+                        {selectedRanking.missing_skills.length > 0 && (
+                          <div style={{ fontSize: 11, color: '#ef4444', marginBottom: 4 }}>Missing: {selectedRanking.missing_skills.join(', ')}</div>
+                        )}
+                        {selectedRanking.resume_role_title && (
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,.3)', marginTop: 6 }}>From candidate&apos;s most recent CV scan (against &ldquo;{selectedRanking.resume_role_title}&rdquo;) — may not be scanned against this exact posting.</div>
+                        )}
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.35)' }}>No linked candidate account or CV scan found for this candidate.</div>
+                    )}
+                  </div>
                 )}
                 {selectedReport.status !== 'completed' && (
                   <div style={s(card, { marginBottom: 14, color: '#e2b04a', fontSize: 12 })}>Still in progress — candidate hasn't finished yet.</div>
@@ -1229,8 +1368,33 @@ export default function HRDashboard() {
               </div>
             ) : (
               <>
-                <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{selectedPosting.title}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginBottom: 20 }}>{selectedPosting.public_link}</div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{selectedPosting.title}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>{selectedPosting.public_link}</div>
+                  </div>
+                  {!interviewCandidatesLoading && interviewCandidates.length > 0 && (
+                    <button onClick={() => setShowRanking(v => !v)} style={{
+                      flexShrink: 0, fontSize: 12, fontWeight: 700, padding: '9px 16px', borderRadius: 9, cursor: 'pointer',
+                      fontFamily: 'Inter,sans-serif', border: 'none',
+                      background: showRanking ? 'rgba(255,255,255,.06)' : 'linear-gradient(135deg,#7c3aed,#a78bfa)',
+                      color: showRanking ? 'rgba(255,255,255,.6)' : '#fff',
+                    }}>
+                      {showRanking ? '← Candidate List' : '✨ Talent Intelligence Ranking'}
+                    </button>
+                  )}
+                </div>
+                <div style={{ marginBottom: 20 }} />
+                {showRanking ? (
+                  <TalentIntelligencePanel
+                    postingId={selectedPosting.id}
+                    onOpenCandidate={(candidate) => {
+                      setSelectedRanking(candidate)
+                      api.getInterviewSessionReport(candidate.id).then(setSelectedReport)
+                    }}
+                  />
+                ) : (
+                <>
                 {interviewCandidatesLoading && <div style={{ fontSize: 13, color: 'rgba(255,255,255,.3)' }}>Loading...</div>}
                 {!interviewCandidatesLoading && interviewCandidates.length === 0 && (
                   <div style={s(card, { textAlign: 'center', padding: 30, color: 'rgba(255,255,255,.3)' })}>
@@ -1238,7 +1402,7 @@ export default function HRDashboard() {
                   </div>
                 )}
                 {interviewCandidates.map((c: any) => (
-                  <div key={c.id} onClick={() => { if (c.status === 'completed') api.getInterviewSessionReport(c.id).then(setSelectedReport) }}
+                  <div key={c.id} onClick={() => { if (c.status === 'completed') { setSelectedRanking(null); api.getInterviewSessionReport(c.id).then(setSelectedReport) } }}
                     style={s(card, { marginBottom: 8, cursor: c.status === 'completed' ? 'pointer' : 'default' })}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#fff' }}>
@@ -1272,6 +1436,8 @@ export default function HRDashboard() {
                     </div>
                   </div>
                 ))}
+                </>
+                )}
               </>
             )}
           </div>
@@ -1281,7 +1447,7 @@ export default function HRDashboard() {
               context="candidate_review"
               report={selectedReport}
               candidateName={selectedReport.candidate_name}
-              peers={interviewCandidates.map((c: any) => ({ name: c.candidate_name, score: c.ai_score ?? c.assessment_score ?? null }))}
+              peers={interviewCandidates.map((c: any) => ({ id: c.id, name: c.candidate_name, score: c.ai_score ?? c.assessment_score ?? null }))}
             />
           )}
         </div>
@@ -1293,6 +1459,7 @@ export default function HRDashboard() {
     switch (section) {
       case 'dashboard': return renderDashboard()
       case 'bulk': return renderBulk()
+      case 'talent-pool': return renderTalentPool()
       case 'candidates': return renderCandidates(activeCandidates, 'All Candidates', 'Run a bulk screening to see candidates here.')
       case 'shortlist': return renderCandidates(shortlistedList, 'Shortlisted', 'No candidates shortlisted yet. Go to All Candidates and shortlist the ones you like.')
       case 'chatbot': return renderChatbot()
