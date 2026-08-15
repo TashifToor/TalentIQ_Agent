@@ -70,6 +70,14 @@ function ScoreChip({ score }: { score: number }) {
   return <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, color }}>{score}</div>
 }
 
+function TalentIntelligencePanel({ postingId }: { postingId: string, onOpenCandidate: (candidate: any) => void }) {
+  return (
+    <div style={{ padding: 16, borderRadius: 8, background: '#111110', border: '1px solid rgba(255,255,255,.06)', color: 'rgba(255,255,255,.35)', fontSize: 12 }}>
+      Talent intelligence ranking is unavailable for posting {postingId}.
+    </div>
+  )
+}
+
 function SkillTags({ matched, missing }: { matched: string[], missing: string[] }) {
   const all = [...matched.slice(0, 3), ...missing.slice(0, 2)]
   const mset = new Set(matched)
@@ -459,7 +467,7 @@ export default function HRDashboard() {
     const newHistory = [entry, ...history.filter(h => !(h.filename === c.filename && h.jobTitle === entry.jobTitle))]
     setHistory(newHistory); saveHistory(newHistory)
     if (c.application_id) {
-      ; (api as any).updateApplication(c.application_id, status === 'shortlisted' ? 'shortlist' : 'reject').catch(() => { })
+      api.updateApplication(c.application_id, status === 'shortlisted' ? 'shortlist' : 'reject').catch(() => { })
     }
   }
 
@@ -467,7 +475,7 @@ export default function HRDashboard() {
     const c = candidates[idx]
     const updated = [...candidates]; updated[idx] = { ...c, status: 'active' }; setCandidates(updated)
     if (c?.application_id) {
-      ; (api as any).updateApplication(c.application_id, 'reset').catch(() => { })
+      api.updateApplication(c.application_id, 'reset').catch(() => { })
     }
   }
 
@@ -485,7 +493,7 @@ export default function HRDashboard() {
     setMoveLoading(true)
     setMoveError('')
     try {
-      const res: any = await (api as any).moveApplicationToInterview(c.application_id, movePostingId, moveEmailInput || c.candidate_email)
+      const res: any = await api.moveApplicationToInterview(c.application_id, movePostingId, moveEmailInput || c.candidate_email)
       setMoveResult({ idx, link: res.public_link, emailed: res.emailed })
       const updated = [...candidates]
       updated[idx] = { ...c, trigger_interview: true, candidate_email: res.candidate_email }
@@ -1388,7 +1396,7 @@ export default function HRDashboard() {
                 {showRanking ? (
                   <TalentIntelligencePanel
                     postingId={selectedPosting.id}
-                    onOpenCandidate={(candidate: any) => {
+                    onOpenCandidate={(candidate) => {
                       setSelectedRanking(candidate)
                       api.getInterviewSessionReport(candidate.id).then(setSelectedReport)
                     }}
