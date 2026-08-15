@@ -34,10 +34,10 @@ def resolve_application_identity(db: Session, application) -> tuple[str | None, 
     Returns (name, email, is_real_account) for a bulk-screening Application row.
 
     Two ingestion paths write into the same `applications` table:
-    - /apply/{job_id}: candidate_id is a REAL logged-in candidate's User.id —
+      - /apply/{job_id}: candidate_id is a REAL logged-in candidate's User.id —
         the best possible identity, so we prefer it when it actually resolves
         to a candidate account.
-    - /bulk/screen (HR-uploaded CVs): candidate_id is a placeholder (set to
+      - /bulk/screen (HR-uploaded CVs): candidate_id is a placeholder (set to
         the HR user's own id — there's no logged-in candidate at all), so we
         fall back to whatever was explicitly captured on the Application row
         itself (candidate_name from CV-text extraction, candidate_email only
