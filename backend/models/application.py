@@ -13,6 +13,15 @@ class Application(Base):
     candidate_id=   Column(Integer,ForeignKey("users.id"),nullable=False)
     cv_filename=    Column(String,nullable=True)
     cv_text=        Column(Text,nullable=True)
+    candidate_name= Column(String,nullable=True)   # persisted from the pipeline's own name extraction
+    candidate_email=Column(String,nullable=True)   # only ever set when an HR user explicitly types it in
+
+    # CrewAI screening committee — qualitative multi-agent analysis, kept
+    # entirely separate from the deterministic ATS fields above. Never
+    # duplicates ai_score/matched_skills/missing_skills/final_verdict.
+    ai_screening_status=     Column(String, nullable=False, default="not_analyzed")  # not_analyzed|queued|analyzing|completed|failed
+    ai_screening_result=     Column(Text, nullable=True)      # ScreeningCommitteeResult, JSON-serialized
+    ai_screening_updated_at= Column(DateTime(timezone=True), nullable=True)
 
     ai_score=       Column(Integer,default=0)
     matched_skills= Column(Text,default="[]")  
