@@ -222,6 +222,21 @@ export const api = {
   // Poll bulk screening task status
   pollBulkStatus: (taskId: string) => apiFetch(`/bulk/status/${taskId}`),
 
+  // Real, persisted per-application actions (Talent Pool / bulk screening)
+  updateApplication: (applicationId: string, action: 'shortlist' | 'reject' | 'reset', candidateEmail?: string) =>
+    apiFetch(`/bulk/applications/${applicationId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ action, candidate_email: candidateEmail || undefined }),
+    }),
+  moveApplicationToInterview: (applicationId: string, postingId: string, candidateEmail?: string) =>
+    apiFetch(`/bulk/applications/${applicationId}/move-to-interview`, {
+      method: "POST",
+      body: JSON.stringify({ posting_id: postingId, candidate_email: candidateEmail || undefined }),
+    }),
+  getTalentPool: () => apiFetch("/bulk/talent-pool"),
+  getTalentPoolCandidate: (applicationId: string) => apiFetch(`/bulk/talent-pool/${applicationId}`),
+  triggerAiScreening: (applicationId: string) => apiFetch(`/bulk/applications/${applicationId}/ai-screening`, { method: "POST" }),
+
   // Forgot password
   forgotPassword: (email: string) =>
     apiFetch("/auth/forgot-password", {
@@ -300,6 +315,8 @@ export const api = {
   getAllInterviewCandidates: () => apiFetch(`/interview/candidates`),
 
   getInterviewSessionReport: (sessionId: string) => apiFetch(`/interview/sessions/${sessionId}`),
+
+  getPostingRanking: (postingId: string) => apiFetch(`/interview/postings/${postingId}/ranking`),
 
   getProctoringPhotoUrl: (sessionId: string, path: string) => {
     const filename = path.split('/').pop()
