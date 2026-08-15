@@ -459,7 +459,7 @@ export default function HRDashboard() {
     const newHistory = [entry, ...history.filter(h => !(h.filename === c.filename && h.jobTitle === entry.jobTitle))]
     setHistory(newHistory); saveHistory(newHistory)
     if (c.application_id) {
-      api.updateApplication(c.application_id, status === 'shortlisted' ? 'shortlist' : 'reject').catch(() => {})
+      api.updateApplication(c.application_id, status === 'shortlisted' ? 'shortlist' : 'reject').catch(() => { })
     }
   }
 
@@ -467,7 +467,7 @@ export default function HRDashboard() {
     const c = candidates[idx]
     const updated = [...candidates]; updated[idx] = { ...c, status: 'active' }; setCandidates(updated)
     if (c?.application_id) {
-      api.updateApplication(c.application_id, 'reset').catch(() => {})
+      api.updateApplication(c.application_id, 'reset').catch(() => { })
     }
   }
 
@@ -613,74 +613,74 @@ export default function HRDashboard() {
 
   const renderDashboard = () => (
     <div style={{ padding: 28, overflowY: 'auto', height: '100%', display: 'flex', gap: 20 }}>
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>HR Dashboard</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Overview of your latest screening session</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div>
+            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>HR Dashboard</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Overview of your latest screening session</div>
+          </div>
+          {candidates.length > 0 && (
+            <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(19,194,142,.2)', background: 'rgba(19,194,142,.08)', color: '#13c28e', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
+              ⬇ Export CSV
+            </button>
+          )}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
+          {[
+            { v: totalProcessed || '—', l: 'Total Screened' },
+            { v: shortlistedList.length || '—', l: 'Shortlisted', sub: totalProcessed ? `${Math.round(shortlistedList.length / totalProcessed * 100)}% pass rate` : '' },
+            { v: avgScore || '—', l: 'Avg. Score' },
+            { v: rejectedList.length || '—', l: 'Rejected' },
+          ].map(st => (
+            <div key={st.l} style={card}>
+              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 600, marginBottom: 2 }}>{st.v}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>{st.l}</div>
+              {st.sub && <div style={{ fontSize: 11, color: '#22c55e', marginTop: 3 }}>{st.sub}</div>}
+            </div>
+          ))}
         </div>
         {candidates.length > 0 && (
-          <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(19,194,142,.2)', background: 'rgba(19,194,142,.08)', color: '#13c28e', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
-            ⬇ Export CSV
-          </button>
+          <>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>ATS Score Distribution</div>
+            <div style={s(card, { marginBottom: 24 })}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80, padding: '8px 4px 0' }}>
+                {candidates.map((c, i) => (
+                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' }} onClick={() => setSection('candidates')}>
+                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', fontWeight: 600 }}>{c.ai_score}</span>
+                    <div title={c.filename} style={{ width: '100%', borderRadius: '3px 3px 0 0', height: `${Math.max(c.ai_score, 4)}%`, background: c.ai_score >= 80 ? '#13c28e' : c.ai_score >= 60 ? '#e2b04a' : 'rgba(239,68,68,.5)', transition: 'all .3s', minHeight: 4 }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,.2)' }}>Lowest: {Math.min(...candidates.map(c => c.ai_score))}</span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,.2)' }}>Avg: {Math.round(candidates.reduce((s, c) => s + c.ai_score, 0) / candidates.length)}</span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,.2)' }}>Highest: {Math.max(...candidates.map(c => c.ai_score))}</span>
+              </div>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Top Candidates</div>
+            {candidates.slice(0, 3).map((c, i) => <CandidateCard key={i} c={c} idx={i} />)}
+            <button onClick={() => setSection('candidates')} style={{ fontSize: 12, color: '#13c28e', background: 'transparent', border: '1px solid rgba(19,194,142,.2)', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontFamily: 'Inter,sans-serif', marginTop: 4 }}>View all {candidates.length} candidates →</button>
+          </>
+        )}
+        {candidates.length === 0 && (
+          <div style={s(card, { textAlign: 'center', padding: 40 })}>
+
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>No screenings yet</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginBottom: 16 }}>Upload a ZIP of CVs to get started</div>
+            <button onClick={() => setSection('bulk')} style={{ fontSize: 13, fontWeight: 700, background: '#13c28e', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Run Bulk Screening</button>
+          </div>
         )}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
-        {[
-          { v: totalProcessed || '—', l: 'Total Screened' },
-          { v: shortlistedList.length || '—', l: 'Shortlisted', sub: totalProcessed ? `${Math.round(shortlistedList.length / totalProcessed * 100)}% pass rate` : '' },
-          { v: avgScore || '—', l: 'Avg. Score' },
-          { v: rejectedList.length || '—', l: 'Rejected' },
-        ].map(st => (
-          <div key={st.l} style={card}>
-            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 600, marginBottom: 2 }}>{st.v}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>{st.l}</div>
-            {st.sub && <div style={{ fontSize: 11, color: '#22c55e', marginTop: 3 }}>{st.sub}</div>}
-          </div>
-        ))}
-      </div>
-      {candidates.length > 0 && (
-        <>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>ATS Score Distribution</div>
-          <div style={s(card, { marginBottom: 24 })}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80, padding: '8px 4px 0' }}>
-              {candidates.map((c, i) => (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' }} onClick={() => setSection('candidates')}>
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', fontWeight: 600 }}>{c.ai_score}</span>
-                  <div title={c.filename} style={{ width: '100%', borderRadius: '3px 3px 0 0', height: `${Math.max(c.ai_score, 4)}%`, background: c.ai_score >= 80 ? '#13c28e' : c.ai_score >= 60 ? '#e2b04a' : 'rgba(239,68,68,.5)', transition: 'all .3s', minHeight: 4 }} />
-                </div>
-              ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,.2)' }}>Lowest: {Math.min(...candidates.map(c => c.ai_score))}</span>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,.2)' }}>Avg: {Math.round(candidates.reduce((s, c) => s + c.ai_score, 0) / candidates.length)}</span>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,.2)' }}>Highest: {Math.max(...candidates.map(c => c.ai_score))}</span>
-            </div>
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Top Candidates</div>
-          {candidates.slice(0, 3).map((c, i) => <CandidateCard key={i} c={c} idx={i} />)}
-          <button onClick={() => setSection('candidates')} style={{ fontSize: 12, color: '#13c28e', background: 'transparent', border: '1px solid rgba(19,194,142,.2)', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontFamily: 'Inter,sans-serif', marginTop: 4 }}>View all {candidates.length} candidates →</button>
-        </>
-      )}
-      {candidates.length === 0 && (
-        <div style={s(card, { textAlign: 'center', padding: 40 })}>
-
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>No screenings yet</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginBottom: 16 }}>Upload a ZIP of CVs to get started</div>
-          <button onClick={() => setSection('bulk')} style={{ fontSize: 13, fontWeight: 700, background: '#13c28e', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Run Bulk Screening</button>
-        </div>
-      )}
-    </div>
-    <CopilotPanel
-      context="hr_overview"
-      hrOverview={{
-        postings: interviewPostings.map((p: any) => ({ id: p.id, candidateCount: p.candidate_count || 0, isActive: !!p.is_active })),
-        completedInterviews: interviewHistory.map((c: any) => ({ final_verdict: c.final_verdict, ai_score: c.ai_score, assessment_score: c.assessment_score })),
-        bulkCandidates: candidates.map(c => ({ ai_score: c.ai_score, final_verdict: c.final_verdict })),
-        orgMembersCount: org ? orgMembers.length : null,
-        shortlistedCount: shortlistedList.length,
-      }}
-    />
+      <CopilotPanel
+        context="hr_overview"
+        hrOverview={{
+          postings: interviewPostings.map((p: any) => ({ id: p.id, candidateCount: p.candidate_count || 0, isActive: !!p.is_active })),
+          completedInterviews: interviewHistory.map((c: any) => ({ final_verdict: c.final_verdict, ai_score: c.ai_score, assessment_score: c.assessment_score })),
+          bulkCandidates: candidates.map(c => ({ ai_score: c.ai_score, final_verdict: c.final_verdict })),
+          orgMembersCount: org ? orgMembers.length : null,
+          shortlistedCount: shortlistedList.length,
+        }}
+      />
     </div>
   )
 
@@ -1394,49 +1394,49 @@ export default function HRDashboard() {
                     }}
                   />
                 ) : (
-                <>
-                {interviewCandidatesLoading && <div style={{ fontSize: 13, color: 'rgba(255,255,255,.3)' }}>Loading...</div>}
-                {!interviewCandidatesLoading && interviewCandidates.length === 0 && (
-                  <div style={s(card, { textAlign: 'center', padding: 30, color: 'rgba(255,255,255,.3)' })}>
-                    No candidates yet. Share the public link to start getting interviews.
-                  </div>
-                )}
-                {interviewCandidates.map((c: any) => (
-                  <div key={c.id} onClick={() => { if (c.status === 'completed') { setSelectedRanking(null); api.getInterviewSessionReport(c.id).then(setSelectedReport) } }}
-                    style={s(card, { marginBottom: 8, cursor: c.status === 'completed' ? 'pointer' : 'default' })}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#fff' }}>
-                        {initials(c.candidate_name)}
+                  <>
+                    {interviewCandidatesLoading && <div style={{ fontSize: 13, color: 'rgba(255,255,255,.3)' }}>Loading...</div>}
+                    {!interviewCandidatesLoading && interviewCandidates.length === 0 && (
+                      <div style={s(card, { textAlign: 'center', padding: 30, color: 'rgba(255,255,255,.3)' })}>
+                        No candidates yet. Share the public link to start getting interviews.
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600 }}>{c.candidate_name}</div>
-                          {c.proctoring_flag_count > 0 && (
-                            <span title={`${c.proctoring_flag_count} proctoring flag(s)`} style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(239,68,68,.12)', color: '#ef4444' }}>⚠ {c.proctoring_flag_count}</span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>
-                          {c.status === 'completed' ? (c.final_verdict || 'Completed') : 'In progress...'}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                        {c.ai_score != null && (
-                          <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 600, color: c.ai_score >= 80 ? '#13c28e' : c.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{c.ai_score}</div>
-                            <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,.25)' }}>INTERVIEW</div>
+                    )}
+                    {interviewCandidates.map((c: any) => (
+                      <div key={c.id} onClick={() => { if (c.status === 'completed') { setSelectedRanking(null); api.getInterviewSessionReport(c.id).then(setSelectedReport) } }}
+                        style={s(card, { marginBottom: 8, cursor: c.status === 'completed' ? 'pointer' : 'default' })}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#fff' }}>
+                            {initials(c.candidate_name)}
                           </div>
-                        )}
-                        {c.assessment_score != null && (
-                          <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 600, color: c.assessment_score >= 80 ? '#13c28e' : c.assessment_score >= 60 ? '#e2b04a' : '#ef4444' }}>{c.assessment_score}%</div>
-                            <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,.25)' }}>MCQ</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <div style={{ fontSize: 13, fontWeight: 600 }}>{c.candidate_name}</div>
+                              {c.proctoring_flag_count > 0 && (
+                                <span title={`${c.proctoring_flag_count} proctoring flag(s)`} style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(239,68,68,.12)', color: '#ef4444' }}>⚠ {c.proctoring_flag_count}</span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>
+                              {c.status === 'completed' ? (c.final_verdict || 'Completed') : 'In progress...'}
+                            </div>
                           </div>
-                        )}
+                          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                            {c.ai_score != null && (
+                              <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 600, color: c.ai_score >= 80 ? '#13c28e' : c.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{c.ai_score}</div>
+                                <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,.25)' }}>INTERVIEW</div>
+                              </div>
+                            )}
+                            {c.assessment_score != null && (
+                              <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 600, color: c.assessment_score >= 80 ? '#13c28e' : c.assessment_score >= 60 ? '#e2b04a' : '#ef4444' }}>{c.assessment_score}%</div>
+                                <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,.25)' }}>MCQ</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-                </>
+                    ))}
+                  </>
                 )}
               </>
             )}
