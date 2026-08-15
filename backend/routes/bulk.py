@@ -5,12 +5,14 @@ import shutil
 import smtplib
 import zipfile
 import tempfile
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import update
 from celery.result import AsyncResult
 
 from models.database import get_db
@@ -18,14 +20,24 @@ from middleware.auth import get_current_user
 from models.user import User
 from models.job import Job
 from models.application import Application
+from models.interview import InterviewPosting, InterviewSession
 from core.celery_app import celery_app
 from core.redis_client import check_rate_limit
+from core.org_scope import get_org_scoped_user_ids
+from core.talent_ranking import compute_candidate_fit
+from core.candidate_identity import resolve_application_identity, resolve_interview_status
+from utils.email_utils import normalize_email
 from tasks.screening_task import run_bulk_screening
+from pydantic import BaseModel
+from typing import Optional, Literal
+
+logger = logging.getLogger("talentiq.bulk")
 
 router = APIRouter(prefix="/bulk", tags=["Bulk Screening"])
 MAX_CVS = 25
 MAX_ZIP_SIZE_MB = 50
 MAX_ZIP_SIZE_BYTES = MAX_ZIP_SIZE_MB * 1024 * 1024
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 UPLOAD_TMP = os.path.join(os.path.dirname(__file__), "..", "data", "bulk_tmp")
 os.makedirs(UPLOAD_TMP, exist_ok=True)
@@ -41,6 +53,93 @@ def require_hr(user: User):
     if (user.role or "").lower() != "hr":
         raise HTTPException(status_code=403, detail="Only HR users can do this.")
     return user
+
+
+def get_scoped_application(db: Session, application_id: str, current_user: User) -> Application:
+    """
+    Ownership check for every per-application action below: the Application
+    must belong to a Job owned by this HR user's org (same
+    get_org_scoped_user_ids pattern used everywhere else HR-owned data is
+    queried). 404s rather than 403s so an application ID from another org
+    can't even be confirmed to exist.
+    """
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+    app = (
+        db.query(Application)
+        .join(Job, Application.job_id == Job.id)
+        .filter(Application.id == application_id, Job.hr_user_id.in_(scoped_ids))
+        .first()
+    )
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found.")
+    return app
+
+
+def build_candidate_entry(db: Session, app: Application, job: Job | None, org_sessions: list) -> dict:
+    """
+    The single source of truth for "everything we know about this
+    candidate" — used by the Bulk Screening results list, Talent Pool list,
+    and the Talent Pool candidate detail view, so all three always agree
+    (no second interpretation of the same Application row).
+
+    org_sessions must be prefetched once per request by the caller (not
+    re-queried per candidate) to avoid an N+1 pattern.
+    """
+    name, email, has_linked_account = resolve_application_identity(db, app)
+    status_info = resolve_interview_status(app, email, has_linked_account, org_sessions)
+    session = status_info["session"]
+
+    matched = json.loads(app.matched_skills or "[]")
+    missing = json.loads(app.missing_skills or "[]")
+    total = len(matched) + len(missing)
+    skill_match_pct = round((len(matched) / total) * 100) if total > 0 else None
+
+    # This ATS score was computed directly against `job`'s own description —
+    # by construction, never a stale/unrelated scan — so exact_job_match=True
+    # always here (unlike the interview-posting ranking path, which pulls a
+    # candidate's separately-run CV Optimizer history and must caveat it).
+    resume_profile = {
+        "resume_available": True,
+        "ats_score": app.ai_score,
+        "matched_skills": matched,
+        "missing_skills": missing,
+        "skill_match_pct": skill_match_pct,
+        "resume_verdict": app.final_verdict,
+        "resume_role_title": job.title if job else None,
+        "resume_scanned_at": app.screened_at.isoformat() if app.screened_at else None,
+        "exact_job_match": True,
+    }
+
+    fit = compute_candidate_fit(
+        ai_score=session.ai_score if session else None,
+        assessment_score=session.assessment_score if session else None,
+        final_verdict=(session.final_verdict if session else None) or app.final_verdict,
+        assessment_breakdown=None,
+        proctoring_flag_count=len(json.loads(session.assessment_flags or "[]")) if session else 0,
+        status=session.status if session else "not_started",
+        resume_profile=resume_profile,
+    )
+
+    return {
+        "id": str(app.id),
+        "job_id": str(app.job_id),
+        "job_title": job.title if job else None,
+        "candidate_name": name,
+        "candidate_email": email,
+        "has_linked_account": has_linked_account,
+        "cv_filename": app.cv_filename,
+        "deep_analysis": app.deep_analysis,
+        "is_shortlisted": app.is_shortlisted,          # "pending" | "yes" | "no"
+        "trigger_interview": app.trigger_interview == "yes",
+        "interview_status": status_info["status"],      # unknown | not_invited | invited | in_progress | completed
+        "interview_session_id": str(session.id) if session else None,
+        "has_report": bool(session and session.status == "completed"),
+        "created_at": app.created_at.isoformat() if app.created_at else None,
+        "screened_at": app.screened_at.isoformat() if app.screened_at else None,
+        **fit,   # fit_score, fit_tier, recommendation, ats_score, matched_skills, missing_skills,
+                 # skill_match_pct, resume_verdict, resume_role_title, resume_scanned_at,
+                 # resume_matches_current_context, evidence
+    }
 
 
 def extract_candidate_name(filename: str, cv_text: str = "") -> str:
@@ -131,40 +230,9 @@ def send_screening_complete_email(hr_email: str, hr_name: str, job_title: str, t
         print(f"[Email] Failed: {e}")
 
 
-def save_screening_to_db(
-    db: Session,
-    hr_user: User,
-    job_title: str,
-    job_description: str,
-    results: list,
-) -> str:
-    """Create Job record + Application records for each screened CV."""
-    job = Job(
-        hr_user_id=hr_user.id,
-        title=job_title or "Untitled Role",
-        description=job_description,
-    )
-    db.add(job)
-    db.flush()  # get job.id without committing
-
-    for r in results:
-        app = Application(
-            job_id=job.id,
-            candidate_id=hr_user.id,  # placeholder — no real candidate account
-            cv_filename=r.get("filename", ""),
-            ai_score=r.get("ai_score", 0),
-            matched_skills=json.dumps(r.get("matched_skills", [])),
-            missing_skills=json.dumps(r.get("missing_skills", [])),
-            final_verdict=r.get("final_verdict", ""),
-            deep_analysis=r.get("deep_analysis", ""),
-            is_shortlisted="yes" if r.get("is_shortlisted") else "no",
-            trigger_interview="yes" if r.get("trigger_interview") else "no",
-            screened_at=datetime.utcnow(),
-        )
-        db.add(app)
-
-    db.commit()
-    return str(job.id)
+# NOTE: save_screening_to_db() previously lived here but was dead code — the
+# actual save-to-DB happens inside tasks/screening_task.py's Celery task.
+# Removed rather than left to rot next to the real implementation.
 
 
 @router.post("/screen")
@@ -281,6 +349,19 @@ def get_task_status(task_id: str, current_user: User = Depends(get_current_user)
     return {"task_id": task_id, "state": result.state, "status": "Unknown state."}
 
 
+def get_scoped_org_sessions(db: Session, scoped_ids: list) -> list:
+    """Every InterviewSession belonging to this org's own postings — fetched
+    once per request and reused across all candidates, so matching identity
+    to interview status never becomes an N+1 query pattern."""
+    return (
+        db.query(InterviewSession)
+        .join(InterviewPosting, InterviewSession.posting_id == InterviewPosting.id)
+        .filter(InterviewPosting.hr_user_id.in_(scoped_ids))
+        .order_by(InterviewSession.created_at.desc())
+        .all()
+    )
+
+
 @router.get("/jobs")
 def get_hr_jobs(
     db: Session = Depends(get_db),
@@ -288,12 +369,21 @@ def get_hr_jobs(
 ):
     """HR ke saare past screening jobs with results (team workspace: sab teammates ke jobs bhi)."""
     require_hr(current_user)
-    from core.org_scope import get_org_scoped_user_ids
     scoped_ids = get_org_scoped_user_ids(current_user, db)
     jobs = db.query(Job).filter(Job.hr_user_id.in_(scoped_ids)).order_by(Job.created_at.desc()).all()
+    org_sessions = get_scoped_org_sessions(db, scoped_ids)
+
+    # One query for every Application across every job — avoids an N+1
+    # per-job query, then groups them in Python.
+    job_ids = [j.id for j in jobs]
+    all_apps = db.query(Application).filter(Application.job_id.in_(job_ids)).all() if job_ids else []
+    apps_by_job: dict = {}
+    for a in all_apps:
+        apps_by_job.setdefault(str(a.job_id), []).append(a)
+
     result = []
     for job in jobs:
-        apps = db.query(Application).filter(Application.job_id == job.id).all()
+        apps = apps_by_job.get(str(job.id), [])
         result.append({
             "id": str(job.id),
             "title": job.title,
@@ -302,19 +392,256 @@ def get_hr_jobs(
             "total_candidates": len(apps),
             "shortlisted": sum(1 for a in apps if a.is_shortlisted == "yes"),
             "top_score": max((a.ai_score for a in apps), default=0),
-            "candidates": [
-                {
-                    "filename": a.cv_filename,
-                    "ai_score": a.ai_score,
-                    "matched_skills": json.loads(a.matched_skills or "[]"),
-                    "missing_skills": json.loads(a.missing_skills or "[]"),
-                    "final_verdict": a.final_verdict,
-                    "deep_analysis": a.deep_analysis,
-                    "is_shortlisted": a.is_shortlisted == "yes",
-                    "trigger_interview": a.trigger_interview == "yes",
-                    "screened_at": a.screened_at.isoformat() if a.screened_at else None,
-                }
-                for a in sorted(apps, key=lambda x: x.ai_score, reverse=True)
-            ]
+            "candidates": [build_candidate_entry(db, a, job, org_sessions) for a in sorted(apps, key=lambda x: x.ai_score, reverse=True)]
         })
     return result
+
+# ── Request schemas for the actions below ──
+class ApplicationActionRequest(BaseModel):
+    action: Literal["shortlist", "reject", "reset"]
+    candidate_email: Optional[str] = None   # only stored if the application doesn't already have one
+
+
+class MoveToInterviewRequest(BaseModel):
+    posting_id: str
+    candidate_email: Optional[str] = None   # required if the application has no email on file yet
+
+
+def send_interview_invite_email(candidate_email: str, candidate_name: str, posting_title: str, public_link: str):
+    if not MAIL_PASSWORD or MAIL_PASSWORD == "your_gmail_app_password_here":
+        print(f"[Email] Skipping invite (not configured). Candidate: {candidate_email}, Posting: {posting_title}")
+        return False
+
+    html = f"""
+    <div style="font-family:'Inter',sans-serif;max-width:520px;margin:0 auto;background:#0a0a08;color:#fff;border-radius:12px;overflow:hidden;border:1px solid #1e1e1b">
+      <div style="padding:28px 32px;border-bottom:1px solid #1e1e1b">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#13c28e;margin-bottom:8px">TalentIQ</div>
+        <h1 style="font-size:20px;font-weight:600;margin:0">You're invited to interview</h1>
+      </div>
+      <div style="padding:24px 32px">
+        <p style="color:rgba(255,255,255,.6);font-size:13px;margin:0 0 18px">Hi {candidate_name or 'there'}, you've been invited to complete an AI interview for <strong style="color:#fff">{posting_title}</strong>.</p>
+        <a href="{public_link}" style="display:inline-block;padding:11px 22px;background:#13c28e;color:#0a0a08;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Start Interview</a>
+      </div>
+    </div>"""
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"You're invited to interview — {posting_title}"
+    msg["From"]    = MAIL_FROM
+    msg["To"]      = candidate_email
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
+            server.starttls()
+            server.login(MAIL_USERNAME, MAIL_PASSWORD)
+            server.sendmail(MAIL_FROM, candidate_email, msg.as_string())
+        print(f"[Email] Interview invite sent to {candidate_email}")
+        return True
+    except Exception as e:
+        print(f"[Email] Invite failed: {e}")
+        return False
+
+
+# ── PATCH /bulk/applications/{id} — shortlist / reject / reset, real backend record ──
+@router.patch("/applications/{application_id}")
+def update_application(
+    application_id: str,
+    payload: ApplicationActionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    app = get_scoped_application(db, application_id, current_user)
+
+    app.is_shortlisted = {"shortlist": "yes", "reject": "no", "reset": "pending"}[payload.action]
+
+    if payload.candidate_email and not app.candidate_email:
+        app.candidate_email = payload.candidate_email.strip()
+
+    db.commit()
+    db.refresh(app)
+
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+    job = db.query(Job).filter(Job.id == app.job_id).first()
+    org_sessions = get_scoped_org_sessions(db, scoped_ids)
+    return build_candidate_entry(db, app, job, org_sessions)
+
+
+# ── POST /bulk/applications/{id}/move-to-interview — reuses the EXISTING interview posting/link, never a second interview system ──
+@router.post("/applications/{application_id}/move-to-interview")
+def move_to_interview(
+    application_id: str,
+    payload: MoveToInterviewRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    app = get_scoped_application(db, application_id, current_user)
+
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+    posting = db.query(InterviewPosting).filter(
+        InterviewPosting.id == payload.posting_id,
+        InterviewPosting.hr_user_id.in_(scoped_ids),
+    ).first()
+    if not posting:
+        raise HTTPException(status_code=404, detail="Interview posting not found.")
+
+    email = (payload.candidate_email or app.candidate_email or "").strip()
+    if not email:
+        raise HTTPException(status_code=400, detail="This candidate has no email on file — enter one to send an interview invite.")
+
+    # Prevent duplicate invitations: covers a real session (in progress or
+    # completed) AND the case where the candidate was already invited but
+    # hasn't started yet (trigger_interview='yes', no session found) — both
+    # must block a second invite email.
+    org_sessions = get_scoped_org_sessions(db, scoped_ids)
+    norm = normalize_email(email)
+    existing = next((s for s in org_sessions if normalize_email(s.candidate_email) == norm), None)
+    if existing:
+        existing_posting = db.query(InterviewPosting).filter(InterviewPosting.id == existing.posting_id).first()
+        return {
+            "already_exists": True,
+            "public_link": f"{FRONTEND_URL}/interview/{existing_posting.public_slug}" if existing_posting else None,
+            "interview_status": "completed" if existing.status == "completed" else "in_progress",
+            "posting_title": existing_posting.title if existing_posting else None,
+            "emailed": False,
+            "candidate_email": email,
+        }
+    if app.trigger_interview == "yes":
+        # Already invited, hasn't started a session yet. Application doesn't
+        # track which posting it was invited to, so we can't re-surface that
+        # exact link here — but we can, and must, still refuse to send a
+        # second email.
+        return {
+            "already_exists": True,
+            "public_link": None,
+            "interview_status": "invited",
+            "posting_title": None,
+            "emailed": False,
+            "candidate_email": email,
+        }
+
+    if not app.candidate_email:
+        app.candidate_email = email
+
+    app.trigger_interview = "yes"
+    if app.is_shortlisted == "pending":
+        app.is_shortlisted = "yes"
+    db.commit()
+
+    public_link = f"{FRONTEND_URL}/interview/{posting.public_slug}"
+    name, _, _ = resolve_application_identity(db, app)
+    emailed = send_interview_invite_email(email, name or "", posting.title, public_link)
+
+    return {"already_exists": False, "public_link": public_link, "emailed": emailed, "candidate_email": email}
+
+
+# ── GET /bulk/talent-pool — every screened candidate across the org's screening jobs, real filters happen client-side on this data ──
+@router.get("/talent-pool")
+def get_talent_pool(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+
+    apps = (
+        db.query(Application)
+        .join(Job, Application.job_id == Job.id)
+        .filter(Job.hr_user_id.in_(scoped_ids))
+        .order_by(Application.ai_score.desc())
+        .all()
+    )
+
+    jobs = {j.id: j for j in db.query(Job).filter(Job.hr_user_id.in_(scoped_ids)).all()}
+    org_sessions = get_scoped_org_sessions(db, scoped_ids)
+
+    candidates = [build_candidate_entry(db, app, jobs.get(app.job_id), org_sessions) for app in apps]
+    return {"total": len(candidates), "candidates": candidates}
+
+
+# ── GET /bulk/talent-pool/{id} — dedicated candidate detail view, one query pass, same builder as the list ──
+@router.get("/talent-pool/{application_id}")
+def get_talent_pool_candidate(
+    application_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    app = get_scoped_application(db, application_id, current_user)
+
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+    job = db.query(Job).filter(Job.id == app.job_id).first()
+    org_sessions = get_scoped_org_sessions(db, scoped_ids)
+
+    entry = build_candidate_entry(db, app, job, org_sessions)
+    entry["job_description"] = job.description if job else None
+
+    # Full AI feedback report, when a completed interview session exists —
+    # same InterviewSessionReport contract the existing report view/Copilot
+    # already use, so this never duplicates that report-generation logic.
+    entry["interview_report"] = None
+    if entry["interview_session_id"] and entry["has_report"]:
+        session = next((s for s in org_sessions if str(s.id) == entry["interview_session_id"]), None)
+        if session:
+            entry["interview_report"] = {
+                "id": str(session.id),
+                "candidate_name": session.candidate_name,
+                "candidate_email": session.candidate_email,
+                "ai_score": session.ai_score,
+                "assessment_score": session.assessment_score,
+                "final_verdict": session.final_verdict,
+                "experience_assessment": session.experience_assessment,
+                "deep_analysis": session.deep_analysis,
+            }
+
+    # CrewAI screening committee — read-only here, never triggers a run.
+    # "AI Analysis", kept clearly separate from the deterministic "System
+    # Score" fields already in `entry` (fit_score, ats_score, etc).
+    entry["ai_screening_status"] = app.ai_screening_status
+    entry["ai_screening_updated_at"] = app.ai_screening_updated_at.isoformat() if app.ai_screening_updated_at else None
+    try:
+        entry["ai_screening_result"] = json.loads(app.ai_screening_result) if app.ai_screening_result else None
+    except (json.JSONDecodeError, TypeError):
+        # A corrupted/partial result should never crash the whole candidate
+        # view — report it as needing a re-run rather than 500ing.
+        logger.error(f"[ai-screening] malformed ai_screening_result JSON for application={application_id}")
+        entry["ai_screening_result"] = None
+        entry["ai_screening_status"] = "failed"
+
+    return entry
+
+
+# ── POST /bulk/applications/{id}/ai-screening — explicitly trigger (or re-trigger) the CrewAI committee ──
+@router.post("/applications/{application_id}/ai-screening")
+def trigger_ai_screening(
+    application_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    app = get_scoped_application(db, application_id, current_user)   # ownership verified server-side — id is never trusted alone
+
+    if not (app.cv_text or "").strip():
+        raise HTTPException(status_code=400, detail="No resume text is available for this candidate — cannot run AI analysis. This candidate was screened before resume text was persisted; re-screen the CV to enable this.")
+
+    # Atomic claim, not read-then-write: two rapid clicks (or two tabs) can
+    # both reach this endpoint with app.ai_screening_status == 'not_analyzed'
+    # before either commits. A conditional UPDATE means only one request's
+    # WHERE clause matches — rowcount tells us honestly whether we're the
+    # one who gets to launch the Celery task.
+    result = db.execute(
+        update(Application)
+        .where(Application.id == app.id, Application.ai_screening_status.notin_(["queued", "analyzing"]))
+        .values(ai_screening_status="queued")
+    )
+    db.commit()
+
+    if result.rowcount == 0:
+        db.refresh(app)
+        return {"status": app.ai_screening_status, "already_running": True}
+
+    from tasks.crew_screening_task import run_candidate_ai_screening
+    run_candidate_ai_screening.delay(application_id)
+
+    return {"status": "queued", "already_running": False}
