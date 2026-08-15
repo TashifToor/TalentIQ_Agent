@@ -11,9 +11,13 @@ from models.user import User
 from models.interview import InterviewPosting, InterviewSession
 from core.org_scope import get_org_scoped_user_ids
 from core.assessment import generate_assessment_questions, score_assessment, MIN_QUESTIONS, MAX_QUESTIONS
+from core.talent_ranking import compute_candidate_fit
+from core.candidate_identity import resolve_candidate_user
+from core.resume_intelligence import get_latest_resume_profile, resume_profile_to_dict
 from schemas.interview import (
     InterviewPostingCreate, InterviewPostingResponse,
     InterviewSessionSummary, InterviewSessionReport,
+    RankedCandidate, PostingRankingResponse,
 )
 
 router = APIRouter(prefix="/interview", tags=["AI Interviewer"])
@@ -231,6 +235,86 @@ def list_candidates(
         }
         for s in sessions
     ]
+
+
+# ── GET /interview/postings/{id}/ranking — Talent Intelligence: deterministic, explainable candidate ranking ──
+@router.get("/postings/{posting_id}/ranking", response_model=PostingRankingResponse)
+def get_posting_ranking(
+    posting_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+
+    posting = db.query(InterviewPosting).filter(
+        InterviewPosting.id == posting_id,
+        InterviewPosting.hr_user_id.in_(scoped_ids),
+    ).first()
+    if not posting:
+        raise HTTPException(status_code=404, detail="Posting not found.")
+
+    questions = json.loads(posting.assessment_questions or "[]")
+    sessions = db.query(InterviewSession).filter(InterviewSession.posting_id == posting_id).all()
+
+    ranked: list[RankedCandidate] = []
+    for s in sessions:
+        breakdown = None
+        if s.assessment_score is not None and questions:
+            answers = json.loads(s.assessment_answers or "[]")
+            breakdown = score_assessment(questions, answers)["breakdown_by_topic"]
+
+        flag_count = len(json.loads(s.assessment_flags or "[]"))
+
+        # Candidate Identity + Resume Intelligence — exact normalized-email
+        # match against the candidate's own registered account only (never
+        # another user's). No candidate/resume ID is ever taken from the
+        # request — both are resolved server-side from this posting's own
+        # session data, so there's no IDOR surface here.
+        resume_profile = None
+        candidate_user = resolve_candidate_user(db, s.candidate_email)
+        if candidate_user:
+            latest_scan = get_latest_resume_profile(db, candidate_user.id)
+            resume_profile = resume_profile_to_dict(latest_scan)
+
+        fit = compute_candidate_fit(
+            ai_score=s.ai_score,
+            assessment_score=s.assessment_score,
+            final_verdict=s.final_verdict,
+            assessment_breakdown=breakdown,
+            proctoring_flag_count=flag_count,
+            status=s.status,
+            resume_profile=resume_profile,
+        )
+
+        ranked.append(RankedCandidate(
+            id=str(s.id),
+            candidate_name=s.candidate_name,
+            candidate_email=s.candidate_email,
+            status=s.status,
+            ai_score=s.ai_score,
+            assessment_score=s.assessment_score,
+            proctoring_flag_count=flag_count,
+            created_at=s.created_at.isoformat() if s.created_at else "",
+            completed_at=s.completed_at.isoformat() if s.completed_at else None,
+            **fit,
+        ))
+
+    # Deterministic sort — highest fit score first, "not enough data" candidates last.
+    ranked.sort(key=lambda c: (c.fit_score is None, -(c.fit_score or 0)))
+
+    return PostingRankingResponse(
+        posting_id=str(posting.id),
+        posting_title=posting.title,
+        total_candidates=len(ranked),
+        strong_count=sum(1 for c in ranked if c.fit_tier == "strong"),
+        good_count=sum(1 for c in ranked if c.fit_tier == "good"),
+        possible_count=sum(1 for c in ranked if c.fit_tier == "possible"),
+        low_count=sum(1 for c in ranked if c.fit_tier == "low"),
+        not_enough_data_count=sum(1 for c in ranked if c.fit_tier == "not_enough_data"),
+        recommended_count=sum(1 for c in ranked if c.recommendation in ("Strong Hire", "Hire")),
+        candidates=ranked,
+    )
 
 
 # ── GET /interview/candidates — ALL completed interview candidates across every posting, for the History tab ──
