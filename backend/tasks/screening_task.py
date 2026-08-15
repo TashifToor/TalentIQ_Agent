@@ -75,7 +75,6 @@ def run_bulk_screening(
 
             cv_text = " ".join([d.page_content for d in documents])
             candidate_name = extract_name_from_text(cv_text, raw_name)
-
             chunker = TextChunker()
             chunks = chunker.split_documents(documents)
 
@@ -93,6 +92,7 @@ def run_bulk_screening(
                 "deep_analysis": report.get("screening_analysis", ""),
                 "is_shortlisted": report.get("is_shortlisted", False),
                 "trigger_interview": report.get("trigger_interview", False),
+                "cv_text": cv_text[:20000],   # capped — persisted so a later AI screening pass (CrewAI) doesn't need the original file
             })
 
         except Exception as e:
@@ -111,10 +111,37 @@ def run_bulk_screening(
             from datetime import datetime
 
             db = session_local()
+
+            # Idempotency guard: task_acks_late means a worker crash mid-task
+            # can cause Celery to redeliver and re-run this exact task. If a
+            # Job from this same task_id already exists (the first run
+            # actually succeeded, just didn't get to ack in time), reuse it
+            # instead of creating a duplicate Job + duplicate Applications.
+            task_id = self.request.id
+            existing_job = db.query(Job).filter(Job.source_task_id == task_id).first() if task_id else None
+            if existing_job:
+                job_id = str(existing_job.id)
+                existing_apps = db.query(Application).filter(Application.job_id == existing_job.id).all()
+                by_filename = {a.cv_filename: a for a in existing_apps}
+                for r in ranked:
+                    match = by_filename.get(r.get("filename", ""))
+                    if match:
+                        r["application_id"] = str(match.id)
+                        r["job_id"] = job_id
+                db.close()
+                print(f"[Task] Redelivery detected for task_id={task_id} — reusing existing job {job_id} instead of duplicating")
+                for r in ranked:
+                    r.pop("cv_text", None)
+                return {
+                    "status": "done", "total_cvs_processed": total, "job_id": job_id,
+                    "top_candidates": ranked[:top_n], "all_results": ranked,
+                }
+
             job = Job(
                 hr_user_id=hr_user_id,
                 title=job_title or "Untitled Role",
                 description=job_description_raw or job_description,
+                source_task_id=task_id,
             )
             db.add(job)
             db.flush()
@@ -125,16 +152,21 @@ def run_bulk_screening(
                     job_id=job.id,
                     candidate_id=hr_user_id,
                     cv_filename=r.get("filename", ""),
+                    candidate_name=r.get("candidate_name") or r.get("filename", ""),
+                    cv_text=r.get("cv_text", ""),
                     ai_score=r.get("ai_score", 0),
                     matched_skills=json.dumps(r.get("matched_skills", [])),
                     missing_skills=json.dumps(r.get("missing_skills", [])),
                     final_verdict=r.get("final_verdict", ""),
                     deep_analysis=r.get("deep_analysis", ""),
-                    is_shortlisted="yes" if r.get("is_shortlisted") else "no",
+                    is_shortlisted="yes" if r.get("is_shortlisted") else "pending",
                     trigger_interview="yes" if r.get("trigger_interview") else "no",
                     screened_at=datetime.utcnow(),
                 )
                 db.add(app)
+                db.flush()   # need app.id before commit, so the frontend can reference this exact record
+                r["application_id"] = str(app.id)
+                r["job_id"] = job_id
             db.commit()
             db.close()
             print(f"[Task] Saved job {job_id} with {len(ranked)} applications")
@@ -159,6 +191,12 @@ def run_bulk_screening(
             })
         except Exception as e:
             print(f"[Task] Analytics tracking failed: {e}")
+
+    # Don't ship raw resume text back to the frontend in poll responses —
+    # it's already persisted to Application.cv_text for later use (e.g. the
+    # CrewAI screening committee), the client never needs it directly.
+    for r in ranked:
+        r.pop("cv_text", None)
 
     return {
         "status": "done",
