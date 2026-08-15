@@ -89,6 +89,50 @@ class InterviewSessionReport(BaseModel):
     completed_at: Optional[str] = None
 
 
+# ── Talent Intelligence — deterministic candidate ranking for a posting ──
+
+class RankedCandidate(BaseModel):
+    id: str
+    candidate_name: str
+    candidate_email: str
+    status: str
+    fit_score: Optional[int] = None         # None until at least one real signal exists
+    fit_tier: str                            # "strong" | "good" | "possible" | "low" | "not_enough_data"
+    recommendation: Optional[str] = None     # real final_verdict passthrough, or None
+    ai_score: Optional[int] = None
+    assessment_score: Optional[int] = None
+    # Resume / ATS intelligence — from the candidate's own linked account (core.candidate_identity),
+    # reusing their real CV Optimizer scan history (core.resume_intelligence). Never fabricated;
+    # resume_available is False (all resume_* fields None/empty) when no linked account or no scan exists.
+    resume_available: bool = False
+    ats_score: Optional[int] = None
+    matched_skills: List[str] = []
+    missing_skills: List[str] = []
+    skill_match_pct: Optional[int] = None
+    resume_verdict: Optional[str] = None
+    resume_role_title: Optional[str] = None   # the JD title the resume was actually scanned against — may differ from this posting
+    resume_scanned_at: Optional[str] = None
+    experience_match_available: bool = False  # always False today — no experience signal exists anywhere in this data model
+    education_match_available: bool = False   # always False today — no education signal exists anywhere in this data model
+    proctoring_flag_count: int = 0
+    evidence: List[str] = []
+    created_at: str
+    completed_at: Optional[str] = None
+
+
+class PostingRankingResponse(BaseModel):
+    posting_id: str
+    posting_title: str
+    total_candidates: int
+    strong_count: int
+    good_count: int
+    possible_count: int
+    low_count: int
+    not_enough_data_count: int
+    recommended_count: int   # recommendation in ("Strong Hire", "Hire")
+    candidates: List[RankedCandidate]
+
+
 # ── Public / candidate side ─────────────────────────────────────
 
 class PublicPostingInfo(BaseModel):
