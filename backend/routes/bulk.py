@@ -205,10 +205,10 @@ def send_screening_complete_email(hr_email: str, hr_name: str, job_title: str, t
         color = "#13c28e" if score >= 75 else "#e2b04a" if score >= 55 else "#ef4444"
         top_rows += f"""
         <tr>
-        <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.5);font-size:12px">#{i}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.8);font-size:13px;font-weight:600">{name}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;font-size:14px;font-weight:700;color:{color}">{score}</td>
-        <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.4);font-size:11px">{verdict}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.5);font-size:12px">#{i}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.8);font-size:13px;font-weight:600">{name}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;font-size:14px;font-weight:700;color:{color}">{score}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.4);font-size:11px">{verdict}</td>
         </tr>"""
 
     html = f"""
