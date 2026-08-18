@@ -54,7 +54,7 @@ export default function TalentPoolPanel({ interviewPostings }: {
                 interviewPostings={interviewPostings}
                 onBack={() => setOpenId(null)}
                 onChanged={load}
-                onToggleCompare={(c: { id: string }) => toggleSelect(c.id)}
+                onToggleCompare={(c) => toggleSelect(c.id)}
                 isSelectedForCompare={selected.includes(openId)}
             />
         )
@@ -219,6 +219,9 @@ export default function TalentPoolPanel({ interviewPostings }: {
                                     <div style={{ fontSize: 10.5, fontWeight: 700, color: c.interview_status === 'completed' ? '#13c28e' : c.interview_status === 'invited' || c.interview_status === 'in_progress' ? '#e2b04a' : 'rgba(255,255,255,.3)' }}>
                                         {INTERVIEW_STATUS_LABEL[c.interview_status]}
                                     </div>
+                                    {c.interview_posting && (
+                                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,.25)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>{c.interview_posting.title}</div>
+                                    )}
                                 </div>
                             </div>
                         </div>

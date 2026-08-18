@@ -75,19 +75,41 @@ def get_scoped_application(db: Session, application_id: str, current_user: User)
     return app
 
 
-def build_candidate_entry(db: Session, app: Application, job: Job | None, org_sessions: list) -> dict:
+def build_candidate_entry(db: Session, app: Application, job: Job | None, org_sessions: list, org_postings: dict | None = None) -> dict:
     """
     The single source of truth for "everything we know about this
     candidate" — used by the Bulk Screening results list, Talent Pool list,
     and the Talent Pool candidate detail view, so all three always agree
     (no second interpretation of the same Application row).
 
-    org_sessions must be prefetched once per request by the caller (not
-    re-queried per candidate) to avoid an N+1 pattern.
+    org_sessions and org_postings must be prefetched once per request by the
+    caller (not re-queried per candidate) to avoid an N+1 pattern.
+    org_postings is optional only for callers that don't need
+    interview_posting resolved (none currently — kept optional so this
+    signature change can't break a caller that forgets to pass it; it just
+    degrades interview_posting to None instead of raising).
     """
+    org_postings = org_postings or {}
     name, email, has_linked_account = resolve_application_identity(db, app)
     status_info = resolve_interview_status(app, email, has_linked_account, org_sessions)
     session = status_info["session"]
+
+    # Resolve the real posting this candidate is actually tied to — from the
+    # matched session when one exists (they're actually interviewing), else
+    # from the persistent invited_posting_id set by move_to_interview() when
+    # they were invited but haven't started. Never inferred any other way.
+    posting_obj = None
+    if session:
+        posting_obj = org_postings.get(session.posting_id)
+    elif app.invited_posting_id:
+        posting_obj = org_postings.get(app.invited_posting_id)
+    interview_posting = None
+    if posting_obj:
+        interview_posting = {
+            "id": str(posting_obj.id),
+            "title": posting_obj.title,
+            "public_link": f"{FRONTEND_URL}/interview/{posting_obj.public_slug}",
+        }
 
     matched = json.loads(app.matched_skills or "[]")
     missing = json.loads(app.missing_skills or "[]")
@@ -133,6 +155,7 @@ def build_candidate_entry(db: Session, app: Application, job: Job | None, org_se
         "trigger_interview": app.trigger_interview == "yes",
         "interview_status": status_info["status"],      # unknown | not_invited | invited | in_progress | completed
         "interview_session_id": str(session.id) if session else None,
+        "interview_posting": interview_posting,          # {id, title, public_link} — the exact posting, when resolvable
         "has_report": bool(session and session.status == "completed"),
         "created_at": app.created_at.isoformat() if app.created_at else None,
         "screened_at": app.screened_at.isoformat() if app.screened_at else None,
@@ -182,10 +205,10 @@ def send_screening_complete_email(hr_email: str, hr_name: str, job_title: str, t
         color = "#13c28e" if score >= 75 else "#e2b04a" if score >= 55 else "#ef4444"
         top_rows += f"""
         <tr>
-          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.5);font-size:12px">#{i}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.8);font-size:13px;font-weight:600">{name}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;font-size:14px;font-weight:700;color:{color}">{score}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.4);font-size:11px">{verdict}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.5);font-size:12px">#{i}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.8);font-size:13px;font-weight:600">{name}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;font-size:14px;font-weight:700;color:{color}">{score}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.4);font-size:11px">{verdict}</td>
         </tr>"""
 
     html = f"""
@@ -362,6 +385,14 @@ def get_scoped_org_sessions(db: Session, scoped_ids: list) -> list:
     )
 
 
+def get_scoped_org_postings(db: Session, scoped_ids: list) -> dict:
+    """Every InterviewPosting owned by this org, keyed by id — fetched once
+    per request so build_candidate_entry can resolve a candidate's exact
+    invited/interviewed posting without a query per candidate."""
+    postings = db.query(InterviewPosting).filter(InterviewPosting.hr_user_id.in_(scoped_ids)).all()
+    return {p.id: p for p in postings}
+
+
 @router.get("/jobs")
 def get_hr_jobs(
     db: Session = Depends(get_db),
@@ -372,6 +403,7 @@ def get_hr_jobs(
     scoped_ids = get_org_scoped_user_ids(current_user, db)
     jobs = db.query(Job).filter(Job.hr_user_id.in_(scoped_ids)).order_by(Job.created_at.desc()).all()
     org_sessions = get_scoped_org_sessions(db, scoped_ids)
+    org_postings = get_scoped_org_postings(db, scoped_ids)
 
     # One query for every Application across every job — avoids an N+1
     # per-job query, then groups them in Python.
@@ -392,7 +424,7 @@ def get_hr_jobs(
             "total_candidates": len(apps),
             "shortlisted": sum(1 for a in apps if a.is_shortlisted == "yes"),
             "top_score": max((a.ai_score for a in apps), default=0),
-            "candidates": [build_candidate_entry(db, a, job, org_sessions) for a in sorted(apps, key=lambda x: x.ai_score, reverse=True)]
+            "candidates": [build_candidate_entry(db, a, job, org_sessions, org_postings) for a in sorted(apps, key=lambda x: x.ai_score, reverse=True)]
         })
     return result
 
@@ -464,7 +496,8 @@ def update_application(
     scoped_ids = get_org_scoped_user_ids(current_user, db)
     job = db.query(Job).filter(Job.id == app.job_id).first()
     org_sessions = get_scoped_org_sessions(db, scoped_ids)
-    return build_candidate_entry(db, app, job, org_sessions)
+    org_postings = get_scoped_org_postings(db, scoped_ids)
+    return build_candidate_entry(db, app, job, org_sessions, org_postings)
 
 
 # ── POST /bulk/applications/{id}/move-to-interview — reuses the EXISTING interview posting/link, never a second interview system ──
@@ -492,8 +525,9 @@ def move_to_interview(
 
     # Prevent duplicate invitations: covers a real session (in progress or
     # completed) AND the case where the candidate was already invited but
-    # hasn't started yet (trigger_interview='yes', no session found) — both
-    # must block a second invite email.
+    # hasn't started yet. The invited_posting_id relationship (set once,
+    # below, the first time this succeeds) is what makes the second case
+    # possible to answer accurately instead of just "invited, link unknown".
     org_sessions = get_scoped_org_sessions(db, scoped_ids)
     norm = normalize_email(email)
     existing = next((s for s in org_sessions if normalize_email(s.candidate_email) == norm), None)
@@ -508,15 +542,21 @@ def move_to_interview(
             "candidate_email": email,
         }
     if app.trigger_interview == "yes":
-        # Already invited, hasn't started a session yet. Application doesn't
-        # track which posting it was invited to, so we can't re-surface that
-        # exact link here — but we can, and must, still refuse to send a
-        # second email.
+        # Already invited, hasn't started a session yet. invited_posting_id
+        # (set on the original successful invite, verified against this
+        # org — never inferred) lets us return the EXACT real link instead
+        # of the previous honest-but-unhelpful "link unknown".
+        invited_posting = (
+            db.query(InterviewPosting)
+            .filter(InterviewPosting.id == app.invited_posting_id, InterviewPosting.hr_user_id.in_(scoped_ids))
+            .first()
+            if app.invited_posting_id else None
+        )
         return {
             "already_exists": True,
-            "public_link": None,
+            "public_link": f"{FRONTEND_URL}/interview/{invited_posting.public_slug}" if invited_posting else None,
             "interview_status": "invited",
-            "posting_title": None,
+            "posting_title": invited_posting.title if invited_posting else None,
             "emailed": False,
             "candidate_email": email,
         }
@@ -525,6 +565,7 @@ def move_to_interview(
         app.candidate_email = email
 
     app.trigger_interview = "yes"
+    app.invited_posting_id = posting.id   # the real, persistent link — set once, never inferred
     if app.is_shortlisted == "pending":
         app.is_shortlisted = "yes"
     db.commit()
@@ -555,8 +596,9 @@ def get_talent_pool(
 
     jobs = {j.id: j for j in db.query(Job).filter(Job.hr_user_id.in_(scoped_ids)).all()}
     org_sessions = get_scoped_org_sessions(db, scoped_ids)
+    org_postings = get_scoped_org_postings(db, scoped_ids)
 
-    candidates = [build_candidate_entry(db, app, jobs.get(app.job_id), org_sessions) for app in apps]
+    candidates = [build_candidate_entry(db, app, jobs.get(app.job_id), org_sessions, org_postings) for app in apps]
     return {"total": len(candidates), "candidates": candidates}
 
 
@@ -573,8 +615,9 @@ def get_talent_pool_candidate(
     scoped_ids = get_org_scoped_user_ids(current_user, db)
     job = db.query(Job).filter(Job.id == app.job_id).first()
     org_sessions = get_scoped_org_sessions(db, scoped_ids)
+    org_postings = get_scoped_org_postings(db, scoped_ids)
 
-    entry = build_candidate_entry(db, app, job, org_sessions)
+    entry = build_candidate_entry(db, app, job, org_sessions, org_postings)
     entry["job_description"] = job.description if job else None
 
     # Full AI feedback report, when a completed interview session exists —
