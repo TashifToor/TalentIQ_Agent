@@ -9,7 +9,7 @@ passlib[bcrypt]
 argon2-cffi
 bcrypt==4.0.1
 python-jose[cryptography]
-pydantic[email]
+pydantic[email]>=2.11.9,<2.13
 email-validator
 python-dotenv
 jose
@@ -31,6 +31,13 @@ groq
 pypdf
 pymupdf
 chromadb
+
+# Multi-agent screening committee (Bulk Screening / Talent Pool only —
+# never used for interview orchestration, which stays on LangGraph).
+# litellm is required for CrewAI's LLM() wrapper to recognize the "groq/"
+# model prefix and reuse the same GROQ_API_KEY as core/llm.py.
+crewai
+litellm
 
 # Background Tasks
 celery[redis]==5.3.6
