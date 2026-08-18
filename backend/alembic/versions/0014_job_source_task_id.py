@@ -31,4 +31,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_jobs_source_task_id", table_name="jobs")
-    op.drop_column("jobs", "source_task_id")
+    op.drop_column("jobs", "source_task_id") 
