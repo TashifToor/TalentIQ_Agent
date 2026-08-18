@@ -76,6 +76,7 @@ export interface PoolCandidate {
     trigger_interview: boolean
     interview_status: InterviewStatus
     interview_session_id: string | null
+    interview_posting: { id: string; title: string; public_link: string } | null
     has_report: boolean
     created_at: string | null
     screened_at: string | null
