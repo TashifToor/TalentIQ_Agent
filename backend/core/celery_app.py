@@ -26,7 +26,12 @@ celery_app = Celery(
     "talentiq",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["tasks.screening_task"],
+    # tasks.crew_screening_task MUST be listed here — a worker process only
+    # registers tasks it has actually imported. Before this, .delay() calls
+    # from the API published a message the worker had never registered, so
+    # the AI Screening Committee silently never ran (NotRegistered on the
+    # worker side, invisible from the API, which had already returned 200).
+    include=["tasks.screening_task", "tasks.crew_screening_task"],
 )
 
 celery_app.conf.update(
