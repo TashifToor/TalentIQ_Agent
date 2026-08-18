@@ -30,6 +30,7 @@ dependencies = [
     "pydantic[email]>=2.11.9,<2.13",
     "pymupdf>=1.27.2.3",
     "pypdf==5.4.0",
+    "pytest>=9.1.1",
     "python-dotenv==1.1.0",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.29",
