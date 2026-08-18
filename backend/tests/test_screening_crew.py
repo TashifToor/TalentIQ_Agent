@@ -148,7 +148,7 @@ def test_candidate_ai_screening_failure_preserves_ats_score_and_marks_failed():
     original_ai_score = app.ai_score
 
     with patch("models.database.session_local", return_value=db), \
-        patch("core.screening_crew.run_screening_crew", side_effect=RuntimeError("simulated LLM failure")):
+         patch("core.screening_crew.run_screening_crew", side_effect=RuntimeError("simulated LLM failure")):
         from tasks.crew_screening_task import run_candidate_ai_screening
         result = run_candidate_ai_screening(application_id)
 
