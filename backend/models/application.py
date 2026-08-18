@@ -31,5 +31,14 @@ class Application(Base):
     is_shortlisted= Column(String,default="pending")  
     trigger_interview= Column(String,default="no")       
 
+    # Real, persistent link between this Application and the interview
+    # posting it was actually moved/invited to — set exactly once, by
+    # move_to_interview(), never inferred from name/email matching. Nullable
+    # because most Applications never get moved to interview at all; every
+    # existing row is valid with this left null (no backfill performed —
+    # there's no reliable, non-inferred source to backfill it from for
+    # invitations that happened before this column existed).
+    invited_posting_id = Column(UUID(as_uuid=True), ForeignKey("interview_postings.id"), nullable=True)
+
     created_at=    Column(DateTime(timezone=True),server_default=func.now())
     screened_at=   Column(DateTime(timezone=True),nullable=True)
