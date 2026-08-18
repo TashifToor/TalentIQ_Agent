@@ -54,7 +54,7 @@ export default function TalentPoolPanel({ interviewPostings }: {
                 interviewPostings={interviewPostings}
                 onBack={() => setOpenId(null)}
                 onChanged={load}
-                onToggleCompare={(c) => toggleSelect(c.id)}
+                onToggleCompare={(c: PoolCandidate) => toggleSelect(c.id)}
                 isSelectedForCompare={selected.includes(openId)}
             />
         )
