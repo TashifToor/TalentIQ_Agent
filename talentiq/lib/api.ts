@@ -19,6 +19,18 @@ export class ApiError extends Error {
   }
 }
 
+// Single source of truth for clearing local auth state — used by logout
+// buttons across both dashboards and by the 401-session-expired handler
+// below. Previously duplicated (with slightly different, sometimes
+// incomplete, cookie-clearing) in half a dozen places.
+export function clearAuthState() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("token");
+  localStorage.removeItem("role");
+  document.cookie = "token=; path=/; max-age=0";
+  document.cookie = "role=; path=/; max-age=0";
+}
+
 function buildApiError(err: any): ApiError {
   const raw = parseError(err);
   if (raw.includes("|")) {
@@ -47,10 +59,7 @@ export async function apiFetch(path: string, options?: RequestInit) {
     }
     if (typeof window !== "undefined") {
       const role = localStorage.getItem("role");
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
-      document.cookie = "token=; path=/; max-age=0";
-      document.cookie = "role=; path=/; max-age=0";
+      clearAuthState();
       window.location.href = role === "hr" ? "/auth/login/hr" : "/auth/login/candidate";
     }
     throw new ApiError("Session expired. Please log in again.", "SESSION_EXPIRED");
@@ -143,10 +152,7 @@ export const api = {
     if (res.status === 401) {
       if (typeof window !== "undefined") {
         const role = localStorage.getItem("role");
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
-        document.cookie = "token=; path=/; max-age=0";
-        document.cookie = "role=; path=/; max-age=0";
+        clearAuthState();
         if (!window.location.pathname.includes("/auth/login")) {
           window.location.href = role === "hr" ? "/auth/login/hr" : "/auth/login/candidate";
         }
