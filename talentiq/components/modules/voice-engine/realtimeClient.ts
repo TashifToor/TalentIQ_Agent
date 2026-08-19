@@ -179,6 +179,14 @@ export class RealtimeVoiceClient {
         this.bargeInRafId = null
         return
       }
+      if (this.muted) {
+        // Keep the loop alive (so unmuting mid-AI-speech resumes detection
+        // instantly) but don't evaluate amplitude while muted — a muted
+        // candidate's mic noise shouldn't be able to interrupt the AI.
+        this.bargeInAboveSince = null
+        this.bargeInRafId = requestAnimationFrame(tick)
+        return
+      }
       this.analyser.getByteTimeDomainData(this.analyserData as Uint8Array<ArrayBuffer>)
       let sumSquares = 0
       for (let i = 0; i < this.analyserData.length; i++) {
