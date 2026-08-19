@@ -30,6 +30,12 @@ export default function PracticeChatInterface({
                 setTimeout(onComplete, 900)
             }
         } catch (err: any) {
+            // Roll back the optimistic message — it was never actually
+            // persisted server-side, so leaving it in the transcript would
+            // show a "sent" message the AI never received. Restore it to
+            // the input so the candidate can retry without retyping.
+            setTranscript(t => t.filter((m, i) => !(i === t.length - 1 && m.role === 'candidate' && m.content === text)))
+            setInput(text)
             setError(err.message || 'Could not send your answer — try again.')
         } finally {
             setSending(false)
