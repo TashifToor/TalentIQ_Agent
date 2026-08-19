@@ -159,6 +159,13 @@ class VoiceSession:
             return
         if self._current_tts:
             await self._current_tts.cancel()
+            # cancel() alone only tells Cartesia to stop generating — the
+            # audio_chunks() generator (and the _forward_audio task reading
+            # it) only actually terminates on the NEXT inbound WS message,
+            # which isn't guaranteed if Cartesia doesn't send one back.
+            # Closing the socket here guarantees that loop ends immediately
+            # instead of leaving an orphaned task on a stale connection.
+            await self._current_tts.close()
         if self._turn_task and not self._turn_task.done():
             self._turn_task.cancel()
         await self._send_state("candidate_speaking")
