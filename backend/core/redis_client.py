@@ -63,6 +63,43 @@ def record_failed_login(email: str, max_attempts: int = 5, lockout_seconds: int 
         return 0, False
 
 
+# ---------------------------------------------------------------------------
+# Generic version of the same INCR+EXPIRE lockout pattern, parameterized by a
+# caller-supplied key so different flows (OTP verification for signup vs.
+# password reset, etc.) each get their own independent attempt counter
+# instead of sharing one namespace. record_failed_login/is_login_locked above
+# are kept as-is (untouched, zero risk of regressing login behavior) — this
+# is what OTP-verification brute-force protection is built on instead.
+# ---------------------------------------------------------------------------
+def record_failed_attempt(key: str, max_attempts: int = 5, lockout_seconds: int = 300) -> tuple[int, bool]:
+    """Returns (attempt_count, is_now_locked)."""
+    try:
+        count = redis_client.incr(key)
+        if count == 1:
+            redis_client.expire(key, lockout_seconds)
+        return count, count >= max_attempts
+    except redis.exceptions.RedisError:
+        return 0, False
+
+
+def is_attempt_locked(key: str, max_attempts: int = 5) -> tuple[bool, int]:
+    try:
+        ttl = redis_client.ttl(key)
+        count = redis_client.get(key)
+        if count and int(count) >= max_attempts and ttl > 0:
+            return True, ttl
+        return False, 0
+    except redis.exceptions.RedisError:
+        return False, 0
+
+
+def clear_failed_attempts(key: str):
+    try:
+        redis_client.delete(key)
+    except redis.exceptions.RedisError:
+        pass
+
+
 def is_login_locked(email: str) -> tuple[bool, int]:
     try:
         key = f"loginfail:{email}"
@@ -163,4 +200,4 @@ def set_cached_screening(cv_text: str, job_description: str, result: dict, ttl_s
         key = _screening_cache_key(cv_text, job_description)
         redis_client.set(key, json.dumps(result), ex=ttl_seconds)
     except redis.exceptions.RedisError:
-        pass 
+        pass
