@@ -339,6 +339,12 @@ export default function PublicInterviewPage() {
       setAwaitingCv(!!res.awaiting_cv)
       if (res.next_stage === 'assessment') setStage('assessment')
     } catch (e: any) {
+      // Roll back the optimistic message — it was never actually persisted
+      // server-side, so leaving it in the transcript would show the
+      // candidate a "sent" message the AI never received. Restore it to
+      // the input so they can retry without retyping.
+      setMessages(prev => prev.filter((m, i) => !(i === prev.length - 1 && m.role === 'candidate' && m.content === text)))
+      setInput(text)
       setSendError(e?.message || 'Message failed to send. Please try again.')
     } finally {
       setSending(false)
