@@ -1,434 +1,630 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import UpgradeModal from '@/components/UpgradeModal'
-import { api, ApiError } from '@/lib/api'
-import CopilotPanel from '@/components/modules/copilot/CopilotPanel'
-import { PracticeHistoryItem } from '@/components/modules/copilot/candidateHomeInsights'
+import { useRouter } from 'next/navigation'
+import { api } from '@/lib/api'
 
-const ICONS: Record<string, JSX.Element> = {
-  dashboard: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>,
-  scan: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M9 13h6M9 17h6" /></svg>,
-  history: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></svg>,
-  profile: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" /></svg>,
-  settings: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>,
+/* Loads Cormorant Garamond + Inter — safe to keep even if already loaded globally */
+function FontImports() {
+  return (
+    <style jsx global>{`
+      @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+    `}</style>
+  )
 }
 
-const NAV = [
-  { key: 'dashboard', label: 'Dashboard', href: '/candidate/dashboard' },
-  { key: 'scan', label: 'Scan CV', href: '/candidate/dashboard#scan-area' },
-  { key: 'cv-builder', label: 'CV Builder', href: '/candidate/dashboard/cv-builder' },
-  { key: 'optimizer', label: 'CV Optimizer', href: '/candidate/dashboard/optimizer' },
-  { key: 'practice', label: 'Interview Practice', href: '/candidate/dashboard/practice' },
-  { key: 'history', label: 'History', href: '/candidate/dashboard/history' },
-  { key: 'profile', label: 'My Profile', href: '/candidate/dashboard/profile' },
-  { key: 'settings', label: 'Settings', href: '/candidate/dashboard/settings' },
-]
-
-export default function CandidateDashboard() {
-  const [activeNav, setActiveNav] = useState('dashboard')
-  const [user, setUser] = useState<{ name?: string; email?: string } | null>(null)
-  const [showUpgrade, setShowUpgrade] = useState(false)
-  const [file, setFile] = useState<File | null>(null)
-  const [cvText, setCvText] = useState('')
-  const [uploading, setUploading] = useState(false)
-  const [scanning, setScanning] = useState(false)
-  const [scanStep, setScanStep] = useState(-1)
-  const [result, setResult] = useState<any>(null)
+export default function CandidateLogin() {
+  const router = useRouter()
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [tab, setTab] = useState<'login' | 'signup'>('login')
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [activeTab, setActiveTab] = useState('skills')
-  const [jd, setJd] = useState('')
-  const [scansLeft, setScansLeft] = useState(3)
-  const [history, setHistory] = useState<any[]>([])
-  const [practiceHistory, setPracticeHistory] = useState<PracticeHistoryItem[] | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const [strength, setStrength] = useState(0)
+  const [focused, setFocused] = useState<string | null>(null)
 
-  const SCAN_STEPS = [
-    'Parsing your CV...',
-    'Creating text chunks...',
-    'Building vector embeddings...',
-    'Storing in FAISS index...',
-    'Retrieving relevant context...',
-    'Reasoning with LLaMA 3.3...',
-    'Generating score & analysis...',
-  ]
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
 
+  const [showForgot, setShowForgot] = useState(false)
+  const [forgotStep, setForgotStep] = useState<'email' | 'otp'>('email')
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotMsg, setForgotMsg] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', ''])
+  const [newPassword, setNewPassword] = useState('')
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  // Signup email verification
+  const [signupStep, setSignupStep] = useState<'form' | 'verify'>('form')
+  const [pendingEmail, setPendingEmail] = useState('')
+  const [verifyOtp, setVerifyOtp] = useState<string[]>(['', '', '', '', ''])
+  const [verifyMsg, setVerifyMsg] = useState('')
+  const [verifyLoading, setVerifyLoading] = useState(false)
+  const verifyRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  const handleVerifyOtpChange = (i: number, v: string) => {
+    if (v && !/^[0-9]$/.test(v)) return
+    const next = [...verifyOtp]
+    next[i] = v
+    setVerifyOtp(next)
+    if (v && i < 4) verifyRefs.current[i + 1]?.focus()
+  }
+
+  const handleVerifyOtpKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !verifyOtp[i] && i > 0) verifyRefs.current[i - 1]?.focus()
+  }
+
+  const handleVerifyOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 5)
+    if (!digits) return
+    e.preventDefault()
+    const next = ['', '', '', '', '']
+    for (let i = 0; i < digits.length; i++) next[i] = digits[i]
+    setVerifyOtp(next)
+    verifyRefs.current[Math.min(digits.length, 4)]?.focus()
+  }
+
+  const handleVerifySignup = async () => {
+    if (verifyLoading) return
+    const otp = verifyOtp.join('')
+    if (otp.length < 5) { setVerifyMsg('Enter the full 5-digit code.'); return }
+    setVerifyLoading(true)
+    setVerifyMsg('')
+    try {
+      const data = await api.verifySignup(pendingEmail, otp)
+      localStorage.setItem('token', data.access_token)
+      localStorage.setItem('role', 'candidate')
+      document.cookie = `token=${data.access_token}; path=/`
+      document.cookie = `role=candidate; path=/`
+      router.push('/candidate/dashboard')
+    } catch (e: any) {
+      setVerifyMsg(e.message || 'Invalid or expired code.')
+    } finally { setVerifyLoading(false) }
+  }
+
+  const handleResendVerification = async () => {
+    setVerifyLoading(true)
+    setVerifyMsg('')
+    try {
+      await api.resendVerification(pendingEmail)
+      setVerifyMsg('New code sent.')
+    } catch {
+      setVerifyMsg('Could not resend code. Try again shortly.')
+    } finally { setVerifyLoading(false) }
+  }
+
+  const handleSendOtp = async () => {
+    if (forgotLoading || !forgotEmail.trim()) return
+    setForgotLoading(true)
+    setForgotMsg('')
+    try {
+      await api.forgotPassword(forgotEmail.trim())
+      setForgotStep('otp')
+      setForgotMsg('')
+      setTimeout(() => otpRefs.current[0]?.focus(), 50)
+    } catch {
+      setForgotMsg('Something went wrong. Please try again.')
+    } finally { setForgotLoading(false) }
+  }
+
+  const handleOtpChange = (i: number, v: string) => {
+    if (v && !/^[0-9]$/.test(v)) return
+    const next = [...otpDigits]
+    next[i] = v
+    setOtpDigits(next)
+    if (v && i < 4) otpRefs.current[i + 1]?.focus()
+  }
+
+  const handleOtpKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otpDigits[i] && i > 0) otpRefs.current[i - 1]?.focus()
+  }
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 5)
+    if (!digits) return
+    e.preventDefault()
+    const next = ['', '', '', '', '']
+    for (let i = 0; i < digits.length; i++) next[i] = digits[i]
+    setOtpDigits(next)
+    otpRefs.current[Math.min(digits.length, 4)]?.focus()
+  }
+
+  const handleResetPassword = async () => {
+    if (forgotLoading) return
+    const otp = otpDigits.join('')
+    if (otp.length < 5) { setForgotMsg('Enter the full 5-digit code.'); return }
+    if (newPassword.length < 6) { setForgotMsg('Password must be at least 6 characters.'); return }
+    setForgotLoading(true)
+    setForgotMsg('')
+    try {
+      await api.resetPassword(forgotEmail.trim(), otp, newPassword)
+      setShowForgot(false)
+      setForgotStep('email')
+      setOtpDigits(['', '', '', '', ''])
+      setNewPassword('')
+      setEmail(forgotEmail)
+      setTab('login')
+      setError('✓ Password reset! Log in with your new password.')
+    } catch (e: any) {
+      setForgotMsg(e.message || 'Invalid or expired code.')
+    } finally { setForgotLoading(false) }
+  }
+
+  /* Ambient particle field — quiet, slow, premium */
   useEffect(() => {
-    api.me().then((u: any) => {
-      setUser({ name: u?.name || u?.full_name, email: u?.email })
-      if (typeof u?.scans_remaining === 'number') setScansLeft(u.scans_remaining)
-    }).catch(() => { })
-    api.getPracticeHistory()
-      .then((r: any) => setPracticeHistory(Array.isArray(r) ? r : []))
-      .catch(() => setPracticeHistory([]))
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    let W = (canvas.width = canvas.offsetWidth)
+    let H = (canvas.height = canvas.offsetHeight)
+    const onResize = () => { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight }
+    window.addEventListener('resize', onResize)
+
+    const particles: { x: number; y: number; vx: number; vy: number; r: number; alpha: number; gold: boolean }[] = []
+    for (let i = 0; i < 70; i++) {
+      particles.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.18, r: Math.random() * 1.1 + 0.3, alpha: Math.random() * 0.35 + 0.08, gold: Math.random() > 0.82 })
+    }
+
+    let raf: number
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H)
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const d = Math.hypot(particles[i].x - particles[j].x, particles[i].y - particles[j].y)
+          if (d < 70) {
+            ctx.beginPath()
+            ctx.moveTo(particles[i].x, particles[i].y)
+            ctx.lineTo(particles[j].x, particles[j].y)
+            ctx.strokeStyle = `rgba(196,154,77,${0.08 * (1 - d / 70)})`
+            ctx.lineWidth = 0.5
+            ctx.stroke()
+          }
+        }
+        const p = particles[i]
+        p.x += p.vx; p.y += p.vy
+        if (p.x < 0 || p.x > W) p.vx *= -1
+        if (p.y < 0 || p.y > H) p.vy *= -1
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        ctx.fillStyle = p.gold ? `rgba(212,175,109,${p.alpha + 0.12})` : `rgba(255,255,255,${p.alpha})`
+        ctx.fill()
+      }
+      raf = requestAnimationFrame(draw)
+    }
+    draw()
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize) }
   }, [])
 
-  const handlePickFile = () => fileRef.current?.click()
+  const calcStrength = (v: string) => {
+    let s = 0
+    if (v.length > 7) s++
+    if (/[A-Z]/.test(v)) s++
+    if (/[0-9]/.test(v)) s++
+    if (/[^A-Za-z0-9]/.test(v)) s++
+    setStrength(s)
+  }
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (!f) return
+  const handleLogin = async () => {
+    if (loading) return
     setError('')
-    setFile(f)
-    setUploading(true)
+    setLoading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', f)
-      const res = await api.uploadCV(formData)
-      console.log('Upload response:', res)
-      let extracted = ''
-      if (typeof res === 'string') {
-        extracted = res
-      } else if (res && typeof res === 'object') {
-        const data = res as any
-        extracted = data.cv_text || data.text || data.extracted_text || data.content || ''
+      const data = await api.login(email, password)
+      localStorage.setItem('token', data.access_token)
+      localStorage.setItem('role', 'candidate')
+      document.cookie = `token=${data.access_token}; path=/`
+      document.cookie = `role=candidate; path=/`
+      router.push('/candidate/dashboard')
+    } catch (e: any) {
+      if (e.code === 'EMAIL_NOT_VERIFIED') {
+        setPendingEmail(email)
+        setSignupStep('verify')
+        setTab('signup')
+        setVerifyMsg('')
+        try { await api.resendVerification(email) } catch {}
+        setTimeout(() => verifyRefs.current[0]?.focus(), 50)
+        return
       }
-      if (!extracted) {
-        setError('Upload succeeded but no CV text was returned — check console log and share the response shape.')
-      }
-      setCvText(extracted)
-    } catch (err: any) {
-      setError(err.message || 'Upload failed')
-      setFile(null)
+      setError(e.message || 'Login failed. Please check your credentials.')
     } finally {
-      setUploading(false)
+      setLoading(false)
     }
   }
 
-  const handleScan = async () => {
-    if (!file) { setError('Upload a CV first.'); return }
-    if (!cvText) { setError('CV text not extracted yet — try re-uploading.'); return }
-    if (!jd.trim()) { setError('Paste a job description first.'); return }
-    if (scansLeft <= 0) { setShowUpgrade(true); return }
-
+  const handleSignup = async () => {
+    if (loading) return
     setError('')
-    setScanning(true)
-    setScanStep(0)
-
-    // Cycle through steps while API call runs
-    const stepInterval = setInterval(() => {
-      setScanStep(s => s < SCAN_STEPS.length - 1 ? s + 1 : s)
-    }, 900)
-
+    setLoading(true)
     try {
-      const data = await api.screenCandidate(jd, cvText)
-      clearInterval(stepInterval)
-      setScanStep(SCAN_STEPS.length - 1)
-      await new Promise(r => setTimeout(r, 400)) // brief pause on last step
-      console.log('Scan response:', data)
-      setResult(data)
-      if (typeof data.scans_remaining === 'number') setScansLeft(data.scans_remaining)
-      else setScansLeft(s => Math.max(0, s - 1))
-      const score = data?.metrics?.candidate_score ?? 0
-      const aiTitle = (data?.metrics?.job_title || '').trim()
-      const fallbackTitle = (jd.match(/Job Title:\s*(.+)/i)?.[1] || jd.split('\n')[0])?.trim()
-      setHistory(h => [{
-        score,
-        role: (aiTitle || fallbackTitle || 'Untitled Role').slice(0, 60),
-        skills: (data?.metrics?.matched_skills || []).slice(0, 3).join(', '),
-        date: 'Just now',
-        color: score >= 80 ? '#13c28e' : score >= 50 ? '#e2b04a' : '#ef4444',
-      }, ...h])
-    } catch (err: any) {
-      clearInterval(stepInterval)
-      if (err instanceof ApiError && err.code === 'FREE_LIMIT_REACHED') {
-        setScansLeft(0)
-        setShowUpgrade(true)
-      } else {
-        setError(err.message || 'Scan failed. Try again.')
+      await api.signupCandidate({ name, email, password })
+      setPendingEmail(email)
+      setSignupStep('verify')
+      setVerifyOtp(['', '', '', '', ''])
+      setVerifyMsg('')
+      setTimeout(() => verifyRefs.current[0]?.focus(), 50)
+    } catch (e: any) {
+      if (e.message?.toLowerCase().includes('already registered')) {
+        setError('Email already registered. Please use the Login tab, or click Forgot Password if you never verified it.')
+        setTab('login')
+        return
       }
+      setError(e.message || 'Signup failed. Please try again.')
     } finally {
-      setScanning(false)
-      setScanStep(-1)
+      setLoading(false)
     }
   }
 
-  const handleNavClick = (item: typeof NAV[number]) => {
-    setActiveNav(item.key)
-    const hashIndex = item.href.indexOf('#')
-    if (hashIndex !== -1) {
-      const id = item.href.slice(hashIndex)
-      setTimeout(() => {
-        document.querySelector(id)?.scrollIntoView({ behavior: 'smooth' })
-      }, 50)
-    }
-  }
-
-  const S = { sidebar: { width: 220, flexShrink: 0, background: '#111110', borderRight: '1px solid rgba(255,255,255,.07)', display: 'flex', flexDirection: 'column' as const } }
+  const strengthColors = ['#c44b4b', '#c4843f', '#b8a23c', '#4a9d6e']
+  const strengthLabels = ['Weak', 'Fair', 'Good', 'Strong']
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0c0c0a', fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.88)' }}>
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Syne:wght@400;500;600;700&display=swap');
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a08', fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <FontImports />
 
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes ringDraw { from { stroke-dashoffset: 339; } }
-        @keyframes barGrow { from { width: 0; } }
-        @keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: .8; } }
-        @keyframes spin { to { transform: rotate(360deg); } }
+      {/* ============ LEFT — EDITORIAL VISUAL PANEL ============ */}
+      <div style={{ flex: '1 1 52%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'radial-gradient(ellipse 120% 80% at 20% 0%, #161310 0%, #0a0a08 60%)' }}>
+        <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.9 }} />
 
-        .fade-up { animation: fadeUp .45s ease both; }
-        .fade-in { animation: fadeIn .3s ease both; }
-        .ring-anim { animation: ringDraw 1.1s cubic-bezier(.4,0,.2,1) both; }
-        .bar-anim { width: var(--bw); animation: barGrow 1s cubic-bezier(.4,0,.2,1) both; }
-        .pulse-dot { animation: pulse 1.4s ease-in-out infinite; }
-        .spinner { animation: spin .8s linear infinite; }
-        .nav-btn { transition: background .2s, color .2s, border-color .2s; }
-        .nav-btn:hover { background: rgba(255,255,255,.04); color: rgba(255,255,255,.7); }
-        .history-row { transition: background .2s, transform .2s; }
-        .history-row:hover { background: #1b1b18; transform: translateX(2px); }
-        .dropzone { transition: border-color .25s, background .25s, transform .15s; }
-        .dropzone:hover { transform: translateY(-1px); }
-        .tab-btn { transition: color .2s, border-color .2s; }
-      `}</style>
+        {/* Fine hairline frame — gives the panel a designed edge, not a flat block */}
+        <div style={{ position: 'absolute', inset: 24, border: '1px solid rgba(212,175,109,.14)', borderRadius: 2, pointerEvents: 'none' }} />
 
-      {showUpgrade && <UpgradeModal role="candidate" onClose={() => setShowUpgrade(false)} />}
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: '56px 60px' }}>
 
-      {/* SIDEBAR */}
-      <div style={S.sidebar}>
-        <Link href="/" style={{ padding: '22px 18px', borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', gap: 10, fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,.9)', textDecoration: 'none' }}>
-          <div style={{ width: 28, height: 28, background: '#e2b04a', borderRadius: 7, display: 'grid', placeItems: 'center' }}><svg width="12" height="12" viewBox="0 0 16 16" fill="#0a0a09"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg></div>
-          TalentIQ
-        </Link>
-        <div style={{ padding: '18px 12px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,.25)' }}>Menu</div>
-        {NAV.map(n => {
-          const active = activeNav === n.key
-          return (
-            <Link key={n.key} href={n.href} onClick={() => handleNavClick(n)} className="nav-btn" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, color: active ? '#e2b04a' : 'rgba(255,255,255,.45)', cursor: 'pointer', margin: '0 6px 2px', border: active ? '1px solid rgba(226,176,74,.15)' : '1px solid transparent', background: active ? 'rgba(226,176,74,.1)' : 'transparent', fontFamily: 'Syne, sans-serif', width: 'calc(100% - 12px)', textAlign: 'left', textDecoration: 'none' }}>
-              <span style={{ display: 'flex' }}>{ICONS[n.key]}</span>{n.label}
-            </Link>
-          )
-        })}
-        <div style={{ marginTop: 'auto', padding: '14px', borderTop: '1px solid rgba(255,255,255,.07)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8 }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#c5931f,#e2b04a)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#0a0a09', flexShrink: 0 }}>
-              {(user?.name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+          {/* Top: wordmark */}
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
+            <div style={{ width: 30, height: 30, border: '1px solid rgba(212,175,109,.5)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 6, height: 6, background: '#d4af6d', borderRadius: '50%' }} />
             </div>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name || 'Loading…'}</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email || ''}</div>
+            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 21, fontWeight: 500, color: 'rgba(245,242,235,.92)', letterSpacing: '0.5px' }}>TalentIQ</span>
+          </Link>
+
+          {/* Middle: refined proof panel — single composed card, not scattered chips */}
+          <div style={{ maxWidth: 380 }}>
+            <div style={{
+              background: 'linear-gradient(165deg, rgba(255,255,255,.045), rgba(255,255,255,.015))',
+              border: '1px solid rgba(255,255,255,.09)',
+              borderRadius: 4,
+              padding: '28px 30px',
+              backdropFilter: 'blur(6px)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20, borderBottom: '1px solid rgba(255,255,255,.08)', paddingBottom: 18 }}>
+                <div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 44, fontWeight: 500, color: '#d4af6d', lineHeight: 1, letterSpacing: '-0.5px' }}>91</div>
+                  <div style={{ fontSize: 11, color: 'rgba(245,242,235,.4)', marginTop: 6, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Match score</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(245,242,235,.85)' }}>Zara Ahmed</div>
+                  <div style={{ fontSize: 12, color: 'rgba(245,242,235,.4)', marginTop: 2 }}>Product Designer</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+                {[{ l: 'Design systems', v: 96 }, { l: 'User research', v: 88 }, { l: 'Prototyping', v: 74 }].map(row => (
+                  <div key={row.l} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 12, color: 'rgba(245,242,235,.5)', width: 110, flexShrink: 0 }}>{row.l}</span>
+                    <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,.08)', borderRadius: 1, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${row.v}%`, background: 'linear-gradient(90deg, #a8854a, #d4af6d)' }} />
+                    </div>
+                    <span style={{ fontSize: 11, color: 'rgba(245,242,235,.35)', width: 26, textAlign: 'right' }}>{row.v}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <button
-              onClick={() => {
-                localStorage.removeItem('token')
-                localStorage.removeItem('role')
-                document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-                window.location.replace('/auth/login/candidate')
-              }}
-              title="Log out"
-              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.35)', cursor: 'pointer', flexShrink: 0, display: 'flex', padding: 4 }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
-            </button>
+          </div>
+
+          {/* Bottom: editorial headline + restrained stat row */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#d4af6d', marginBottom: 20 }}>
+              For candidates
+            </div>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,3.6vw,46px)', fontWeight: 500, lineHeight: 1.18, color: '#f5f2eb', marginBottom: 18, letterSpacing: '-0.5px' }}>
+              Know exactly where<br />you stand — before<br />you apply.
+            </h2>
+            <p style={{ fontSize: 14.5, color: 'rgba(245,242,235,.42)', lineHeight: 1.75, maxWidth: 340, marginBottom: 32, fontWeight: 300 }}>
+              A precise match score against any role, with the reasoning behind it. No guesswork.
+            </p>
+            <div style={{ display: 'flex', gap: 0, borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 20 }}>
+              {[{ v: '94%', l: 'Accuracy' }, { v: '2.1s', l: 'Per scan' }, { v: '12k+', l: 'CVs read' }].map((s, i) => (
+                <div key={s.l} style={{ paddingRight: 32, marginRight: 32, borderRight: i < 2 ? '1px solid rgba(255,255,255,.08)' : 'none' }}>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 500, color: '#f5f2eb', lineHeight: 1 }}>{s.v}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(245,242,235,.35)', marginTop: 5, letterSpacing: '0.03em' }}>{s.l}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* MAIN */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Topbar */}
-        <div style={{ height: 60, borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', padding: '0 28px', justifyContent: 'space-between', flexShrink: 0 }}>
-          <div><div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600 }}>My Dashboard</div><div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginTop: 1 }}>Welcome back — {3 - scansLeft} scans used</div></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#161614', border: '1px solid rgba(255,255,255,.07)', borderRadius: 8, padding: '6px 12px', fontSize: 12, color: 'rgba(255,255,255,.5)' }}>
-              <strong style={{ color: '#e2b04a' }}>{scansLeft}</strong>&nbsp;free scan{scansLeft === 1 ? '' : 's'} remaining
-            </div>
-            <button onClick={() => setShowUpgrade(true)} style={{ fontSize: 12, fontWeight: 700, background: '#e2b04a', color: '#0a0a09', padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif', letterSpacing: '.03em' }}>
-              Upgrade to Pro — $9/mo
-            </button>
-          </div>
+      {/* ============ RIGHT — FORM PANEL ============ */}
+      <div style={{ flex: '1 1 480px', maxWidth: 500, background: '#0d0d0b', borderLeft: '1px solid rgba(255,255,255,.06)', display: 'flex', flexDirection: 'column' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '32px 48px 0' }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'rgba(245,242,235,.38)', textDecoration: 'none', fontWeight: 400 }}>
+            <span style={{ fontSize: 15 }}>←</span> Back
+          </Link>
+          <Link href="/auth/login/hr" style={{ fontSize: 13, color: 'rgba(245,242,235,.38)', textDecoration: 'none' }}>
+            HR team? <span style={{ color: '#d4af6d' }}>Sign in</span>
+          </Link>
         </div>
 
-        {/* Content */}
-        <div className="dark-scroll" style={{ flex: 1, overflowY: 'auto', padding: 28, display: 'flex', gap: 20 }}>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 48px', maxWidth: 420, width: '100%' }}>
 
-            {/* Scan Area */}
-            <div id="scan-area" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div><div style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-.2px' }}>Scan Your CV</div><div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginTop: 2 }}>Upload a CV and paste a job description to get your match score</div></div>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>{scansLeft} free scan{scansLeft === 1 ? '' : 's'} left</span>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, marginBottom: 36 }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#d4af6d', display: 'inline-block' }} />
+            <span style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(212,175,109,.85)' }}>Candidate portal</span>
+          </div>
+
+          {/* Tabs — underline style, not boxed pill (reads less templated) */}
+          <div style={{ display: 'flex', gap: 28, marginBottom: 36, borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+            {(['login', 'signup'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                style={{
+                  padding: '0 0 14px', fontSize: 14, fontWeight: 500,
+                  fontFamily: 'inherit', border: 'none', cursor: 'pointer', background: 'none',
+                  color: tab === t ? '#f5f2eb' : 'rgba(245,242,235,.32)',
+                  borderBottom: tab === t ? '1.5px solid #d4af6d' : '1.5px solid transparent',
+                  marginBottom: -1, transition: 'color .2s',
+                }}
+              >
+                {t === 'login' ? 'Sign in' : 'Create account'}
+              </button>
+            ))}
+          </div>
+
+          {error && (
+            <div style={{ background: 'rgba(196,75,75,.08)', border: '1px solid rgba(196,75,75,.25)', color: '#e08585', fontSize: 13, padding: '11px 15px', borderRadius: 3, marginBottom: 20 }}>
+              {error}
+            </div>
+          )}
+
+          {tab === 'login' ? (
+            <>
+            <div>
+              <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#f5f2eb', marginBottom: 8, letterSpacing: '-0.3px' }}>
+                Welcome back
+              </h1>
+              <p style={{ fontSize: 13.5, color: 'rgba(245,242,235,.4)', marginBottom: 30, fontWeight: 300 }}>
+                New here?{' '}
+                <button onClick={() => setTab('signup')} style={{ color: '#d4af6d', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontFamily: 'inherit', padding: 0 }}>
+                  Create a free account
+                </button>
+              </p>
+
+              <RefinedField label="Email" type="email" value={email} onChange={setEmail} placeholder="you@email.com"
+                focused={focused === 'email'} onFocus={() => setFocused('email')} onBlur={() => setFocused(null)} />
+              <RefinedField label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••"
+                focused={focused === 'password'} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} />
+
+              <div style={{ textAlign: 'right', marginBottom: 28 }}>
+                <a href="#" onClick={e=>{e.preventDefault();setShowForgot(true);setForgotMsg('');setForgotEmail(email)}} style={{ fontSize: 12.5, color: 'rgba(245,242,235,.32)', textDecoration: 'none' }}>Forgot password?</a>
               </div>
 
-              {error && (
-                <div className="fade-in" style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', color: '#ef4444', fontSize: 12, padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>
-                  {error}
-                </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} style={{ display: 'none' }} />
-                <div onClick={handlePickFile} className="dropzone" style={{ border: `2px dashed ${file ? 'rgba(19,194,142,.4)' : 'rgba(255,255,255,.12)'}`, borderRadius: 10, padding: 28, textAlign: 'center', cursor: 'pointer', background: file ? 'rgba(19,194,142,.04)' : '#161614' }}>
-                  <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}>
-                    {uploading ? (
-                      <svg className="spinner" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e2b04a" strokeWidth="2"><circle cx="12" cy="12" r="9" strokeOpacity=".2" /><path d="M21 12a9 9 0 0 0-9-9" /></svg>
-                    ) : file ? (
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#13c28e" strokeWidth="1.8"><circle cx="12" cy="12" r="9" /><path d="M8 12.5l2.5 2.5L16 9" /></svg>
-                    ) : (
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" strokeWidth="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,.85)', marginBottom: 4 }}>
-                    {uploading ? 'Uploading…' : file ? file.name : 'Drop your CV here'}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>
-                    {uploading ? 'Please wait' : file ? 'Ready to analyze' : 'or click to browse · PDF or DOCX'}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.3)', letterSpacing: '.06em', textTransform: 'uppercase' }}>Job Description</div>
-                  <textarea value={jd} onChange={e => setJd(e.target.value)} placeholder={"Paste the job description here…\n\ne.g. 'We're looking for a Senior React Developer with 4+ years…'"} style={{ flex: 1, background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, padding: 14, fontSize: 13, fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.8)', outline: 'none', resize: 'none', lineHeight: 1.6, minHeight: 100 }} />
-                  <button onClick={handleScan} disabled={scanning || uploading} style={{ width: '100%', background: scanning ? 'rgba(226,176,74,.15)' : '#e2b04a', color: scanning ? '#e2b04a' : '#0a0a09', fontSize: 14, fontWeight: 700, fontFamily: 'Syne, sans-serif', padding: 13, borderRadius: 10, border: scanning ? '1px solid rgba(226,176,74,.3)' : 'none', cursor: scanning ? 'default' : 'pointer', letterSpacing: '.04em' }}>
-                    {scanning ? SCAN_STEPS[scanStep] || 'Analyzing...' : result ? 'Analysis Complete — Scan Again' : 'Analyze Match'}
-                  </button>
-                  {scanning && (
-                    <div style={{ marginTop: 12 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {SCAN_STEPS.map((step, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: i <= scanStep ? 1 : 0.2, transition: 'opacity 0.4s ease', fontSize: 11, color: i === scanStep ? '#e2b04a' : i < scanStep ? '#13c28e' : 'rgba(255,255,255,.3)' }}>
-                            <div style={{ width: 5, height: 5, borderRadius: '50%', background: i === scanStep ? '#e2b04a' : i < scanStep ? '#13c28e' : 'rgba(255,255,255,.15)', flexShrink: 0, transition: 'background 0.4s' }} />
-                            <span style={{ fontFamily: 'Syne, sans-serif' }}>{step}</span>
-                            {i < scanStep && <span style={{ marginLeft: 'auto', color: '#13c28e', fontSize: 10 }}>done</span>}
-                            {i === scanStep && <span style={{ marginLeft: 'auto', fontSize: 10, animation: 'pulse 1s infinite' }}>...</span>}
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ marginTop: 10, height: 2, background: 'rgba(255,255,255,.06)', borderRadius: 1 }}>
-                        <div style={{ height: '100%', background: 'linear-gradient(90deg,#b8860b,#e2b04a)', borderRadius: 1, width: `${Math.round(((scanStep + 1) / SCAN_STEPS.length) * 100)}%`, transition: 'width 0.6s ease' }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <button onClick={handleLogin} disabled={loading} style={{ ...primaryBtn, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                {loading && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" style={{ animation:'spin 0.8s linear infinite' }}>
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3"/>
+                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="28 56" strokeLinecap="round"/>
+                  </svg>
+                )}
+                {loading ? 'Signing in…' : 'Sign in'}
+              </button>
+              <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{to{transform:rotate(360deg)}}` }} />
             </div>
 
-            {/* Results */}
-            {result && (
-              <div className="fade-up" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20, alignItems: 'start' }}>
-                {/* Score Ring */}
-                <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
-                  <svg width="0" height="0"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#c5931f" /><stop offset="100%" stopColor="#13c28e" /></linearGradient></defs></svg>
-                  <div style={{ position: 'relative', width: 120, height: 120, marginBottom: 16 }}>
-                    <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
-                      <circle cx="60" cy="60" r="54" fill="none" stroke="#1e1e1b" strokeWidth="10" />
-                      <circle className="ring-anim" cx="60" cy="60" r="54" fill="none" stroke="url(#rg)" strokeWidth="10" strokeLinecap="round" strokeDasharray="339" strokeDashoffset={339 - (339 * (result.metrics?.candidate_score ?? 0)) / 100} />
-                    </svg>
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 38, fontWeight: 600, lineHeight: 1 }}>{result.metrics?.candidate_score ?? 0}</span>
-                      <small style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>/ 100</small>
-                    </div>
-                  </div>
-                  <div style={{ background: 'rgba(19,194,142,.12)', color: '#13c28e', fontSize: 12, fontWeight: 600, padding: '5px 14px', borderRadius: 100, border: '1px solid rgba(19,194,142,.2)', marginBottom: 12, textAlign: 'center' }}>{result.metrics?.final_verdict || 'Match Result'}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', textAlign: 'center', lineHeight: 1.5, marginBottom: 14 }}>You match {result.metrics?.candidate_score ?? 0}% of<br />this role's requirements</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
-                    {result.flags?.is_shortlisted && (
-                      <div style={{ fontSize: 11, color: '#13c28e', background: 'rgba(19,194,142,.08)', border: '1px solid rgba(19,194,142,.18)', borderRadius: 6, padding: '5px 10px', textAlign: 'center' }}>Shortlisted</div>
-                    )}
-                    {result.flags?.trigger_interview && (
-                      <div style={{ fontSize: 11, color: '#e2b04a', background: 'rgba(226,176,74,.08)', border: '1px solid rgba(226,176,74,.18)', borderRadius: 6, padding: '5px 10px', textAlign: 'center' }}>Interview Recommended</div>
-                    )}
-                    {result.flags?.has_min_experience === false && (
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '5px 10px', textAlign: 'center' }}>Below Minimum Experience</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Analysis Panel */}
-                <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24 }}>
-                  <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 20 }}>
-                    {['skills', 'gaps', 'recos'].map(t => (
-                      <button key={t} onClick={() => setActiveTab(t)} className="tab-btn" style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, color: activeTab === t ? '#e2b04a' : 'rgba(255,255,255,.3)', cursor: 'pointer', borderBottom: `2px solid ${activeTab === t ? '#e2b04a' : 'transparent'}`, marginBottom: -1, border: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none', background: 'none', fontFamily: 'Syne, sans-serif' }}>
-                        {t === 'skills' ? 'Skills' : t === 'gaps' ? 'Skill Gaps' : 'Suggestions'}
-                      </button>
-                    ))}
-                  </div>
-
-                  {activeTab === 'skills' && (
-                    (result.metrics?.matched_skills?.length ?? 0) === 0 ? (
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '20px 0' }}>No matched skills found.</div>
-                    ) : (result.metrics?.matched_skills || []).map((s: string, i: number) => (
-                      <div key={s} className="fade-up" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#161614', borderRadius: 8, border: '1px solid rgba(255,255,255,.06)', marginBottom: 8, animationDelay: `${i * 50}ms` }}>
-                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(19,194,142,.12)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#13c28e" strokeWidth="3"><path d="M5 12l5 5L20 7" /></svg>
-                        </div>
-                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,.75)' }}>{s}</span>
+            {/* Forgot Password Modal */}
+            {showForgot && (
+              <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.7)', zIndex:999, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={()=>{setShowForgot(false); setForgotStep('email')}}>
+                <div style={{ background:'#141412', border:'1px solid rgba(255,255,255,.1)', borderRadius:16, padding:28, width:340, maxWidth:'90vw' }} onClick={e=>e.stopPropagation()}>
+                  {forgotStep === 'email' ? (
+                    <>
+                      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:6, color:'#f5f2eb' }}>Forgot Password</div>
+                      <p style={{ fontSize:13, color:'rgba(255,255,255,.35)', marginBottom:20 }}>Enter your email — we'll send a 5-digit reset code.</p>
+                      <input value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="your@email.com" style={{ width:'100%', background:'#1e1e1b', border:'1px solid rgba(255,255,255,.08)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'rgba(255,255,255,.8)', outline:'none', fontFamily:'inherit', marginBottom:12, boxSizing:'border-box' as any }} />
+                      {forgotMsg && <div style={{ fontSize:12, color:'#ef4444', marginBottom:12 }}>{forgotMsg}</div>}
+                      <div style={{ display:'flex', gap:8 }}>
+                        <button onClick={()=>setShowForgot(false)} style={{ flex:1, fontSize:13, padding:'9px', borderRadius:8, border:'1px solid rgba(255,255,255,.08)', background:'transparent', color:'rgba(255,255,255,.4)', cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
+                        <button onClick={handleSendOtp} disabled={forgotLoading} style={{ flex:1, fontSize:13, fontWeight:600, padding:'9px', borderRadius:8, border:'none', background:'#d4af6d', color:'#0a0a08', cursor:'pointer', fontFamily:'inherit' }}>{forgotLoading?'Sending…':'Send Code'}</button>
                       </div>
-                    ))
-                  )}
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:6, color:'#f5f2eb' }}>Enter Code</div>
+                      <p style={{ fontSize:13, color:'rgba(255,255,255,.35)', marginBottom:18 }}>Sent to {forgotEmail}. Expires in 10 minutes.</p>
 
-                  {activeTab === 'gaps' && (
-                    (result.metrics?.missing_skills?.length ?? 0) === 0 ? (
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '20px 0' }}>No skill gaps found — strong match.</div>
-                    ) : (result.metrics?.missing_skills || []).map((s: string, i: number) => (
-                      <div key={s} className="fade-up" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#161614', borderRadius: 8, border: '1px solid rgba(255,255,255,.06)', marginBottom: 8, animationDelay: `${i * 50}ms` }}>
-                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(239,68,68,.1)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="3"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                        </div>
-                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,.7)', flex: 1 }}>{s}</span>
-                        <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 100, background: 'rgba(239,68,68,.1)', color: '#ef4444' }}>Missing</span>
+                      <div style={{ display:'flex', gap:8, marginBottom:16, justifyContent:'center' }}>
+                        {otpDigits.map((d, i) => (
+                          <input
+                            key={i}
+                            ref={el => { otpRefs.current[i] = el }}
+                            value={d}
+                            onChange={e=>handleOtpChange(i, e.target.value)}
+                            onKeyDown={e=>handleOtpKeyDown(i, e)}
+                            onPaste={handleOtpPaste}
+                            maxLength={1}
+                            inputMode="numeric"
+                            aria-label={`Reset code digit ${i + 1} of 5`}
+                            style={{ width:40, height:48, textAlign:'center', fontSize:20, fontWeight:600, background:'#1e1e1b', border:'1px solid rgba(255,255,255,.12)', borderRadius:8, color:'#f5f2eb', outline:'none', fontFamily:'inherit' }}
+                          />
+                        ))}
                       </div>
-                    ))
-                  )}
 
-                  {activeTab === 'recos' && (
-                    <div className="fade-up" style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-                      {(result.deep_analysis || 'No suggestions available.')
-                        .split(/\n(?=\*\*)/)
-                        .filter(Boolean)
-                        .map((block: string, i: number) => {
-                          const headingMatch = block.match(/^\*\*(.+?)\*\*/)
-                          const heading = headingMatch ? headingMatch[1] : null
-                          const body = heading ? block.replace(/^\*\*(.+?)\*\*/, '').trim() : block.trim()
-                          return (
-                            <div key={i} style={{ marginBottom: 16, padding: '12px 14px', background: '#161614', borderRadius: 8, borderLeft: '3px solid #e2b04a' }}>
-                              {heading && <h5 style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: 'rgba(255,255,255,.85)' }}>{heading}</h5>}
-                              <p style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', lineHeight: 1.7, margin: 0 }}>{body.replace(/^\n+/, '')}</p>
-                            </div>
-                          )
-                        })}
-                    </div>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={e=>setNewPassword(e.target.value)}
+                        placeholder="New password"
+                        style={{ width:'100%', background:'#1e1e1b', border:'1px solid rgba(255,255,255,.08)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'rgba(255,255,255,.8)', outline:'none', fontFamily:'inherit', marginBottom:12, boxSizing:'border-box' as any }}
+                      />
+
+                      {forgotMsg && <div style={{ fontSize:12, color:'#ef4444', marginBottom:12 }}>{forgotMsg}</div>}
+
+                      <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+                        <button onClick={()=>{setForgotStep('email'); setForgotMsg('')}} style={{ flex:1, fontSize:13, padding:'9px', borderRadius:8, border:'1px solid rgba(255,255,255,.08)', background:'transparent', color:'rgba(255,255,255,.4)', cursor:'pointer', fontFamily:'inherit' }}>Back</button>
+                        <button onClick={handleResetPassword} disabled={forgotLoading} style={{ flex:1, fontSize:13, fontWeight:600, padding:'9px', borderRadius:8, border:'none', background:'#d4af6d', color:'#0a0a08', cursor:'pointer', fontFamily:'inherit' }}>{forgotLoading?'Resetting…':'Reset Password'}</button>
+                      </div>
+                      <button onClick={handleSendOtp} disabled={forgotLoading} style={{ width:'100%', fontSize:12, background:'none', border:'none', color:'rgba(255,255,255,.3)', cursor:'pointer', fontFamily:'inherit' }}>Resend code</button>
+                    </>
                   )}
                 </div>
               </div>
             )}
+            </>
+          ) : signupStep === 'verify' ? (
+            <div>
+              <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#f5f2eb', marginBottom: 8, letterSpacing: '-0.3px' }}>
+                Verify your email
+              </h1>
+              <p style={{ fontSize: 13.5, color: 'rgba(245,242,235,.4)', marginBottom: 24, fontWeight: 300 }}>
+                Sent to {pendingEmail}. Expires in 10 minutes.
+              </p>
 
-            {/* History */}
-            <div id="history" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>Recent Scans</div>
-                {history.length > 0 && (
-                  <button onClick={() => setHistory([])} style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>Clear</button>
-                )}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 20, justifyContent: 'center' }}>
+                {verifyOtp.map((d, i) => (
+                  <input
+                    key={i}
+                    ref={el => { verifyRefs.current[i] = el }}
+                    value={d}
+                    onChange={e => handleVerifyOtpChange(i, e.target.value)}
+                    onKeyDown={e => handleVerifyOtpKeyDown(i, e)}
+                    onPaste={handleVerifyOtpPaste}
+                    maxLength={1}
+                    inputMode="numeric"
+                    aria-label={`Digit ${i + 1} of 5`}
+                    style={{ width: 44, height: 52, textAlign: 'center', fontSize: 20, fontWeight: 600, background: '#1e1e1b', border: '1px solid rgba(255,255,255,.12)', borderRadius: 8, color: '#f5f2eb', outline: 'none', fontFamily: 'inherit' }}
+                  />
+                ))}
               </div>
-              {history.length === 0 ? (
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '20px 0' }}>No scans yet — run your first analysis above.</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {history.map((h, i) => (
-                    <div key={i} className="history-row fade-up" style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#161614', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, padding: '14px 18px', cursor: 'pointer', animationDelay: `${i * 50}ms` }}>
-                      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 600, color: h.color, width: 40, textAlign: 'center' }}>{h.score}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{h.role}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>{h.skills}</div>
-                      </div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)' }}>{h.date}</div>
-                      <div style={{ color: 'rgba(255,255,255,.3)', fontSize: 16 }}>›</div>
-                    </div>
+
+              {verifyMsg && <div style={{ fontSize: 12, color: verifyMsg === 'New code sent.' ? '#13c28e' : '#ef4444', marginBottom: 16, textAlign: 'center' }}>{verifyMsg}</div>}
+
+              <button onClick={handleVerifySignup} disabled={verifyLoading} style={primaryBtn}>
+                {verifyLoading ? 'Verifying…' : 'Verify & Continue'}
+              </button>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button onClick={() => { setSignupStep('form'); setTab('signup') }} style={{ fontSize: 12.5, color: 'rgba(245,242,235,.32)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Back</button>
+                <button onClick={handleResendVerification} disabled={verifyLoading} style={{ fontSize: 12.5, color: '#d4af6d', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Resend code</button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#f5f2eb', marginBottom: 8, letterSpacing: '-0.3px' }}>
+                Create your account
+              </h1>
+              <p style={{ fontSize: 13.5, color: 'rgba(245,242,235,.4)', marginBottom: 30, fontWeight: 300 }}>
+                Already have one?{' '}
+                <button onClick={() => setTab('login')} style={{ color: '#d4af6d', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontFamily: 'inherit', padding: 0 }}>
+                  Sign in
+                </button>
+              </p>
+
+              <RefinedField label="Full name" type="text" value={name} onChange={setName} placeholder="Your full name"
+                focused={focused === 'name'} onFocus={() => setFocused('name')} onBlur={() => setFocused(null)} />
+              <RefinedField label="Email" type="email" value={email} onChange={setEmail} placeholder="you@email.com"
+                focused={focused === 'email'} onFocus={() => setFocused('email')} onBlur={() => setFocused(null)} />
+
+              <div style={{ marginBottom: 22 }}>
+                <label style={labelStyle}>Password</label>
+                <div style={{
+                  borderBottom: `1px solid ${focused === 'password' ? '#d4af6d' : 'rgba(255,255,255,.12)'}`,
+                  transition: 'border-color .2s',
+                }}>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => { setPassword(e.target.value); calcStrength(e.target.value) }}
+                    onFocus={() => setFocused('password')}
+                    onBlur={() => setFocused(null)}
+                    placeholder="Create a strong password"
+                    style={inputBareStyle}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 4, marginTop: 10 }}>
+                  {[0, 1, 2, 3].map(i => (
+                    <div key={i} style={{ flex: 1, height: 2, borderRadius: 1, background: i < strength ? strengthColors[strength - 1] : 'rgba(255,255,255,.08)', transition: 'background .3s' }} />
                   ))}
                 </div>
-              )}
-            </div>
+                {strength > 0 && <p style={{ fontSize: 11, color: strengthColors[strength - 1], marginTop: 6, fontWeight: 500 }}>{strengthLabels[strength - 1]}</p>}
+              </div>
 
-          </div>
-          <CopilotPanel
-            context="candidate_home"
-            candidateHome={{
-              scanResult: result ? { metrics: result.metrics, flags: result.flags, deep_analysis: result.deep_analysis } : null,
-              practiceHistory,
-            }}
-          />
+              <button onClick={handleSignup} disabled={loading} style={primaryBtn}>
+                {loading ? 'Creating account…' : 'Create account'}
+              </button>
+
+              <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(245,242,235,.3)', marginTop: 20, fontWeight: 300 }}>
+                By continuing you agree to our <a href="/terms" style={{ color: '#d4af6d' }}>Terms</a> and <a href="/privacy" style={{ color: '#d4af6d' }}>Privacy Policy</a>
+              </p>
+            </div>
+          )}
         </div>
+
+        <div style={{ padding: '24px 48px', borderTop: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12.5, color: 'rgba(245,242,235,.3)', fontWeight: 300 }}>Hiring instead of applying?</span>
+          <Link href="/auth/login/hr" style={{ fontSize: 12.5, color: '#d4af6d', textDecoration: 'none', fontWeight: 500 }}>HR portal →</Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontSize: 11.5, fontWeight: 500, letterSpacing: '0.05em',
+  color: 'rgba(245,242,235,.4)', marginBottom: 10,
+}
+
+const inputBareStyle: React.CSSProperties = {
+  width: '100%', background: 'transparent', border: 'none', outline: 'none',
+  color: '#f5f2eb', fontSize: 14.5, fontFamily: 'inherit', padding: '10px 0',
+}
+
+const primaryBtn: React.CSSProperties = {
+  width: '100%', background: '#d4af6d', color: '#15130f', fontWeight: 600,
+  fontSize: 14, padding: '15px', borderRadius: 3, border: 'none',
+  cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.01em',
+  marginBottom: 24, transition: 'background .2s, transform .15s',
+}
+
+function RefinedField({
+  label, type, value, onChange, placeholder, focused, onFocus, onBlur,
+}: {
+  label: string; type: string; value: string; onChange: (v: string) => void
+  placeholder: string; focused: boolean; onFocus: () => void; onBlur: () => void
+}) {
+  const [reveal, setReveal] = useState(false)
+  const isPassword = type === 'password'
+  const inputId = `field-${label.toLowerCase().replace(/\s+/g, '-')}`
+  return (
+    <div style={{ marginBottom: 22 }}>
+      <label htmlFor={inputId} style={labelStyle}>{label}</label>
+      <div style={{ display: 'flex', alignItems: 'center', borderBottom: `1px solid ${focused ? '#d4af6d' : 'rgba(255,255,255,.12)'}`, transition: 'border-color .2s' }}>
+        <input
+          id={inputId}
+          type={isPassword && reveal ? 'text' : type}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          placeholder={placeholder}
+          autoComplete={isPassword ? 'current-password' : undefined}
+          style={{ ...inputBareStyle, flex: 1 }}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setReveal(r => !r)}
+            aria-label={reveal ? 'Hide password' : 'Show password'}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(245,242,235,.4)', padding: '0 2px 6px', display: 'flex', alignItems: 'center' }}
+          >
+            {reveal ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3l18 18" /><path d="M10.6 10.6a2 2 0 002.8 2.8" /><path d="M9.9 4.24A9.8 9.8 0 0112 4c6 0 10 7 10 7a17.6 17.6 0 01-3.1 3.87M6.6 6.6C4 8.3 2 11 2 11s4 7 10 7a9.6 9.6 0 004.4-1.06" /></svg>
+            )}
+          </button>
+        )}
       </div>
     </div>
   )
