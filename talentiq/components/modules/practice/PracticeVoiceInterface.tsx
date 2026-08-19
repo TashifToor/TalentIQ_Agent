@@ -107,6 +107,10 @@ export default function PracticeVoiceInterface({
         }
       })
     } catch (err: any) {
+      // Same rollback as the chat interface — this candidate turn was
+      // never actually persisted server-side, so it must not stay in the
+      // visible transcript as if it had been.
+      setTranscript(t => t.filter((m, i) => !(i === t.length - 1 && m.role === 'candidate' && m.content === text)))
       setError(err.message || 'Could not send your answer.')
       dispatch({ type: 'ERROR' })
     }
@@ -124,6 +128,7 @@ export default function PracticeVoiceInterface({
   const recording = voiceState === 'candidate_speaking'
   const processing = voiceState === 'thinking'
   const aiSpeaking = voiceState === 'ai_speaking'
+  const concluded = voiceState === 'completed'
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
@@ -151,12 +156,12 @@ export default function PracticeVoiceInterface({
       <div style={{ textAlign: 'center', marginBottom: 14 }}>
         <button
           onClick={recording ? stopRecording : startRecording}
-          disabled={processing || aiSpeaking}
+          disabled={processing || aiSpeaking || concluded}
           className={recording ? 'voice-pulse' : ''}
           style={{
-            width: 72, height: 72, borderRadius: '50%', border: 'none', cursor: (processing || aiSpeaking) ? 'default' : 'pointer',
+            width: 72, height: 72, borderRadius: '50%', border: 'none', cursor: (processing || aiSpeaking || concluded) ? 'default' : 'pointer',
             background: recording ? 'linear-gradient(135deg,#ef4444,#f87171)' : 'linear-gradient(135deg,#7c3aed,#a78bfa)',
-            display: 'grid', placeItems: 'center', opacity: (processing || aiSpeaking) ? .5 : 1,
+            display: 'grid', placeItems: 'center', opacity: (processing || aiSpeaking || concluded) ? .5 : 1,
           }}>
           <span style={{ fontSize: 26 }}>{processing ? '⏳' : aiSpeaking ? '🔊' : recording ? '⏹' : '🎙'}</span>
         </button>
@@ -167,7 +172,7 @@ export default function PracticeVoiceInterface({
 
       {error && <div style={{ fontSize: 12, color: '#ef4444', textAlign: 'center', marginBottom: 10 }}>{error}</div>}
 
-      {showTypeFallback && (
+      {showTypeFallback && !concluded && (
         <div style={{ display: 'flex', gap: 8 }}>
           <input value={typedFallback} onChange={e => setTypedFallback(e.target.value)} onKeyDown={e => e.key === 'Enter' && submitTyped()}
             placeholder="Type your answer instead..." className="premium-input accent-purple"
@@ -175,7 +180,7 @@ export default function PracticeVoiceInterface({
           <AnimatedButton onClick={submitTyped} disabled={!typedFallback.trim()}>Send</AnimatedButton>
         </div>
       )}
-      {!showTypeFallback && (
+      {!showTypeFallback && !concluded && (
         <div style={{ textAlign: 'center' }}>
           <button onClick={() => setShowTypeFallback(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.3)', fontSize: 11.5, cursor: 'pointer' }}>Type instead</button>
         </div>
