@@ -55,7 +55,18 @@ export default function CandidateLogin() {
     if (e.key === 'Backspace' && !verifyOtp[i] && i > 0) verifyRefs.current[i - 1]?.focus()
   }
 
+  const handleVerifyOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 5)
+    if (!digits) return
+    e.preventDefault()
+    const next = ['', '', '', '', '']
+    for (let i = 0; i < digits.length; i++) next[i] = digits[i]
+    setVerifyOtp(next)
+    verifyRefs.current[Math.min(digits.length, 4)]?.focus()
+  }
+
   const handleVerifySignup = async () => {
+    if (verifyLoading) return
     const otp = verifyOtp.join('')
     if (otp.length < 5) { setVerifyMsg('Enter the full 5-digit code.'); return }
     setVerifyLoading(true)
@@ -84,7 +95,7 @@ export default function CandidateLogin() {
   }
 
   const handleSendOtp = async () => {
-    if (!forgotEmail.trim()) return
+    if (forgotLoading || !forgotEmail.trim()) return
     setForgotLoading(true)
     setForgotMsg('')
     try {
@@ -109,7 +120,18 @@ export default function CandidateLogin() {
     if (e.key === 'Backspace' && !otpDigits[i] && i > 0) otpRefs.current[i - 1]?.focus()
   }
 
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 5)
+    if (!digits) return
+    e.preventDefault()
+    const next = ['', '', '', '', '']
+    for (let i = 0; i < digits.length; i++) next[i] = digits[i]
+    setOtpDigits(next)
+    otpRefs.current[Math.min(digits.length, 4)]?.focus()
+  }
+
   const handleResetPassword = async () => {
+    if (forgotLoading) return
     const otp = otpDigits.join('')
     if (otp.length < 5) { setForgotMsg('Enter the full 5-digit code.'); return }
     if (newPassword.length < 6) { setForgotMsg('Password must be at least 6 characters.'); return }
@@ -185,6 +207,7 @@ export default function CandidateLogin() {
   }
 
   const handleLogin = async () => {
+    if (loading) return
     setError('')
     setLoading(true)
     try {
@@ -211,6 +234,7 @@ export default function CandidateLogin() {
   }
 
   const handleSignup = async () => {
+    if (loading) return
     setError('')
     setLoading(true)
     try {
@@ -388,9 +412,6 @@ export default function CandidateLogin() {
                 {loading ? 'Signing in…' : 'Sign in'}
               </button>
               <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{to{transform:rotate(360deg)}}` }} />
-
-              <RefinedDivider />
-              <GoogleButton />
             </div>
 
             {/* Forgot Password Modal */}
@@ -421,8 +442,10 @@ export default function CandidateLogin() {
                             value={d}
                             onChange={e=>handleOtpChange(i, e.target.value)}
                             onKeyDown={e=>handleOtpKeyDown(i, e)}
+                            onPaste={handleOtpPaste}
                             maxLength={1}
                             inputMode="numeric"
+                            aria-label={`Reset code digit ${i + 1} of 5`}
                             style={{ width:40, height:48, textAlign:'center', fontSize:20, fontWeight:600, background:'#1e1e1b', border:'1px solid rgba(255,255,255,.12)', borderRadius:8, color:'#f5f2eb', outline:'none', fontFamily:'inherit' }}
                           />
                         ))}
@@ -466,8 +489,10 @@ export default function CandidateLogin() {
                     value={d}
                     onChange={e => handleVerifyOtpChange(i, e.target.value)}
                     onKeyDown={e => handleVerifyOtpKeyDown(i, e)}
+                    onPaste={handleVerifyOtpPaste}
                     maxLength={1}
                     inputMode="numeric"
+                    aria-label={`Digit ${i + 1} of 5`}
                     style={{ width: 44, height: 52, textAlign: 'center', fontSize: 20, fontWeight: 600, background: '#1e1e1b', border: '1px solid rgba(255,255,255,.12)', borderRadius: 8, color: '#f5f2eb', outline: 'none', fontFamily: 'inherit' }}
                   />
                 ))}
@@ -568,55 +593,39 @@ function RefinedField({
   label: string; type: string; value: string; onChange: (v: string) => void
   placeholder: string; focused: boolean; onFocus: () => void; onBlur: () => void
 }) {
+  const [reveal, setReveal] = useState(false)
+  const isPassword = type === 'password'
+  const inputId = `field-${label.toLowerCase().replace(/\s+/g, '-')}`
   return (
     <div style={{ marginBottom: 22 }}>
-      <label style={labelStyle}>{label}</label>
-      <div style={{ borderBottom: `1px solid ${focused ? '#d4af6d' : 'rgba(255,255,255,.12)'}`, transition: 'border-color .2s' }}>
+      <label htmlFor={inputId} style={labelStyle}>{label}</label>
+      <div style={{ display: 'flex', alignItems: 'center', borderBottom: `1px solid ${focused ? '#d4af6d' : 'rgba(255,255,255,.12)'}`, transition: 'border-color .2s' }}>
         <input
-          type={type}
+          id={inputId}
+          type={isPassword && reveal ? 'text' : type}
           value={value}
           onChange={e => onChange(e.target.value)}
           onFocus={onFocus}
           onBlur={onBlur}
           placeholder={placeholder}
-          style={inputBareStyle}
+          autoComplete={isPassword ? 'current-password' : undefined}
+          style={{ ...inputBareStyle, flex: 1 }}
         />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setReveal(r => !r)}
+            aria-label={reveal ? 'Hide password' : 'Show password'}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(245,242,235,.4)', padding: '0 2px 6px', display: 'flex', alignItems: 'center' }}
+          >
+            {reveal ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 3l18 18" /><path d="M10.6 10.6a2 2 0 002.8 2.8" /><path d="M9.9 4.24A9.8 9.8 0 0112 4c6 0 10 7 10 7a17.6 17.6 0 01-3.1 3.87M6.6 6.6C4 8.3 2 11 2 11s4 7 10 7a9.6 9.6 0 004.4-1.06" /></svg>
+            )}
+          </button>
+        )}
       </div>
     </div>
-  )
-}
-
-function RefinedDivider() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.07)' }} />
-      <span style={{ fontSize: 11.5, color: 'rgba(245,242,235,.28)', letterSpacing: '0.05em' }}>OR</span>
-      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.07)' }} />
-    </div>
-  )
-}
-
-function GoogleButton() {
-  return (
-    <button style={{
-      width: '100%', background: 'transparent', border: '1px solid rgba(255,255,255,.12)',
-      borderRadius: 3, padding: 13, fontSize: 13.5, fontFamily: 'inherit',
-      color: 'rgba(245,242,235,.65)', cursor: 'pointer',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-      transition: 'border-color .2s, background .2s',
-    }}>
-      <GoogleIcon /> Continue with Google
-    </button>
-  )
-}
-
-function GoogleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 17 17">
-      <path d="M16.32 8.7c0-.6-.05-1.18-.15-1.74H8.5v3.29h4.4a3.76 3.76 0 01-1.63 2.47v2.06h2.64c1.54-1.42 2.41-3.51 2.41-6.08z" fill="#4285F4" />
-      <path d="M8.5 16.5c2.2 0 4.05-.73 5.4-1.97l-2.64-2.06c-.73.49-1.67.78-2.76.78-2.12 0-3.92-1.43-4.56-3.36H1.2v2.13A8 8 0 008.5 16.5z" fill="#34A853" />
-      <path d="M3.94 9.89A4.8 4.8 0 013.69 8.5c0-.48.08-.94.25-1.39V4.98H1.2A8 8 0 000 8.5c0 1.29.3 2.5.84 3.52l3.1-2.13z" fill="#FBBC04" />
-      <path d="M8.5 3.75c1.2 0 2.27.41 3.12 1.22l2.34-2.34A8 8 0 001.2 4.98l3.1 2.13C4.57 5.18 6.37 3.75 8.5 3.75z" fill="#EA4335" />
-    </svg>
   )
 }
