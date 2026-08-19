@@ -127,12 +127,24 @@ After your message, on its own final line, write exactly one word: CONTINUE or C
     if marker in ("CONTINUE", "CONCLUDE"):
         action = "conclude" if marker == "CONCLUDE" else "continue"
     else:
-        # Model didn't end with a clean marker line — treat any leftover text
-        # as real content (don't silently drop it) and default to continue.
-        if buffer.strip():
-            full_lines.append(buffer)
-            yield {"type": "delta", "text": buffer}
+        # The model didn't put the marker on its own clean final line (rare,
+        # but LLMs occasionally deviate from formatting instructions) — the
+        # marker word could be glued onto the end of real trailing content
+        # in the same unflushed buffer. Strip it off defensively so it can
+        # never leak into what the candidate sees, and still honor whichever
+        # action the model actually signaled rather than silently forcing
+        # "continue" just because the formatting wasn't clean.
+        stripped = buffer.rstrip()
+        upper = stripped.upper()
         action = "continue"
+        for candidate_marker, candidate_action in (("CONCLUDE", "conclude"), ("CONTINUE", "continue")):
+            if upper.endswith(candidate_marker) and (len(stripped) == len(candidate_marker) or not stripped[-len(candidate_marker) - 1].isalnum()):
+                stripped = stripped[: len(stripped) - len(candidate_marker)].rstrip()
+                action = candidate_action
+                break
+        if stripped:
+            full_lines.append(stripped)
+            yield {"type": "delta", "text": stripped}
 
     message = "\n".join(full_lines).strip()
     if not message:
