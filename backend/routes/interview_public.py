@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, status, WebSocket
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import update
 
 from models.database import get_db
 from models.interview import InterviewPosting, InterviewSession
@@ -63,6 +64,25 @@ def _assessment_question_out(posting: InterviewPosting, session: InterviewSessio
     else:
         seconds_remaining = seconds_allowed
     return AssessmentQuestionOut(id=q["id"], index=index + 1, total=len(questions), question=q["question"], options=q["options"], seconds_allowed=seconds_allowed, seconds_remaining=seconds_remaining)
+
+
+def _claim_completion(db: Session, session: "InterviewSession") -> bool:
+    """
+    Atomic claim, not read-then-write: two near-simultaneous requests to
+    finish the same session (double form submit, a client retry after a
+    slow response, etc.) could otherwise both pass a plain `if status ==
+    'completed'` check before either commits, both call _finalize(), and
+    send two completion emails. A conditional UPDATE means only one
+    request's WHERE clause matches — rowcount tells us honestly whether
+    this request is the one that gets to finalize.
+    """
+    result = db.execute(
+        update(InterviewSession)
+        .where(InterviewSession.id == session.id, InterviewSession.status != "completed")
+        .values(status="completed")
+    )
+    db.commit()
+    return result.rowcount == 1
 
 
 def _finalize(session: InterviewSession, posting: InterviewPosting, transcript: list, db: Session):
@@ -625,6 +645,12 @@ async def upload_cv(
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
     session.cv_text = cv_text or None
+    db.commit()
+
+    if not _claim_completion(db, session):
+        # Another concurrent request (double submit, retry) already
+        # finalized this session in the interim — don't finalize twice.
+        raise HTTPException(status_code=400, detail="This interview has already been completed.")
 
     transcript = json.loads(session.transcript or "[]")
     _finalize(session, posting, transcript, db)
@@ -643,6 +669,9 @@ def skip_cv(slug: str, session_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="This interview has already been completed.")
     if not session.awaiting_cv:
         raise HTTPException(status_code=400, detail="A CV wasn't requested for this session yet.")
+
+    if not _claim_completion(db, session):
+        raise HTTPException(status_code=400, detail="This interview has already been completed.")
 
     transcript = json.loads(session.transcript or "[]")
     _finalize(session, posting, transcript, db)
