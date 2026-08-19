@@ -371,7 +371,7 @@ export const api = {
     apiFetch(`/interview/public/${slug}/${sessionId}/assessment/flag`, {
       method: "POST",
       body: JSON.stringify({ type, detail }),
-    }).catch(() => {}),
+    }).catch(() => { }),
 
   terminateAssessment: (slug: string, sessionId: string, type: string, detail?: string) =>
     apiFetch(`/interview/public/${slug}/${sessionId}/assessment/terminate`, {
