@@ -32,13 +32,74 @@ export default function InterviewPracticePage() {
   const [processingAttempts, setProcessingAttempts] = useState(0)
   const [useRealtimeVoice, setUseRealtimeVoice] = useState(true)
   const [resumable, setResumable] = useState<any>(null)
+  const [recovering, setRecovering] = useState(true)
+
+  const STORAGE_KEY = 'practice_active_session'
 
   useEffect(() => {
     api.getPracticeHistory().then((items: any[]) => {
       const inProgress = items?.find(i => i.status === 'in_progress')
       if (inProgress) setResumable(inProgress)
     }).catch(() => {})
+
+    // Mid-session refresh recovery — mirrors the recruiter interview page's
+    // sessionStorage-cache-then-verify pattern. The cache is NEVER trusted
+    // directly: it only carries a session id + which step the candidate was
+    // on, and every field actually rendered comes from a fresh, verified
+    // getPracticeSession() call, exactly like a normal resume.
+    let cached: { sessionId?: string; step?: Step } | null = null
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY)
+      cached = raw ? JSON.parse(raw) : null
+    } catch {
+      sessionStorage.removeItem(STORAGE_KEY)
+    }
+    if (!cached?.sessionId) { setRecovering(false); return }
+
+    api.getPracticeSession(cached.sessionId)
+      .then(async (s: any) => {
+        if (s.status === 'completed') {
+          // Never resume a completed session as active. If the report is
+          // genuinely ready, show it; otherwise fall back to the normal
+          // select screen rather than inventing a completed-looking state.
+          sessionStorage.removeItem(STORAGE_KEY)
+          try {
+            const r = await api.getPracticeReport(s.id)
+            const hasContent = r.ai_score != null || r.assessment_score != null || r.deep_analysis || r.experience_assessment
+            if (r.status === 'completed' && hasContent) {
+              setSession(s)
+              setReport(r)
+              setStep('report')
+            }
+          } catch { /* no report yet — leave step at 'select' */ }
+        } else if (s.status === 'in_progress') {
+          setSession(s)
+          setMode(s.mode)
+          if (cached!.step === 'processing') {
+            setStep('processing')
+            setProcessingAttempts(1)
+          } else {
+            setStep('session')
+          }
+        } else {
+          sessionStorage.removeItem(STORAGE_KEY)
+        }
+      })
+      .catch(() => { sessionStorage.removeItem(STORAGE_KEY) })
+      .finally(() => setRecovering(false))
   }, [])
+
+  // Keep the cache in sync with whatever's actually recoverable. Only
+  // 'session' and 'processing' are ever cached — 'select'/'configure'/
+  // 'readiness' have no server session yet (or none worth resuming into),
+  // and 'report' means the session already reached its real terminal state.
+  useEffect(() => {
+    if (session?.id && (step === 'session' || step === 'processing')) {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ sessionId: session.id, step }))
+    } else {
+      sessionStorage.removeItem(STORAGE_KEY)
+    }
+  }, [session, step])
 
   const chooseMode = (m: InterviewMode) => { setMode(m); setStep('configure') }
 
@@ -106,7 +167,16 @@ export default function InterviewPracticePage() {
   }, [processingAttempts, step])
 
   const startOver = () => {
+    sessionStorage.removeItem(STORAGE_KEY)
     setStep('select'); setMode(null); setPendingConfig(null); setSession(null); setReport(null); setStartError(''); setProcessingAttempts(0)
+  }
+
+  if (recovering) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0c0c0a', display: 'grid', placeItems: 'center' }}>
+        <div style={{ color: 'rgba(255,255,255,.3)', fontSize: 13 }}>Restoring your session...</div>
+      </div>
+    )
   }
 
   return (
