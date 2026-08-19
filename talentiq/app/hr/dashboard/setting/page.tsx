@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/lib/api'
+import { api, clearAuthState } from '@/lib/api'
 
 export default function CandidateSettings() {
   const router = useRouter()
@@ -121,11 +121,8 @@ export default function CandidateSettings() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('role')
-    document.cookie = 'token=; path=/; max-age=0'
-    document.cookie = 'role=; path=/; max-age=0'
-    window.location.replace('/auth/login/candidate')
+    clearAuthState()
+    window.location.replace('/auth/login/hr')
   }
 
   const handleDelete = async () => {
@@ -134,7 +131,7 @@ export default function CandidateSettings() {
     setDeleteError('')
     try {
       await api.deleteAccount(deletePassword)
-      localStorage.removeItem('token')
+      clearAuthState()
       router.push('/')
     } catch (err: any) {
       setDeleteError(err.message || 'Failed to delete account.')
@@ -330,4 +327,4 @@ export default function CandidateSettings() {
       </div>
     </div>
   )
-} 
+}
