@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from utils.email_utils import normalize_email
 from utils.otp_mailer import generate_otp, send_otp_email, OTP_EXPIRY_MINUTES
-from core.redis_client import check_rate_limit, record_failed_login, is_login_locked, clear_failed_logins, get_invite_token, delete_invite_token
+from core.redis_client import check_rate_limit, record_failed_login, is_login_locked, clear_failed_logins, get_invite_token, delete_invite_token, record_failed_attempt, is_attempt_locked, clear_failed_attempts
 from core.analytics import track, identify
 
 FREE_SCANS = 3
@@ -148,16 +148,31 @@ async def signup(body: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/verify-signup", response_model=TokenResponse)
 async def verify_signup(body: VerifySignupRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == body.email.strip().lower()).first()
+    email = body.email.strip().lower()
+
+    # Same brute-force protection as password reset — a 5-digit OTP is only
+    # 100,000 combinations, so this must not be an unlimited-attempts endpoint.
+    lock_key = f"otpfail:signup:{email}"
+    locked, ttl = is_attempt_locked(lock_key)
+    if locked:
+        raise HTTPException(status_code=429, detail=f"Too many attempts. Try again in {ttl}s.")
+
+    user = db.query(User).filter(User.email == email).first()
 
     if not user or not user.reset_otp_hash or not user.reset_otp_expires_at:
+        record_failed_attempt(lock_key)
         raise HTTPException(status_code=400, detail="Invalid or expired code.")
 
     if datetime.utcnow() > user.reset_otp_expires_at:
         raise HTTPException(status_code=400, detail="Code has expired. Please request a new one.")
 
     if not pwd_context.verify(body.otp, user.reset_otp_hash):
+        count, now_locked = record_failed_attempt(lock_key)
+        if now_locked:
+            raise HTTPException(status_code=429, detail="Too many attempts. Try again in 5 minutes.")
         raise HTTPException(status_code=400, detail="Incorrect code.")
+
+    clear_failed_attempts(lock_key)
 
     user.is_active = True
     user.reset_otp_hash = None
