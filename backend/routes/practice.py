@@ -19,6 +19,7 @@ from core.interviewer import get_next_turn, stream_next_turn, generate_report
 from core.assessment import generate_assessment_questions, score_assessment, MIN_QUESTIONS, MAX_QUESTIONS
 from core.voice import transcribe_audio
 from core.voice_session import VoiceSession
+from core.redis_client import check_rate_limit
 
 router = APIRouter(prefix="/practice", tags=["Practice Sessions"])
 
@@ -136,6 +137,14 @@ def send_practice_message(session_id: str, payload: PracticeMessageRequest, db: 
     if not payload.message.strip():
         raise HTTPException(status_code=400, detail="Message can't be empty.")
 
+    # Same protection the recruiter-facing /message endpoint has — without
+    # it, a double-click/retry racing the frontend's own "sending" guard
+    # could both pass the status check above before either commits, both
+    # append a turn, and (worse) both run generate_report() on conclude.
+    allowed, wait_seconds = check_rate_limit(f"practice-msg:{session_id}", cooldown_seconds=2)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before sending your next message.")
+
     transcript = json.loads(session.transcript or "[]")
     transcript.append({"role": "candidate", "content": payload.message.strip()})
     session.turn_count += 1
@@ -178,6 +187,10 @@ def send_practice_message_stream(session_id: str, payload: PracticeMessageReques
         raise HTTPException(status_code=409, detail="This session isn't accepting messages right now.")
     if not payload.message.strip():
         raise HTTPException(status_code=400, detail="Message can't be empty.")
+
+    allowed, wait_seconds = check_rate_limit(f"practice-msg:{session_id}", cooldown_seconds=2)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s before sending your next message.")
 
     transcript = json.loads(session.transcript or "[]")
     transcript.append({"role": "candidate", "content": payload.message.strip()})
@@ -225,12 +238,27 @@ def answer_practice_question(session_id: str, payload: PracticeAssessmentAnswerR
     if session.mode != "mcq" or session.status != "in_progress" or session.stage != "assessment":
         raise HTTPException(status_code=409, detail="This session isn't accepting assessment answers right now.")
 
+    # Same rate-limit protection the recruiter assessment endpoint has —
+    # without it, two near-simultaneous submissions (double-click racing
+    # the frontend's own guard, or a retry) could both read
+    # assessment_current_index before either commits and both increment
+    # it, silently skipping the next question.
+    allowed, wait_seconds = check_rate_limit(f"practice-answer:{session_id}", cooldown_seconds=1)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s.")
+
     questions = json.loads(session.assessment_questions or "[]")
     answers = json.loads(session.assessment_answers or "[]")
-    if not any(a["question_id"] == payload.question_id for a in answers):
+    is_new_answer = not any(a["question_id"] == payload.question_id for a in answers)
+    if is_new_answer:
         answers.append({"question_id": payload.question_id, "selected_index": payload.selected_index})
-    session.assessment_answers = json.dumps(answers)
-    session.assessment_current_index += 1
+        session.assessment_answers = json.dumps(answers)
+        session.assessment_current_index += 1
+    # A resubmission of an already-recorded question_id (retry racing a
+    # success response that got lost, or a rapid duplicate double-click)
+    # must NOT advance the index again — otherwise the candidate silently
+    # skips the next question without ever seeing it. Just report where
+    # they actually are.
 
     if session.assessment_current_index >= len(questions):
         result = score_assessment(questions, answers)
