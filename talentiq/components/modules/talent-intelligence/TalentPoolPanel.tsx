@@ -6,6 +6,7 @@ import { PoolCandidate, FIT_TIER_LABEL, FIT_TIER_COLOR, FitTier, InterviewStatus
 import { RankedCandidate } from './types'
 import CandidateDetailPanel from './CandidateDetailPanel'
 import ComparisonView from './ComparisonView'
+import BulkDecisionModal from './BulkDecisionModal'
 
 type TierFilter = 'all' | FitTier
 type InterviewFilter = 'all' | InterviewStatus
@@ -35,6 +36,11 @@ export default function TalentPoolPanel({ interviewPostings }: {
     const [compareLoading, setCompareLoading] = useState(false)
 
     const [openId, setOpenId] = useState<string | null>(null)
+
+    const [decisionMode, setDecisionMode] = useState(false)
+    const [decisionSelected, setDecisionSelected] = useState<string[]>([])
+    const [bulkDecision, setBulkDecision] = useState<'accepted' | 'rejected' | null>(null)
+    const toggleDecisionSelect = (id: string) => setDecisionSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
     const load = () => {
         setLoading(true)
@@ -163,14 +169,30 @@ export default function TalentPoolPanel({ interviewPostings }: {
                 <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,.5)', cursor: 'pointer' }}>
                     <input type="checkbox" checked={recommendedOnly} onChange={e => setRecommendedOnly(e.target.checked)} /> Recommended only
                 </label>
-                <button onClick={() => { setCompareMode(m => !m); setSelected([]); setCompareData(null) }} style={{
+                <button onClick={() => { setCompareMode(m => !m); setSelected([]); setCompareData(null); setDecisionMode(false); setDecisionSelected([]) }} style={{
                     marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
                     background: compareMode ? '#13c28e' : 'rgba(255,255,255,.05)', color: compareMode ? '#0a0a08' : 'rgba(255,255,255,.6)',
                     border: compareMode ? 'none' : '1px solid rgba(255,255,255,.1)',
                 }}>{compareMode ? `Comparing (${selected.length}/${MAX_COMPARE})` : 'Compare Candidates'}</button>
+                <button onClick={() => { setDecisionMode(m => !m); setDecisionSelected([]); setCompareMode(false); setSelected([]); setCompareData(null) }} style={{
+                    fontSize: 11, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
+                    background: decisionMode ? '#7c3aed' : 'rgba(255,255,255,.05)', color: decisionMode ? '#fff' : 'rgba(255,255,255,.6)',
+                    border: decisionMode ? 'none' : '1px solid rgba(255,255,255,.1)',
+                }}>{decisionMode ? `Selecting (${decisionSelected.length})` : 'Bulk Decisions'}</button>
             </div>
 
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginBottom: 10 }}>{filtered.length} of {pool.length} candidates</div>
+
+            {decisionMode && decisionSelected.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                    <button onClick={() => setBulkDecision('accepted')} style={{ fontSize: 11.5, fontWeight: 700, padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#13c28e', color: '#0a0a08', fontFamily: 'Inter,sans-serif' }}>
+                        Accept Selected ({decisionSelected.length})
+                    </button>
+                    <button onClick={() => setBulkDecision('rejected')} style={{ fontSize: 11.5, fontWeight: 700, padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(239,68,68,.3)', cursor: 'pointer', background: 'rgba(239,68,68,.1)', color: '#ef4444', fontFamily: 'Inter,sans-serif' }}>
+                        Reject Selected ({decisionSelected.length})
+                    </button>
+                </div>
+            )}
 
             {compareMode && (
                 <div style={{ marginBottom: 14 }}>
@@ -198,7 +220,13 @@ export default function TalentPoolPanel({ interviewPostings }: {
                                     border: selected.includes(c.id) ? 'none' : '1.5px solid rgba(255,255,255,.25)', background: selected.includes(c.id) ? '#13c28e' : 'transparent',
                                 }}>{selected.includes(c.id) && <span style={{ color: '#0a0a08', fontSize: 12, fontWeight: 900 }}>✓</span>}</div>
                             )}
-                            <div onClick={() => setOpenId(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                            {decisionMode && (
+                                <div onClick={() => toggleDecisionSelect(c.id)} style={{
+                                    width: 18, height: 18, borderRadius: 5, flexShrink: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
+                                    border: decisionSelected.includes(c.id) ? 'none' : '1.5px solid rgba(255,255,255,.25)', background: decisionSelected.includes(c.id) ? '#7c3aed' : 'transparent',
+                                }}>{decisionSelected.includes(c.id) && <span style={{ color: '#fff', fontSize: 12, fontWeight: 900 }}>✓</span>}</div>
+                            )}
+                            <div onClick={() => (decisionMode ? toggleDecisionSelect(c.id) : setOpenId(c.id))} style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, cursor: 'pointer' }}>
                                 <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)' }}>
                                     {(c.candidate_name || c.cv_filename || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')}
                                 </div>
@@ -225,12 +253,21 @@ export default function TalentPoolPanel({ interviewPostings }: {
                                 </div>
                             </div>
                         </div>
-                        <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,.35)', marginTop: 8, paddingLeft: compareMode ? 62 : 44 }}>
+                        <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,.35)', marginTop: 8, paddingLeft: (compareMode || decisionMode) ? 62 : 44 }}>
                             {c.matched_skills.length > 0 && <span style={{ color: '#13c28e' }}>✓ {c.matched_skills.slice(0, 4).join(', ')}</span>}
                             {c.missing_skills.length > 0 && <span style={{ marginLeft: 10, color: '#ef4444' }}>Missing: {c.missing_skills.slice(0, 3).join(', ')}</span>}
                         </div>
                     </div>
                 ))
+            )}
+
+            {bulkDecision && (
+                <BulkDecisionModal
+                    applicationIds={decisionSelected}
+                    decision={bulkDecision}
+                    onClose={() => setBulkDecision(null)}
+                    onDecided={() => { load(); setDecisionSelected([]); setDecisionMode(false); setBulkDecision(null) }}
+                />
             )}
         </div>
     )
