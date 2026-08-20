@@ -3,20 +3,26 @@ import { useState, useRef, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
+import { BRAND_NAME } from '@/lib/brand'
 
 function FontImports() {
   return (
     <style jsx global>{`
       @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+
+      /* Tablet: drop the decorative panel, let the form take the full width */
+      @media (max-width: 900px) {
+        .auth-left { display: none !important; }
+        .auth-right { flex: 1 1 100% !important; max-width: 100% !important; border-left: none !important; }
+      }
+      /* Mobile: tighten side padding so nothing overflows horizontally, keep the form the focus */
+      @media (max-width: 560px) {
+        .auth-topbar, .auth-form-wrap, .auth-footer { padding-left: 24px !important; padding-right: 24px !important; }
+        .auth-footer { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+      }
     `}</style>
   )
 }
-
-const CANDIDATES = [
-  { initials: 'AR', name: 'Aisha Rao', role: 'Frontend Engineer · 4 yrs', score: 91 },
-  { initials: 'MK', name: 'Maaz Khan', role: 'Full-Stack Developer · 3 yrs', score: 84 },
-  { initials: 'SC', name: 'Sara Chen', role: 'Backend Engineer · 5 yrs', score: 79 },
-]
 
 function HRLoginInner() {
   const router = useRouter()
@@ -107,7 +113,7 @@ function HRLoginInner() {
   const [verifyMsg, setVerifyMsg] = useState('')
   const [verifyLoading, setVerifyLoading] = useState(false)
   const verifyRefs = useRef<(HTMLInputElement | null)[]>([])
- 
+
   const handleVerifyOtpChange = (i: number, v: string) => {
     if (v && !/^[0-9]$/.test(v)) return
     const next = [...verifyOtp]
@@ -176,7 +182,7 @@ function HRLoginInner() {
         setSignupStep('verify')
         setTab('signup')
         setVerifyMsg('')
-        try { await api.resendVerification(email) } catch {}
+        try { await api.resendVerification(email) } catch { }
         setTimeout(() => verifyRefs.current[0]?.focus(), 50)
         return
       }
@@ -233,7 +239,7 @@ function HRLoginInner() {
       <FontImports />
 
       {/* ============ LEFT — DARK DATA-LED PANEL ============ */}
-      <div style={{ flex: '1 1 52%', background: 'linear-gradient(165deg, #11140f 0%, #0a0c08 70%)', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div className="auth-left" style={{ flex: '1 1 52%', background: 'linear-gradient(165deg, #11140f 0%, #0a0c08 70%)', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
         {/* Quiet grid texture, behind everything, fixed */}
         <div style={{
@@ -251,65 +257,57 @@ function HRLoginInner() {
               <div style={{ width: 30, height: 30, border: '1px solid rgba(122,168,142,.5)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <div style={{ width: 6, height: 6, background: '#7aa88e', borderRadius: '50%' }} />
               </div>
-              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 21, fontWeight: 500, color: 'rgba(245,242,235,.92)', letterSpacing: '0.5px' }}>TalentIQ</span>
+              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 21, fontWeight: 500, color: 'rgba(245,242,235,.92)', letterSpacing: '0.5px' }}>{BRAND_NAME}</span>
             </Link>
             <span style={{ fontSize: 10.5, fontWeight: 500, color: 'rgba(122,168,142,.7)', letterSpacing: '0.16em', textTransform: 'uppercase' }}>
               For organizations
             </span>
           </div>
 
-          {/* Middle: single composed data panel — no scattered cards */}
-          <div style={{ maxWidth: 400 }}>
-            <div style={{ background: 'linear-gradient(165deg, rgba(255,255,255,.045), rgba(255,255,255,.015))', border: '1px solid rgba(255,255,255,.09)', borderRadius: 4, padding: '26px 28px' }}>
-
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 18 }}>
-                <span style={{ fontSize: 11, fontWeight: 500, color: 'rgba(245,242,235,.4)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>This week</span>
-                <span style={{ fontSize: 12, color: '#7aa88e', fontWeight: 500 }}>↑ 24%</span>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 20 }}>
-                <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 38, fontWeight: 500, color: '#f5f2eb', lineHeight: 1 }}>42</span>
-                <span style={{ fontSize: 13, color: 'rgba(245,242,235,.4)' }}>candidates screened</span>
-              </div>
-
-              {/* Minimal bar row */}
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 36, marginBottom: 22 }}>
-                {[40, 65, 52, 80, 48, 90, 70].map((h, i) => (
-                  <div key={i} style={{ flex: 1, borderRadius: '1px 1px 0 0', height: `${h}%`, background: i === 5 ? '#7aa88e' : 'rgba(255,255,255,.14)' }} />
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 18 }}>
-                {CANDIDATES.map(c => (
-                  <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontSize: 11, color: 'rgba(245,242,235,.3)', width: 16, flexShrink: 0, fontWeight: 500 }}>{c.initials}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: 'rgba(245,242,235,.78)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
-                      <div style={{ fontSize: 11.5, color: 'rgba(245,242,235,.32)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.role}</div>
-                    </div>
-                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, color: '#7aa88e', fontWeight: 500, flexShrink: 0 }}>{c.score}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom: headline + thin stat strip */}
-          <div>
+          {/* Middle: headline + supporting message */}
+          <div style={{ maxWidth: 420 }}>
             <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#7aa88e', marginBottom: 20 }}>
               For HR teams
             </div>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,3.4vw,42px)', fontWeight: 500, lineHeight: 1.2, color: '#f5f2eb', letterSpacing: '-0.4px' }}>
-              Screen with precision.<br />Hire with confidence.
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,3.6vw,44px)', fontWeight: 500, lineHeight: 1.16, color: '#f5f2eb', letterSpacing: '-0.4px', marginBottom: 16 }}>
+              Build your next<br />great team.
             </h2>
+            <p style={{ fontSize: 14.5, color: 'rgba(245,242,235,.42)', lineHeight: 1.7, maxWidth: 360, fontWeight: 300 }}>
+              Find, evaluate, and hire exceptional talent with intelligent candidate screening and AI-powered interviews.
+            </p>
+          </div>
+
+          {/* Bottom: capability grid — real product surfaces, no invented stats */}
+          <div style={{ maxWidth: 420 }}>
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 28, rowGap: 20,
+              borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 24,
+            }}>
+              {[
+                { l: 'AI-Powered Interviews', d: 'Structured, consistent, on your schedule' },
+                { l: 'Resume & ATS Screening', d: 'Rank candidates against the role' },
+                { l: 'Talent Pool', d: 'One searchable home for every applicant' },
+                { l: 'Interview Reports', d: 'Clear writeups the whole team can read' },
+                { l: 'Decision Center', d: 'Compare finalists side by side' },
+                { l: 'Team Collaboration', d: 'Share notes and decide together' },
+              ].map(item => (
+                <div key={item.l} style={{ display: 'flex', gap: 10 }}>
+                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#7aa88e', marginTop: 7, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 12.5, fontWeight: 500, color: 'rgba(245,242,235,.85)', marginBottom: 3 }}>{item.l}</div>
+                    <div style={{ fontSize: 11.5, color: 'rgba(245,242,235,.34)', lineHeight: 1.4, fontWeight: 300 }}>{item.d}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* ============ RIGHT — FORM PANEL (LIGHT, RESTRAINED) ============ */}
-      <div style={{ flex: '1 1 480px', maxWidth: 500, background: '#fbfaf7', borderLeft: '1px solid #e4e0d4', display: 'flex', flexDirection: 'column' }}>
+      <div className="auth-right" style={{ flex: '1 1 480px', maxWidth: 500, background: '#fbfaf7', borderLeft: '1px solid #e4e0d4', display: 'flex', flexDirection: 'column' }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '32px 48px 0' }}>
+        <div className="auth-topbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '32px 48px 0' }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: '#7a7768', textDecoration: 'none' }}>
             <span style={{ fontSize: 15 }}>←</span> Back
           </Link>
@@ -318,7 +316,7 @@ function HRLoginInner() {
           </Link>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 48px', maxWidth: 420, width: '100%' }}>
+        <div className="auth-form-wrap" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 48px', maxWidth: 420, width: '100%' }}>
 
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, marginBottom: 36 }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#3f6e58', display: 'inline-block' }} />
@@ -351,96 +349,96 @@ function HRLoginInner() {
 
           {tab === 'login' ? (
             <>
-            <div>
-              <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#1a1a16', marginBottom: 8, letterSpacing: '-0.3px' }}>
-                Welcome back
-              </h1>
-              <p style={{ fontSize: 13.5, color: '#7a7768', marginBottom: 30, fontWeight: 300 }}>
-                Not on TalentIQ yet?{' '}
-                <button onClick={() => setTab('signup')} style={{ color: '#3f6e58', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontFamily: 'inherit', padding: 0 }}>
-                  Start your trial
-                </button>
-              </p>
+              <div>
+                <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: '#1a1a16', marginBottom: 8, letterSpacing: '-0.3px' }}>
+                  Welcome back
+                </h1>
+                <p style={{ fontSize: 13.5, color: '#7a7768', marginBottom: 30, fontWeight: 300 }}>
+                  Not on {BRAND_NAME} yet?{' '}
+                  <button onClick={() => setTab('signup')} style={{ color: '#3f6e58', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontFamily: 'inherit', padding: 0 }}>
+                    Start your trial
+                  </button>
+                </p>
 
-              <LightField label="Work email" type="email" value={email} onChange={setEmail} placeholder="you@company.com"
-                focused={focused === 'email'} onFocus={() => setFocused('email')} onBlur={() => setFocused(null)} />
-              <LightField label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••"
-                focused={focused === 'password'} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} />
+                <LightField label="Work email" type="email" value={email} onChange={setEmail} placeholder="you@company.com"
+                  focused={focused === 'email'} onFocus={() => setFocused('email')} onBlur={() => setFocused(null)} />
+                <LightField label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••"
+                  focused={focused === 'password'} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} />
 
-              <div style={{ textAlign: 'right', marginBottom: 28 }}>
-                <a href="#" onClick={e=>{e.preventDefault();setShowForgot(true);setForgotMsg('');setForgotEmail(email)}} style={{ fontSize: 12.5, color: '#a3a092', textDecoration: 'none' }}>Forgot password?</a>
-              </div>
-
-              <button onClick={handleLogin} disabled={loading} style={{ ...primaryBtnDark, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                {loading && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" style={{ animation:'spin 0.8s linear infinite' }}>
-                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3"/>
-                    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="28 56" strokeLinecap="round"/>
-                  </svg>
-                )}
-                {loading ? 'Signing in…' : 'Sign in'}
-              </button>
-
-              <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{to{transform:rotate(360deg)}}` }} />
-            </div>
-
-            {/* Forgot Password Modal */}
-            {showForgot && (
-              <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.5)', zIndex:999, display:'flex', alignItems:'center', justifyContent:'center' }} onClick={()=>{setShowForgot(false); setForgotStep('email')}}>
-                <div style={{ background:'#fff', border:'1px solid rgba(0,0,0,.08)', borderRadius:16, padding:28, width:340, maxWidth:'90vw', boxShadow:'0 20px 60px rgba(0,0,0,.15)' }} onClick={e=>e.stopPropagation()}>
-                  {forgotStep === 'email' ? (
-                    <>
-                      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:6, color:'#1a1a16' }}>Forgot Password</div>
-                      <p style={{ fontSize:13, color:'#7a7768', marginBottom:20 }}>Enter your email — we'll send a 5-digit reset code.</p>
-                      <input value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="your@email.com" style={{ width:'100%', background:'#f5f4f0', border:'1px solid rgba(0,0,0,.08)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'#1a1a16', outline:'none', fontFamily:'inherit', marginBottom:12, boxSizing:'border-box' as any }} />
-                      {forgotMsg && <div style={{ fontSize:12, color:'#dc2626', marginBottom:12 }}>{forgotMsg}</div>}
-                      <div style={{ display:'flex', gap:8 }}>
-                        <button onClick={()=>setShowForgot(false)} style={{ flex:1, fontSize:13, padding:'9px', borderRadius:8, border:'1px solid rgba(0,0,0,.08)', background:'transparent', color:'#7a7768', cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
-                        <button onClick={handleSendOtp} disabled={forgotLoading} style={{ flex:1, fontSize:13, fontWeight:600, padding:'9px', borderRadius:8, border:'none', background:'#2d5a47', color:'#fff', cursor:'pointer', fontFamily:'inherit' }}>{forgotLoading?'Sending…':'Send Code'}</button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:22, fontWeight:600, marginBottom:6, color:'#1a1a16' }}>Enter Code</div>
-                      <p style={{ fontSize:13, color:'#7a7768', marginBottom:18 }}>Sent to {forgotEmail}. Expires in 10 minutes.</p>
-
-                      <div style={{ display:'flex', gap:8, marginBottom:16, justifyContent:'center' }}>
-                        {otpDigits.map((d, i) => (
-                          <input
-                            key={i}
-                            ref={el => { otpRefs.current[i] = el }}
-                            value={d}
-                            onChange={e=>handleOtpChange(i, e.target.value)}
-                            onKeyDown={e=>handleOtpKeyDown(i, e)}
-                            onPaste={handleOtpPaste}
-                            maxLength={1}
-                            inputMode="numeric"
-                            aria-label={`Reset code digit ${i + 1} of 5`}
-                            style={{ width:40, height:48, textAlign:'center', fontSize:20, fontWeight:600, background:'#f5f4f0', border:'1px solid rgba(0,0,0,.1)', borderRadius:8, color:'#1a1a16', outline:'none', fontFamily:'inherit' }}
-                          />
-                        ))}
-                      </div>
-
-                      <input
-                        type="password"
-                        value={newPassword}
-                        onChange={e=>setNewPassword(e.target.value)}
-                        placeholder="New password"
-                        style={{ width:'100%', background:'#f5f4f0', border:'1px solid rgba(0,0,0,.08)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'#1a1a16', outline:'none', fontFamily:'inherit', marginBottom:12, boxSizing:'border-box' as any }}
-                      />
-
-                      {forgotMsg && <div style={{ fontSize:12, color:'#dc2626', marginBottom:12 }}>{forgotMsg}</div>}
-
-                      <div style={{ display:'flex', gap:8, marginBottom:10 }}>
-                        <button onClick={()=>{setForgotStep('email'); setForgotMsg('')}} style={{ flex:1, fontSize:13, padding:'9px', borderRadius:8, border:'1px solid rgba(0,0,0,.08)', background:'transparent', color:'#7a7768', cursor:'pointer', fontFamily:'inherit' }}>Back</button>
-                        <button onClick={handleResetPassword} disabled={forgotLoading} style={{ flex:1, fontSize:13, fontWeight:600, padding:'9px', borderRadius:8, border:'none', background:'#2d5a47', color:'#fff', cursor:'pointer', fontFamily:'inherit' }}>{forgotLoading?'Resetting…':'Reset Password'}</button>
-                      </div>
-                      <button onClick={handleSendOtp} disabled={forgotLoading} style={{ width:'100%', fontSize:12, background:'none', border:'none', color:'#a3a092', cursor:'pointer', fontFamily:'inherit' }}>Resend code</button>
-                    </>
-                  )}
+                <div style={{ textAlign: 'right', marginBottom: 28 }}>
+                  <a href="#" onClick={e => { e.preventDefault(); setShowForgot(true); setForgotMsg(''); setForgotEmail(email) }} style={{ fontSize: 12.5, color: '#a3a092', textDecoration: 'none' }}>Forgot password?</a>
                 </div>
+
+                <button onClick={handleLogin} disabled={loading} style={{ ...primaryBtnDark, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  {loading && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" style={{ animation: 'spin 0.8s linear infinite' }}>
+                      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+                      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="3" strokeDasharray="28 56" strokeLinecap="round" />
+                    </svg>
+                  )}
+                  {loading ? 'Signing in…' : 'Sign in'}
+                </button>
+
+                <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{to{transform:rotate(360deg)}}` }} />
               </div>
-            )}
+
+              {/* Forgot Password Modal */}
+              {showForgot && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => { setShowForgot(false); setForgotStep('email') }}>
+                  <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,.08)', borderRadius: 16, padding: 28, width: 340, maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,.15)' }} onClick={e => e.stopPropagation()}>
+                    {forgotStep === 'email' ? (
+                      <>
+                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, marginBottom: 6, color: '#1a1a16' }}>Forgot Password</div>
+                        <p style={{ fontSize: 13, color: '#7a7768', marginBottom: 20 }}>Enter your email — we'll send a 5-digit reset code.</p>
+                        <input value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="your@email.com" style={{ width: '100%', background: '#f5f4f0', border: '1px solid rgba(0,0,0,.08)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#1a1a16', outline: 'none', fontFamily: 'inherit', marginBottom: 12, boxSizing: 'border-box' as any }} />
+                        {forgotMsg && <div style={{ fontSize: 12, color: '#dc2626', marginBottom: 12 }}>{forgotMsg}</div>}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => setShowForgot(false)} style={{ flex: 1, fontSize: 13, padding: '9px', borderRadius: 8, border: '1px solid rgba(0,0,0,.08)', background: 'transparent', color: '#7a7768', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                          <button onClick={handleSendOtp} disabled={forgotLoading} style={{ flex: 1, fontSize: 13, fontWeight: 600, padding: '9px', borderRadius: 8, border: 'none', background: '#2d5a47', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>{forgotLoading ? 'Sending…' : 'Send Code'}</button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, marginBottom: 6, color: '#1a1a16' }}>Enter Code</div>
+                        <p style={{ fontSize: 13, color: '#7a7768', marginBottom: 18 }}>Sent to {forgotEmail}. Expires in 10 minutes.</p>
+
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
+                          {otpDigits.map((d, i) => (
+                            <input
+                              key={i}
+                              ref={el => { otpRefs.current[i] = el }}
+                              value={d}
+                              onChange={e => handleOtpChange(i, e.target.value)}
+                              onKeyDown={e => handleOtpKeyDown(i, e)}
+                              onPaste={handleOtpPaste}
+                              maxLength={1}
+                              inputMode="numeric"
+                              aria-label={`Reset code digit ${i + 1} of 5`}
+                              style={{ width: 40, height: 48, textAlign: 'center', fontSize: 20, fontWeight: 600, background: '#f5f4f0', border: '1px solid rgba(0,0,0,.1)', borderRadius: 8, color: '#1a1a16', outline: 'none', fontFamily: 'inherit' }}
+                            />
+                          ))}
+                        </div>
+
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={e => setNewPassword(e.target.value)}
+                          placeholder="New password"
+                          style={{ width: '100%', background: '#f5f4f0', border: '1px solid rgba(0,0,0,.08)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#1a1a16', outline: 'none', fontFamily: 'inherit', marginBottom: 12, boxSizing: 'border-box' as any }}
+                        />
+
+                        {forgotMsg && <div style={{ fontSize: 12, color: '#dc2626', marginBottom: 12 }}>{forgotMsg}</div>}
+
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                          <button onClick={() => { setForgotStep('email'); setForgotMsg('') }} style={{ flex: 1, fontSize: 13, padding: '9px', borderRadius: 8, border: '1px solid rgba(0,0,0,.08)', background: 'transparent', color: '#7a7768', cursor: 'pointer', fontFamily: 'inherit' }}>Back</button>
+                          <button onClick={handleResetPassword} disabled={forgotLoading} style={{ flex: 1, fontSize: 13, fontWeight: 600, padding: '9px', borderRadius: 8, border: 'none', background: '#2d5a47', color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>{forgotLoading ? 'Resetting…' : 'Reset Password'}</button>
+                        </div>
+                        <button onClick={handleSendOtp} disabled={forgotLoading} style={{ width: '100%', fontSize: 12, background: 'none', border: 'none', color: '#a3a092', cursor: 'pointer', fontFamily: 'inherit' }}>Resend code</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           ) : signupStep === 'verify' ? (
             <div>
@@ -490,7 +488,7 @@ function HRLoginInner() {
 
               {inviteToken && inviteOrgName && (
                 <div style={{ background: '#eef5f0', border: '1px solid #cfe3d6', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 13, color: '#2d5a47' }}>
-                  You're joining <strong>{inviteOrgName}</strong>'s team on TalentIQ.
+                  You're joining <strong>{inviteOrgName}</strong>'s team on {BRAND_NAME}.
                 </div>
               )}
               {inviteError && (
@@ -530,7 +528,7 @@ function HRLoginInner() {
           )}
         </div>
 
-        <div style={{ padding: '24px 48px', borderTop: '1px solid #e4e0d4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="auth-footer" style={{ padding: '24px 48px', borderTop: '1px solid #e4e0d4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 12.5, color: '#a3a092', fontWeight: 300 }}>Looking for a job instead?</span>
           <Link href="/auth/login/candidate" style={{ fontSize: 12.5, color: '#3f6e58', textDecoration: 'none', fontWeight: 500 }}>Candidate portal →</Link>
         </div>
