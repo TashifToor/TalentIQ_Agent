@@ -3,12 +3,24 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { BRAND_NAME } from '@/lib/brand'
 
 /* Loads Cormorant Garamond + Inter — safe to keep even if already loaded globally */
 function FontImports() {
   return (
     <style jsx global>{`
       @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+
+      /* Tablet: drop the decorative panel, let the form take the full width */
+      @media (max-width: 900px) {
+        .auth-left { display: none !important; }
+        .auth-right { flex: 1 1 100% !important; max-width: 100% !important; border-left: none !important; }
+      }
+      /* Mobile: tighten side padding so nothing overflows horizontally, keep the form the focus */
+      @media (max-width: 560px) {
+        .auth-topbar, .auth-form-wrap, .auth-footer { padding-left: 24px !important; padding-right: 24px !important; }
+        .auth-footer { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+      }
     `}</style>
   )
 }
@@ -264,7 +276,7 @@ export default function CandidateLogin() {
       <FontImports />
 
       {/* ============ LEFT — EDITORIAL VISUAL PANEL ============ */}
-      <div style={{ flex: '1 1 52%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'radial-gradient(ellipse 120% 80% at 20% 0%, #161310 0%, #0a0a08 60%)' }}>
+      <div className="auth-left" style={{ flex: '1 1 52%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'radial-gradient(ellipse 120% 80% at 20% 0%, #161310 0%, #0a0a08 60%)' }}>
         <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.9 }} />
 
         {/* Fine hairline frame — gives the panel a designed edge, not a flat block */}
@@ -277,58 +289,42 @@ export default function CandidateLogin() {
             <div style={{ width: 30, height: 30, border: '1px solid rgba(212,175,109,.5)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <div style={{ width: 6, height: 6, background: '#d4af6d', borderRadius: '50%' }} />
             </div>
-            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 21, fontWeight: 500, color: 'rgba(245,242,235,.92)', letterSpacing: '0.5px' }}>TalentIQ</span>
+            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 21, fontWeight: 500, color: 'rgba(245,242,235,.92)', letterSpacing: '0.5px' }}>{BRAND_NAME}</span>
           </Link>
 
-          {/* Middle: refined proof panel — single composed card, not scattered chips */}
-          <div style={{ maxWidth: 380 }}>
-            <div style={{
-              background: 'linear-gradient(165deg, rgba(255,255,255,.045), rgba(255,255,255,.015))',
-              border: '1px solid rgba(255,255,255,.09)',
-              borderRadius: 4,
-              padding: '28px 30px',
-              backdropFilter: 'blur(6px)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20, borderBottom: '1px solid rgba(255,255,255,.08)', paddingBottom: 18 }}>
-                <div>
-                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 44, fontWeight: 500, color: '#d4af6d', lineHeight: 1, letterSpacing: '-0.5px' }}>91</div>
-                  <div style={{ fontSize: 11, color: 'rgba(245,242,235,.4)', marginTop: 6, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Match score</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(245,242,235,.85)' }}>Zara Ahmed</div>
-                  <div style={{ fontSize: 12, color: 'rgba(245,242,235,.4)', marginTop: 2 }}>Product Designer</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-                {[{ l: 'Design systems', v: 96 }, { l: 'User research', v: 88 }, { l: 'Prototyping', v: 74 }].map(row => (
-                  <div key={row.l} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontSize: 12, color: 'rgba(245,242,235,.5)', width: 110, flexShrink: 0 }}>{row.l}</span>
-                    <div style={{ flex: 1, height: 2, background: 'rgba(255,255,255,.08)', borderRadius: 1, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${row.v}%`, background: 'linear-gradient(90deg, #a8854a, #d4af6d)' }} />
-                    </div>
-                    <span style={{ fontSize: 11, color: 'rgba(245,242,235,.35)', width: 26, textAlign: 'right' }}>{row.v}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom: editorial headline + restrained stat row */}
-          <div>
+          {/* Middle: headline + supporting message */}
+          <div style={{ maxWidth: 420 }}>
             <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#d4af6d', marginBottom: 20 }}>
               For candidates
             </div>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,3.6vw,46px)', fontWeight: 500, lineHeight: 1.18, color: '#f5f2eb', marginBottom: 18, letterSpacing: '-0.5px' }}>
-              Know exactly where<br />you stand — before<br />you apply.
+            <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,3.6vw,44px)', fontWeight: 500, lineHeight: 1.16, color: '#f5f2eb', marginBottom: 16, letterSpacing: '-0.5px' }}>
+              Turn your skills into<br />your next opportunity.
             </h2>
-            <p style={{ fontSize: 14.5, color: 'rgba(245,242,235,.42)', lineHeight: 1.75, maxWidth: 340, marginBottom: 32, fontWeight: 300 }}>
-              A precise match score against any role, with the reasoning behind it. No guesswork.
+            <p style={{ fontSize: 14.5, color: 'rgba(245,242,235,.42)', lineHeight: 1.7, maxWidth: 360, fontWeight: 300 }}>
+              Build an ATS-friendly resume, prepare for interviews, and understand how ready you are for your next role.
             </p>
-            <div style={{ display: 'flex', gap: 0, borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 20 }}>
-              {[{ v: '94%', l: 'Accuracy' }, { v: '2.1s', l: 'Per scan' }, { v: '12k+', l: 'CVs read' }].map((s, i) => (
-                <div key={s.l} style={{ paddingRight: 32, marginRight: 32, borderRight: i < 2 ? '1px solid rgba(255,255,255,.08)' : 'none' }}>
-                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, fontWeight: 500, color: '#f5f2eb', lineHeight: 1 }}>{s.v}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(245,242,235,.35)', marginTop: 5, letterSpacing: '0.03em' }}>{s.l}</div>
+          </div>
+
+          {/* Bottom: capability grid — real product surfaces, no invented stats */}
+          <div style={{ maxWidth: 420 }}>
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 28, rowGap: 20,
+              borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 24,
+            }}>
+              {[
+                { l: 'ATS Resume Builder', d: 'A resume built to pass the filters' },
+                { l: 'AI Resume Assistant', d: 'Sharper phrasing, section by section' },
+                { l: 'Job Match', d: 'See how you stack up against a role' },
+                { l: 'Career Gap Radar', d: 'Spot and explain gaps before they ask' },
+                { l: 'Interview Practice', d: 'Realistic mock interviews, real feedback' },
+                { l: 'Career Readiness', d: 'A clear read on where you stand' },
+              ].map(item => (
+                <div key={item.l} style={{ display: 'flex', gap: 10 }}>
+                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#d4af6d', marginTop: 7, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 12.5, fontWeight: 500, color: 'rgba(245,242,235,.85)', marginBottom: 3 }}>{item.l}</div>
+                    <div style={{ fontSize: 11.5, color: 'rgba(245,242,235,.34)', lineHeight: 1.4, fontWeight: 300 }}>{item.d}</div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -337,9 +333,9 @@ export default function CandidateLogin() {
       </div>
 
       {/* ============ RIGHT — FORM PANEL ============ */}
-      <div style={{ flex: '1 1 480px', maxWidth: 500, background: '#0d0d0b', borderLeft: '1px solid rgba(255,255,255,.06)', display: 'flex', flexDirection: 'column' }}>
+      <div className="auth-right" style={{ flex: '1 1 480px', maxWidth: 500, background: '#0d0d0b', borderLeft: '1px solid rgba(255,255,255,.06)', display: 'flex', flexDirection: 'column' }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '32px 48px 0' }}>
+        <div className="auth-topbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '32px 48px 0' }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'rgba(245,242,235,.38)', textDecoration: 'none', fontWeight: 400 }}>
             <span style={{ fontSize: 15 }}>←</span> Back
           </Link>
@@ -348,7 +344,7 @@ export default function CandidateLogin() {
           </Link>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 48px', maxWidth: 420, width: '100%' }}>
+        <div className="auth-form-wrap" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 48px', maxWidth: 420, width: '100%' }}>
 
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, marginBottom: 36 }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#d4af6d', display: 'inline-block' }} />
@@ -561,7 +557,7 @@ export default function CandidateLogin() {
           )}
         </div>
 
-        <div style={{ padding: '24px 48px', borderTop: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="auth-footer" style={{ padding: '24px 48px', borderTop: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 12.5, color: 'rgba(245,242,235,.3)', fontWeight: 300 }}>Hiring instead of applying?</span>
           <Link href="/auth/login/hr" style={{ fontSize: 12.5, color: '#d4af6d', textDecoration: 'none', fontWeight: 500 }}>HR portal →</Link>
         </div>
