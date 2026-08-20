@@ -74,6 +74,10 @@ export interface PoolCandidate {
     deep_analysis?: string | null
     is_shortlisted: 'pending' | 'yes' | 'no'
     trigger_interview: boolean
+    decision: 'pending' | 'accepted' | 'rejected'
+    decision_at: string | null
+    notification_status: 'not_sent' | 'sending' | 'sent' | 'failed'
+    notification_sent_at: string | null
     interview_status: InterviewStatus
     interview_session_id: string | null
     interview_posting: { id: string; title: string; public_link: string } | null
