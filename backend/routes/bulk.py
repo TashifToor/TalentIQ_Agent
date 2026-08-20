@@ -26,6 +26,8 @@ from core.redis_client import check_rate_limit
 from core.org_scope import get_org_scoped_user_ids
 from core.talent_ranking import compute_candidate_fit
 from core.candidate_identity import resolve_application_identity, resolve_interview_status
+from core.assessment import score_assessment
+from core.decision_center import build_decision_email
 from utils.email_utils import normalize_email
 from tasks.screening_task import run_bulk_screening
 from pydantic import BaseModel
@@ -153,6 +155,10 @@ def build_candidate_entry(db: Session, app: Application, job: Job | None, org_se
         "deep_analysis": app.deep_analysis,
         "is_shortlisted": app.is_shortlisted,          # "pending" | "yes" | "no"
         "trigger_interview": app.trigger_interview == "yes",
+        "decision": app.decision,                          # pending | accepted | rejected
+        "decision_at": app.decision_at.isoformat() if app.decision_at else None,
+        "notification_status": app.notification_status,    # not_sent | sending | sent | failed
+        "notification_sent_at": app.notification_sent_at.isoformat() if app.notification_sent_at else None,
         "interview_status": status_info["status"],      # unknown | not_invited | invited | in_progress | completed
         "interview_session_id": str(session.id) if session else None,
         "interview_posting": interview_posting,          # {id, title, public_link} — the exact posting, when resolvable
@@ -688,3 +694,310 @@ def trigger_ai_screening(
     run_candidate_ai_screening.delay(application_id)
 
     return {"status": "queued", "already_running": False}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# DECISION CENTER — Accept/Reject a candidate + one personalized, editable,
+# idempotently-sent notification email. Decision and notification are
+# tracked as separate states on purpose (see models/application.py).
+# ═══════════════════════════════════════════════════════════════════════
+
+class DecisionPreviewRequest(BaseModel):
+    decision: Literal["accepted", "rejected"]
+
+
+class DecisionRequest(BaseModel):
+    decision: Literal["accepted", "rejected"]
+    notify: bool = True
+    subject: Optional[str] = None   # HR's edited version — falls back to the generated draft if omitted
+    body: Optional[str] = None
+
+
+class BulkDecisionPreviewRequest(BaseModel):
+    application_ids: List[str]
+    decision: Literal["accepted", "rejected"]
+
+
+class BulkDecisionItem(BaseModel):
+    application_id: str
+    decision: Literal["accepted", "rejected"]
+    notify: bool = True
+    subject: Optional[str] = None
+    body: Optional[str] = None
+
+
+class BulkDecisionRequest(BaseModel):
+    items: List[BulkDecisionItem]
+
+
+def _weak_assessment_categories(db: Session, session) -> list[str]:
+    """Real weak categories from the candidate's OWN completed MCQ assessment
+    only — never another candidate's, never invented. Reuses the same
+    score_assessment computation the ranking endpoint already relies on."""
+    if not session or session.status != "completed" or not session.assessment_score:
+        return []
+    posting = db.query(InterviewPosting).filter(InterviewPosting.id == session.posting_id).first()
+    if not posting or not posting.assessment_questions:
+        return []
+    try:
+        questions = json.loads(posting.assessment_questions or "[]")
+        answers = json.loads(session.assessment_answers or "[]")
+        breakdown = score_assessment(questions, answers)["breakdown_by_topic"]
+    except Exception:
+        return []
+    weak = []
+    for topic, stat in breakdown.items():
+        if stat.get("total", 0) == 0:
+            continue
+        pct = round((stat["correct"] / stat["total"]) * 100)
+        if pct < 60:
+            weak.append(topic.replace("_", " ").title())
+    return weak
+
+
+def _build_preview(db: Session, app: Application, decision: str, scoped_ids: list) -> dict:
+    job = db.query(Job).filter(Job.id == app.job_id).first()
+    name, email, _ = resolve_application_identity(db, app)
+    org_sessions = get_scoped_org_sessions(db, scoped_ids)
+    _, resolved_email, has_account = resolve_application_identity(db, app)
+    status_info = resolve_interview_status(app, resolved_email, has_account, org_sessions)
+    weak_categories = _weak_assessment_categories(db, status_info["session"])
+
+    matched = json.loads(app.matched_skills or "[]")
+    missing = json.loads(app.missing_skills or "[]")
+
+    missing_data = []
+    if not email:
+        missing_data.append("No candidate email on file — cannot send a notification.")
+    if not matched and not missing and not weak_categories:
+        missing_data.append("No resume/assessment performance data available — feedback will be generic.")
+
+    subject, body = build_decision_email(
+        candidate_name=name, job_title=job.title if job else "this role", company_name=job.company if job else None,
+        decision=decision, ats_score=app.ai_score, matched_skills=matched, missing_skills=missing,
+        assessment_weak_categories=weak_categories,
+    )
+
+    return {
+        "application_id": str(app.id),
+        "candidate_name": name,
+        "candidate_email": email,
+        "job_title": job.title if job else None,
+        "decision": decision,
+        "current_decision": app.decision,
+        "subject": subject,
+        "body": body,
+        "missing_data": missing_data,
+        "ready": bool(email) ,
+    }
+
+
+def _send_decision_email(to_email: str, subject: str, body: str) -> bool:
+    if not MAIL_PASSWORD or MAIL_PASSWORD == "your_gmail_app_password_here":
+        print(f"[Email] Skipping decision notification (not configured). To: {to_email}")
+        return False
+    html = "<div style=\"font-family:Inter,sans-serif;white-space:pre-wrap;line-height:1.6;color:#1a1a16;max-width:520px;margin:0 auto\">" + \
+        body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") + "</div>"
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = MAIL_FROM
+    msg["To"] = to_email
+    msg.attach(MIMEText(body, "plain"))
+    msg.attach(MIMEText(html, "html"))
+    try:
+        with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
+            server.starttls()
+            server.login(MAIL_USERNAME, MAIL_PASSWORD)
+            server.sendmail(MAIL_FROM, to_email, msg.as_string())
+        return True
+    except Exception as e:
+        print(f"[Email] Decision notification failed: {e}")
+        return False
+
+
+def _send_and_record(db: Session, app: Application, subject: str, body: str) -> str:
+    """Atomic claim + send + record. Returns the final notification_status."""
+    claim = db.execute(
+        update(Application)
+        .where(Application.id == app.id, Application.notification_status.notin_(["sending", "sent"]))
+        .values(notification_status="sending", notification_subject=subject, notification_body=body)
+    )
+    db.commit()
+    if claim.rowcount == 0:
+        db.refresh(app)
+        return app.notification_status  # someone else already claimed/sent this — never send twice
+
+    email = (app.candidate_email or "").strip()
+    sent = bool(email) and _send_decision_email(email, subject, body)
+
+    app.notification_status = "sent" if sent else "failed"
+    if sent:
+        app.notification_sent_at = datetime.utcnow()
+    db.commit()
+    return app.notification_status
+
+
+@router.get("/applications/{application_id}/decision-preview")
+def get_decision_preview(
+    application_id: str,
+    decision: Literal["accepted", "rejected"],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    app = get_scoped_application(db, application_id, current_user)
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+    return _build_preview(db, app, decision, scoped_ids)
+
+
+@router.post("/applications/{application_id}/decision")
+def submit_decision(
+    application_id: str,
+    payload: DecisionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    app = get_scoped_application(db, application_id, current_user)
+
+    if app.decision != "pending" and app.decision != payload.decision:
+        raise HTTPException(status_code=409, detail=f"Candidate already {app.decision}.")
+
+    # Atomic claim on the DECISION itself too — a double-click here must
+    # only ever record one decision, exactly like everywhere else this
+    # pattern is used in this file.
+    if app.decision == "pending":
+        claim = db.execute(
+            update(Application)
+            .where(Application.id == app.id, Application.decision == "pending")
+            .values(decision=payload.decision, decision_at=datetime.utcnow())
+        )
+        db.commit()
+        if claim.rowcount == 0:
+            db.refresh(app)
+            if app.decision != payload.decision:
+                raise HTTPException(status_code=409, detail=f"Candidate already {app.decision}.")
+    db.refresh(app)
+
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+    subject = payload.subject
+    body = payload.body
+    if not subject or not body:
+        preview = _build_preview(db, app, payload.decision, scoped_ids)
+        subject = subject or preview["subject"]
+        body = body or preview["body"]
+
+    notification_status = app.notification_status
+    if payload.notify:
+        notification_status = _send_and_record(db, app, subject, body)
+    else:
+        app.notification_subject = subject
+        app.notification_body = body
+        db.commit()
+
+    return {
+        "application_id": str(app.id),
+        "decision": app.decision,
+        "notification_status": notification_status,
+    }
+
+
+@router.post("/applications/{application_id}/decision/retry-notification")
+def retry_decision_notification(
+    application_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    app = get_scoped_application(db, application_id, current_user)
+
+    if app.decision == "pending":
+        raise HTTPException(status_code=400, detail="No decision has been made for this candidate yet.")
+    if not app.notification_subject or not app.notification_body:
+        raise HTTPException(status_code=400, detail="No notification draft exists to retry.")
+    if app.notification_status == "sent":
+        return {"application_id": str(app.id), "notification_status": "sent"}
+
+    # A retry must resend exactly what was already recorded/edited — never
+    # regenerate, so HR's edits from the original send attempt are preserved.
+    app.notification_status = "not_sent"  # release the previous failed claim so _send_and_record can re-claim it
+    db.commit()
+    status = _send_and_record(db, app, app.notification_subject, app.notification_body)
+    return {"application_id": str(app.id), "notification_status": status}
+
+
+@router.post("/decisions/preview")
+def bulk_decision_preview(
+    payload: BulkDecisionPreviewRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+    previews = []
+    for application_id in payload.application_ids:
+        try:
+            app = get_scoped_application(db, application_id, current_user)
+        except HTTPException:
+            previews.append({"application_id": application_id, "ready": False, "missing_data": ["Candidate not found or not accessible."]})
+            continue
+        previews.append(_build_preview(db, app, payload.decision, scoped_ids))
+    return {"previews": previews}
+
+
+@router.post("/decisions")
+def bulk_decisions(
+    payload: BulkDecisionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_hr(current_user)
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+    results = []
+    for item in payload.items:
+        # Each candidate is fully independent — one failure must never
+        # affect the others, exactly like bulk screening's per-candidate
+        # isolation.
+        try:
+            app = get_scoped_application(db, item.application_id, current_user)
+        except HTTPException as e:
+            results.append({"application_id": item.application_id, "ok": False, "error": e.detail})
+            continue
+        try:
+            if app.decision != "pending" and app.decision != item.decision:
+                results.append({"application_id": item.application_id, "ok": False, "error": f"Candidate already {app.decision}."})
+                continue
+            if app.decision == "pending":
+                claim = db.execute(
+                    update(Application)
+                    .where(Application.id == app.id, Application.decision == "pending")
+                    .values(decision=item.decision, decision_at=datetime.utcnow())
+                )
+                db.commit()
+                if claim.rowcount == 0:
+                    db.refresh(app)
+                    if app.decision != item.decision:
+                        results.append({"application_id": item.application_id, "ok": False, "error": f"Candidate already {app.decision}."})
+                        continue
+            db.refresh(app)
+
+            subject, body = item.subject, item.body
+            if not subject or not body:
+                preview = _build_preview(db, app, item.decision, scoped_ids)
+                subject = subject or preview["subject"]
+                body = body or preview["body"]
+
+            notification_status = app.notification_status
+            if item.notify:
+                notification_status = _send_and_record(db, app, subject, body)
+            else:
+                app.notification_subject = subject
+                app.notification_body = body
+                db.commit()
+
+            results.append({"application_id": item.application_id, "ok": True, "decision": app.decision, "notification_status": notification_status})
+        except Exception as e:
+            logger.error(f"[decision] bulk item failed application={item.application_id}: {e}")
+            results.append({"application_id": item.application_id, "ok": False, "error": "Could not process this candidate."})
+
+    return {"results": results}
