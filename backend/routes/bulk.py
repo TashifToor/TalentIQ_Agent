@@ -31,7 +31,7 @@ from core.decision_center import build_decision_email
 from utils.email_utils import normalize_email
 from tasks.screening_task import run_bulk_screening
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import List, Optional, Literal
 
 logger = logging.getLogger("talentiq.bulk")
 
