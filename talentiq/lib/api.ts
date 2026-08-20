@@ -243,6 +243,18 @@ export const api = {
   getTalentPoolCandidate: (applicationId: string) => apiFetch(`/bulk/talent-pool/${applicationId}`),
   triggerAiScreening: (applicationId: string) => apiFetch(`/bulk/applications/${applicationId}/ai-screening`, { method: "POST" }),
 
+  // Decision Center
+  getDecisionPreview: (applicationId: string, decision: 'accepted' | 'rejected') =>
+    apiFetch(`/bulk/applications/${applicationId}/decision-preview?decision=${decision}`),
+  submitDecision: (applicationId: string, payload: { decision: 'accepted' | 'rejected'; notify: boolean; subject?: string; body?: string }) =>
+    apiFetch(`/bulk/applications/${applicationId}/decision`, { method: "POST", body: JSON.stringify(payload) }),
+  retryDecisionNotification: (applicationId: string) =>
+    apiFetch(`/bulk/applications/${applicationId}/decision/retry-notification`, { method: "POST" }),
+  getBulkDecisionPreview: (applicationIds: string[], decision: 'accepted' | 'rejected') =>
+    apiFetch(`/bulk/decisions/preview`, { method: "POST", body: JSON.stringify({ application_ids: applicationIds, decision }) }),
+  submitBulkDecisions: (items: { application_id: string; decision: 'accepted' | 'rejected'; notify: boolean; subject?: string; body?: string }[]) =>
+    apiFetch(`/bulk/decisions`, { method: "POST", body: JSON.stringify({ items }) }),
+
   // Forgot password
   forgotPassword: (email: string) =>
     apiFetch("/auth/forgot-password", {
