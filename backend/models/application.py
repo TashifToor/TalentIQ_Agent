@@ -40,5 +40,16 @@ class Application(Base):
     # invitations that happened before this column existed).
     invited_posting_id = Column(UUID(as_uuid=True), ForeignKey("interview_postings.id"), nullable=True)
 
+    # Decision Center — HR's final accept/reject call on this application,
+    # kept entirely separate from is_shortlisted (a pre-review triage flag)
+    # and from notification delivery (a distinct concern: a decision can be
+    # correctly recorded even if the email that announces it fails to send).
+    decision =              Column(String, nullable=False, default="pending")   # pending | accepted | rejected
+    decision_at =           Column(DateTime(timezone=True), nullable=True)
+    notification_status =   Column(String, nullable=False, default="not_sent")  # not_sent | sending | sent | failed
+    notification_sent_at =  Column(DateTime(timezone=True), nullable=True)
+    notification_subject =  Column(Text, nullable=True)   # exactly what was sent (or the last edited draft, pre-send)
+    notification_body =     Column(Text, nullable=True)
+
     created_at=    Column(DateTime(timezone=True),server_default=func.now())
     screened_at=   Column(DateTime(timezone=True),nullable=True)
