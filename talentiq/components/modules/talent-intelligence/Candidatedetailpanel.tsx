@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import { GlassCard, GradientBadge, ProgressRing, LoadingSkeleton } from '@/components/shared/primitives'
 import AIFeedbackReport, { AIFeedbackData } from '../reports/AIFeedbackReport'
 import { PoolCandidate, FIT_TIER_LABEL, FIT_TIER_COLOR, INTERVIEW_STATUS_LABEL, InterviewStatus, AiScreeningStatus } from './types'
+import DecisionCenter from './DecisionCenter'
 
 function initials(name: string): string {
     return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('') || '?'
@@ -54,6 +55,7 @@ export default function CandidateDetailPanel({
     const [error, setError] = useState('')
     const [busy, setBusy] = useState(false)
     const [showMove, setShowMove] = useState(false)
+    const [showDecision, setShowDecision] = useState(false)
     const [movePostingId, setMovePostingId] = useState('')
     const [moveEmail, setMoveEmail] = useState('')
     const [moveMsg, setMoveMsg] = useState('')
@@ -222,7 +224,7 @@ export default function CandidateDetailPanel({
 
             {/* ── Actions ── */}
             <GlassCard style={{ marginBottom: 16 }}>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     {c.is_shortlisted === 'yes' ? (
                         <button disabled={busy} onClick={() => doAction('reset')} style={actionBtnSt('neutral')}>Unshortlist</button>
                     ) : (
@@ -241,6 +243,18 @@ export default function CandidateDetailPanel({
                             Already {INTERVIEW_STATUS_LABEL[c.interview_status].toLowerCase()} — no duplicate invite needed.
                         </div>
                     )}
+                    <div style={{ marginLeft: 'auto' }}>
+                        {c.decision === 'pending' ? (
+                            <button onClick={() => setShowDecision(true)} style={{ ...actionBtnSt('purple'), background: '#7c3aed', color: '#fff', border: 'none' }}>Make Decision</button>
+                        ) : (
+                            <button onClick={() => setShowDecision(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
+                                <GradientBadge label={c.decision === 'accepted' ? 'Accepted' : 'Rejected'} tone={c.decision === 'accepted' ? 'teal' : 'neutral'} />
+                                <span style={{ fontSize: 10.5, color: c.notification_status === 'sent' ? '#13c28e' : c.notification_status === 'failed' ? '#ef4444' : 'rgba(255,255,255,.35)' }}>
+                                    {c.notification_status === 'sent' ? 'Notified' : c.notification_status === 'failed' ? 'Notification failed' : c.notification_status === 'sending' ? 'Sending…' : 'Not notified'}
+                                </span>
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {showMove && (
@@ -359,6 +373,10 @@ export default function CandidateDetailPanel({
             )}
             {!report && (c.interview_status === 'invited' || c.interview_status === 'in_progress') && (
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Interview {c.interview_status === 'invited' ? 'invited, not started yet' : 'in progress'} — report will appear here once completed.</div>
+            )}
+
+            {showDecision && (
+                <DecisionCenter candidate={c} onClose={() => setShowDecision(false)} onDecided={load} />
             )}
         </div>
     )
