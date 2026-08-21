@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 
@@ -75,6 +75,7 @@ export default function CandidateHistory() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [expandedId, setExpandedId] = useState<number | string | null>(null)
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     api.getScanHistory()
@@ -82,6 +83,13 @@ export default function CandidateHistory() {
       .catch((err: any) => setError(err.message || 'Failed to load history.'))
       .finally(() => setLoading(false))
   }, [])
+
+  // Local, case-insensitive filter over the real role_title field only.
+  const filteredHistory = useMemo(() => {
+    const q = query.trim().toLowerCase().replace(/\s+/g, ' ')
+    if (!q) return history
+    return history.filter(h => (h.role_title || '').toLowerCase().includes(q))
+  }, [history, query])
 
   return (
     <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.88)' }}>
@@ -94,6 +102,13 @@ export default function CandidateHistory() {
         .history-row { transition: background .2s; cursor: pointer; }
         .history-row:hover { background: #1b1b18; }
         .chevron { transition: transform .25s; }
+        .scan-skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 480px) {
+          .scan-skills-grid { grid-template-columns: 1fr; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .fade-up, .expand-in, .history-row, .chevron { animation: none !important; transition: none !important; }
+        }
       `}</style>
 
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px 80px' }}>
@@ -109,6 +124,24 @@ export default function CandidateHistory() {
           <div style={{ background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', color: '#ef4444', fontSize: 12, padding: '10px 14px', borderRadius: 8, marginBottom: 20 }}>{error}</div>
         )}
 
+        {!loading && history.length > 0 && (
+          <div style={{ position: 'relative', marginBottom: 20 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" strokeWidth="2"
+              style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}>
+              <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" />
+            </svg>
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search by role…"
+              style={{
+                width: '100%', background: '#111110', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10,
+                padding: '10px 14px 10px 38px', fontSize: 13, color: '#fff', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+        )}
+
         {loading ? (
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '40px 0' }}>Loading…</div>
         ) : history.length === 0 ? (
@@ -116,9 +149,14 @@ export default function CandidateHistory() {
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,.3)', marginBottom: 14 }}>No scans yet.</div>
             <Link href="/candidate/dashboard" style={{ fontSize: 13, color: '#e2b04a', textDecoration: 'none', fontWeight: 600 }}>Run your first scan →</Link>
           </div>
+        ) : filteredHistory.length === 0 ? (
+          <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 40, textAlign: 'center' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>No matching scans</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Try a different role name.</div>
+          </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {history.map((h, i) => {
+            {filteredHistory.map((h, i) => {
               const score = h.candidate_score ?? 0
               const color = score >= 80 ? '#13c28e' : score >= 50 ? '#e2b04a' : '#ef4444'
               const isOpen = expandedId === (h.id ?? i)
@@ -142,7 +180,7 @@ export default function CandidateHistory() {
 
                   {isOpen && (
                     <div className="expand-in" style={{ borderTop: '1px solid rgba(255,255,255,.07)', padding: '20px 20px 22px', background: '#0e0e0c' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
+                      <div className="scan-skills-grid" style={{ marginBottom: 18 }}>
                         <div>
                           <div style={{ fontSize: 11, fontWeight: 600, color: '#13c28e', letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 8 }}>Matched Skills</div>
                           {(h.matched_skills?.length ?? 0) === 0 ? (
