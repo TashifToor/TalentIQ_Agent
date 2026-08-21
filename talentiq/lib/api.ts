@@ -308,6 +308,25 @@ export const api = {
     return res.blob();
   },
 
+  // --- Job Readiness System (ATS score, Job Match Lab, AI Resume Assistant) ---
+  getAtsScore: (cvData: any, template?: string) =>
+    apiFetch("/cv-builder/ats-score", {
+      method: "POST",
+      body: JSON.stringify({ cv_data: cvData, template: template || undefined }),
+    }),
+
+  optimizeCvForJob: (cvData: any, jobDescription: string) =>
+    apiFetch("/cv-builder/optimize", {
+      method: "POST",
+      body: JSON.stringify({ cv_data: cvData, job_description: jobDescription }),
+    }),
+
+  assistantRewrite: (text: string, instruction: "stronger" | "concise" | "ats_friendly", jobDescription?: string) =>
+    apiFetch("/cv-builder/assistant/rewrite", {
+      method: "POST",
+      body: JSON.stringify({ text, instruction, job_description: jobDescription || undefined }),
+    }),
+
   // --- AI Chatbot Interviewer — HR side (authenticated) ---
   createInterviewPosting: (payload: {
     title: string; company?: string; job_description: string; extra_questions: string[]; interviewer_name?: string;
