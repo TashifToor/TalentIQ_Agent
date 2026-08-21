@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { api } from '@/lib/api'
 
 type Education = { degree: string; institution: string; start_year: string; end_year: string; details: string }
@@ -61,7 +61,17 @@ const BASIC_COLORS: Record<string, string> = {
 }
 const COLOR_ORDER = Object.keys(BASIC_COLORS)
 
-export default function CVBuilderWizard() {
+// Optional — lets a parent page (e.g. the Job Readiness panel) read the resume
+// currently being built without the wizard needing to know anything about it.
+type CVBuilderWizardProps = {
+  onCvStateChange?: (state: { cv: CVData; template: string; accentColor: string | null }) => void
+  // Bump `version` with a new `cv` to push an externally-produced CVData
+  // (e.g. the Job Readiness panel's "Optimize Resume for This Job" result)
+  // back into the editable wizard — the candidate keeps editing from there.
+  externalCvUpdate?: { version: number; cv: CVData } | null
+}
+
+export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: CVBuilderWizardProps = {}) {
   const [step, setStep] = useState(0) // 0=input, 1=template gallery, 2=edit+preview, 3=JD+generate
   const [cv, setCv] = useState<CVData>(EMPTY_CV)
   const [parsing, setParsing] = useState(false)
@@ -76,6 +86,19 @@ export default function CVBuilderWizard() {
   const photoRef = useRef<HTMLInputElement>(null)
 
   const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('token')
+
+  useEffect(() => {
+    onCvStateChange?.({ cv, template, accentColor })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cv, template, accentColor])
+
+  const lastAppliedExternalVersion = useRef<number>(-1)
+  useEffect(() => {
+    if (externalCvUpdate && externalCvUpdate.version !== lastAppliedExternalVersion.current) {
+      lastAppliedExternalVersion.current = externalCvUpdate.version
+      setCv(externalCvUpdate.cv)
+    }
+  }, [externalCvUpdate])
 
   const handleFileUpload = async (file: File) => {
     setParsing(true)
