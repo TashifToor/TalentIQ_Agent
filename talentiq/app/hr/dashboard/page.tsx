@@ -1,11 +1,12 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { api, clearAuthState } from '@/lib/api'
 import InterviewBuilderWizard from '@/components/interviews/InterviewBuilderWizard'
 import CopilotPanel from '@/components/modules/copilot/CopilotPanel'
 import TalentIntelligencePanel from '@/components/modules/talent-intelligence/TalentIntelligencePanel'
 import TalentPoolPanel from '@/components/modules/talent-intelligence/TalentPoolPanel'
+import AIFeedbackReport from '@/components/modules/reports/AIFeedbackReport'
 
 type Candidate = {
   filename: string
@@ -64,6 +65,30 @@ const s = (base: object, ...rest: object[]) => Object.assign({}, base, ...rest)
 function initials(name: string) {
   return name.replace(/\.(pdf|PDF)$/, '').split(/[\s_-]+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('') || '??'
 }
+
+// Buckets a real timestamp into a scannable date group. Falls back to "Earlier" rather than guessing.
+function dateGroupFor(dateStr: string | null | undefined): string {
+  if (!dateStr) return 'Earlier'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return 'Earlier'
+  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate())
+  const diffDays = Math.round((startOfDay(new Date()).getTime() - startOfDay(d).getTime()) / 86400000)
+  if (diffDays <= 0) return 'Today'
+  if (diffDays === 1) return 'Yesterday'
+  if (diffDays <= 7) return 'This Week'
+  return 'Earlier'
+}
+const HISTORY_GROUP_ORDER = ['Today', 'Yesterday', 'This Week', 'Earlier']
+function groupByDate<T>(items: T[], getDate: (item: T) => string | null | undefined): { group: string; items: T[] }[] {
+  const map = new Map<string, T[]>()
+  for (const item of items) {
+    const g = dateGroupFor(getDate(item))
+    if (!map.has(g)) map.set(g, [])
+    map.get(g)!.push(item)
+  }
+  return HISTORY_GROUP_ORDER.map(g => ({ group: g, items: map.get(g) || [] })).filter(g => g.items.length > 0)
+}
+function normalize(q: string) { return q.trim().toLowerCase().replace(/\s+/g, ' ') }
 
 function ScoreChip({ score }: { score: number }) {
   const color = score >= 80 ? '#13c28e' : score >= 60 ? '#e2b04a' : '#ef4444'
@@ -126,6 +151,11 @@ export default function HRDashboard() {
   const [interviewHistoryLoading, setInterviewHistoryLoading] = useState(false)
   const [scanHistorySelected, setScanHistorySelected] = useState<any>(null)
   const [interviewHistorySelected, setInterviewHistorySelected] = useState<any>(null)
+  const [interviewReport, setInterviewReport] = useState<any>(null)
+  const [interviewReportLoading, setInterviewReportLoading] = useState(false)
+  const [historySearch, setHistorySearch] = useState('')
+  const [historyVerdictFilter, setHistoryVerdictFilter] = useState<string | null>(null)
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false)
 
   // DB jobs state
   const [dbJobs, setDbJobs] = useState<any[]>([])
@@ -780,185 +810,300 @@ export default function HRDashboard() {
     </div>
   )
 
-  const renderHistory = () => (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
-      <div style={{ width: 320, borderRight: '1px solid rgba(255,255,255,.07)', overflowY: 'auto', padding: 20 }}>
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, marginBottom: 12 }}>History</div>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-          {([['screenings', 'Screenings'], ['interviews', 'AI Interviews'], ['actions', 'My Actions']] as const).map(([id, label]) => (
-            <button key={id} onClick={() => setHistoryTab(id)}
+  const renderHistory = () => {
+    const search = normalize(historySearch)
+
+    const filteredScan = scanHistory
+      .filter((h: any) => !search || (h.role_title || '').toLowerCase().includes(search))
+      .filter((h: any) => !historyVerdictFilter || h.final_verdict === historyVerdictFilter)
+
+    const filteredInterviews = interviewHistory
+      .filter((h: any) => !search || (h.candidate_name || '').toLowerCase().includes(search) || (h.posting_title || '').toLowerCase().includes(search))
+      .filter((h: any) => !historyVerdictFilter || h.final_verdict === historyVerdictFilter)
+
+    const filteredActions = history.filter((h: any) => !search || (h.filename || '').toLowerCase().includes(search) || (h.jobTitle || '').toLowerCase().includes(search))
+
+    let verdictOptions: string[] = []
+    if (historyTab === 'screenings') verdictOptions = Array.from(new Set(scanHistory.map((h: any) => h.final_verdict).filter(Boolean))) as string[]
+    else if (historyTab === 'interviews') verdictOptions = Array.from(new Set(interviewHistory.map((h: any) => h.final_verdict).filter(Boolean))) as string[]
+    verdictOptions = verdictOptions.slice(0, 6)
+
+    const scanGroups = groupByDate(filteredScan, (h: any) => h.created_at)
+    const interviewGroups = groupByDate(filteredInterviews, (h: any) => h.completed_at || h.created_at)
+    const actionGroups = groupByDate(filteredActions, (h: any) => h.screenedAt)
+
+    const selectScan = (h: any) => { setScanHistorySelected(h); setHistoryDrawerOpen(true) }
+    const selectAction = (h: any) => { setHistorySelected(h); setHistoryDrawerOpen(true) }
+    const selectInterview = async (h: any) => {
+      setInterviewHistorySelected(h)
+      setHistoryDrawerOpen(true)
+      setInterviewReport(null)
+      setInterviewReportLoading(true)
+      try {
+        setInterviewReport(await api.getInterviewSessionReport(h.id))
+      } catch {
+        setInterviewReport(null)
+      } finally {
+        setInterviewReportLoading(false)
+      }
+    }
+    const closeDrawer = () => setHistoryDrawerOpen(false)
+
+    return (
+      <div className="hr-history-shell" style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+        <style jsx global>{`
+          .hr-history-list { width: 340px; flex-shrink: 0; }
+          .hr-history-detail { flex: 1; }
+          .hr-history-back { display: none; }
+          .hr-history-card { transition: transform .15s ease, border-color .15s ease; cursor: pointer; }
+          .hr-history-card:hover { transform: translateY(-1px); }
+          @keyframes hrFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+          .hr-fade-up { animation: hrFadeUp .3s ease both; }
+          @media (max-width: 880px) {
+            .hr-history-list { width: 100%; }
+            .hr-history-detail {
+              position: fixed; inset: 0; z-index: 999; background: #0a0a09;
+              transform: translateX(100%); transition: transform .25s ease; overflow-y: auto;
+            }
+            .hr-history-detail.open { transform: translateX(0); }
+            .hr-history-back { display: flex; }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .hr-history-detail, .hr-history-card, .hr-fade-up { transition: none !important; animation: none !important; }
+          }
+        `}</style>
+
+        <div className="hr-history-list" style={{ borderRight: '1px solid rgba(255,255,255,.07)', overflowY: 'auto', padding: 20 }}>
+          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, marginBottom: 12 }}>History</div>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
+            {([['screenings', 'Screenings'], ['interviews', 'AI Interviews'], ['actions', 'My Actions']] as const).map(([id, label]) => (
+              <button key={id} onClick={() => { setHistoryTab(id); setHistorySearch(''); setHistoryVerdictFilter(null) }}
+                style={{
+                  fontSize: 11, fontWeight: 600, padding: '6px 10px', borderRadius: 100, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
+                  border: historyTab === id ? '1px solid rgba(19,194,142,.3)' : '1px solid rgba(255,255,255,.08)',
+                  background: historyTab === id ? 'rgba(19,194,142,.1)' : 'transparent',
+                  color: historyTab === id ? '#13c28e' : 'rgba(255,255,255,.5)'
+                }}>{label}</button>
+            ))}
+          </div>
+
+          <div style={{ position: 'relative', marginBottom: 10 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.3)" strokeWidth="2"
+              style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}>
+              <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" />
+            </svg>
+            <input
+              value={historySearch}
+              onChange={e => setHistorySearch(e.target.value)}
+              placeholder={historyTab === 'interviews' ? 'Search name or role…' : historyTab === 'actions' ? 'Search filename or role…' : 'Search by role…'}
               style={{
-                fontSize: 11, fontWeight: 600, padding: '6px 10px', borderRadius: 100, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
-                border: historyTab === id ? '1px solid rgba(19,194,142,.3)' : '1px solid rgba(255,255,255,.08)',
-                background: historyTab === id ? 'rgba(19,194,142,.1)' : 'transparent',
-                color: historyTab === id ? '#13c28e' : 'rgba(255,255,255,.5)'
-              }}>{label}</button>
-          ))}
-        </div>
+                width: '100%', background: '#0e0e0d', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8,
+                padding: '8px 12px 8px 30px', fontSize: 12, color: '#fff', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+              }}
+            />
+          </div>
 
-        {historyTab === 'screenings' && (
-          <>
-            {scanHistoryLoading && <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Loading...</div>}
-            {!scanHistoryLoading && scanHistory.length === 0 && (
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '40px 0' }}>No screenings yet. Every CV you screen is saved here automatically.</div>
-            )}
-            {scanHistory.map((h: any) => (
-              <div key={h.id} onClick={() => setScanHistorySelected(h)} style={s(card, { cursor: 'pointer', marginBottom: 8, border: `1px solid ${scanHistorySelected?.id === h.id ? 'rgba(19,194,142,.25)' : 'rgba(255,255,255,.07)'}` })}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: h.is_shortlisted === 'True' ? '#13c28e' : 'rgba(255,255,255,.4)' }}>{h.is_shortlisted === 'True' ? '✓ Shortlisted' : h.final_verdict}</span>
-                  <span style={{ marginLeft: 'auto', fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600, color: h.candidate_score >= 80 ? '#13c28e' : h.candidate_score >= 60 ? '#e2b04a' : '#ef4444' }}>{h.candidate_score}</span>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{h.role_title}</div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,.2)', marginTop: 3 }}>{h.created_at ? new Date(h.created_at).toLocaleString() : ''}</div>
-              </div>
-            ))}
-          </>
-        )}
+          {verdictOptions.length > 0 && (
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 14 }}>
+              <button onClick={() => setHistoryVerdictFilter(null)} style={{
+                fontSize: 10, fontWeight: 600, padding: '4px 9px', borderRadius: 100, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
+                border: !historyVerdictFilter ? '1px solid rgba(255,255,255,.3)' : '1px solid rgba(255,255,255,.07)',
+                background: !historyVerdictFilter ? 'rgba(255,255,255,.08)' : 'transparent',
+                color: !historyVerdictFilter ? '#fff' : 'rgba(255,255,255,.35)',
+              }}>All</button>
+              {verdictOptions.map(v => (
+                <button key={v} onClick={() => setHistoryVerdictFilter(v)} style={{
+                  fontSize: 10, fontWeight: 600, padding: '4px 9px', borderRadius: 100, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
+                  border: historyVerdictFilter === v ? '1px solid rgba(19,194,142,.35)' : '1px solid rgba(255,255,255,.07)',
+                  background: historyVerdictFilter === v ? 'rgba(19,194,142,.1)' : 'transparent',
+                  color: historyVerdictFilter === v ? '#13c28e' : 'rgba(255,255,255,.35)',
+                }}>{v}</button>
+              ))}
+            </div>
+          )}
 
-        {historyTab === 'interviews' && (
-          <>
-            {interviewHistoryLoading && <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Loading...</div>}
-            {!interviewHistoryLoading && interviewHistory.length === 0 && (
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '40px 0' }}>No completed AI interviews yet.</div>
-            )}
-            {interviewHistory.map((h: any) => (
-              <div key={h.id} onClick={() => setInterviewHistorySelected(h)} style={s(card, { cursor: 'pointer', marginBottom: 8, border: `1px solid ${interviewHistorySelected?.id === h.id ? 'rgba(19,194,142,.25)' : 'rgba(255,255,255,.07)'}` })}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.5)' }}>{h.final_verdict}</span>
-                  {h.ai_score != null && <span style={{ marginLeft: 'auto', fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600, color: h.ai_score >= 80 ? '#13c28e' : h.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{h.ai_score}</span>}
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{h.candidate_name}</div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginTop: 2 }}>{h.posting_title}</div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,.2)', marginTop: 3 }}>{h.completed_at ? new Date(h.completed_at).toLocaleString() : ''}</div>
-              </div>
-            ))}
-          </>
-        )}
-
-        {historyTab === 'actions' && (
-          <>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginBottom: 12 }}>{history.length} candidates you shortlisted/rejected (saved on this device only)</div>
-            {history.length === 0 ? (
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '40px 0' }}>No history yet. Shortlist or reject candidates to save them here.</div>
-            ) : history.map((h, i) => (
-              <div key={i} onClick={() => setHistorySelected(h)} style={s(card, { cursor: 'pointer', marginBottom: 8, border: `1px solid ${historySelected === h ? 'rgba(19,194,142,.25)' : 'rgba(255,255,255,.07)'}` })}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: h.status === 'shortlisted' ? '#13c28e' : '#ef4444' }}>{h.status === 'shortlisted' ? '✓ Shortlisted' : '✗ Rejected'}</span>
-                  <span style={{ marginLeft: 'auto', fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600, color: h.ai_score >= 80 ? '#13c28e' : h.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{h.ai_score}</span>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{h.filename}</div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginTop: 2 }}>{h.jobTitle}</div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,.2)', marginTop: 3 }}>{h.screenedAt}</div>
-              </div>
-            ))}
-            {history.length > 0 && (
-              <button onClick={() => { if (confirm('Clear all history?')) { setHistory([]); saveHistory([]) } }} style={{ width: '100%', marginTop: 8, fontSize: 11, color: '#ef4444', background: 'transparent', border: '1px solid rgba(239,68,68,.15)', borderRadius: 8, padding: '8px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Clear History</button>
-            )}
-          </>
-        )}
-      </div>
-
-      <div style={{ flex: 1, overflowY: 'auto', padding: 28 }}>
-        {historyTab === 'screenings' && (
-          !scanHistorySelected ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,.2)', fontSize: 13 }}>Select a screening from history to view details</div>
-          ) : (
+          {historyTab === 'screenings' && (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 600 }}>{scanHistorySelected.role_title}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>{scanHistorySelected.created_at ? new Date(scanHistorySelected.created_at).toLocaleString() : ''}</div>
+              {scanHistoryLoading && <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Loading...</div>}
+              {!scanHistoryLoading && scanHistory.length === 0 && (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '40px 0' }}>No screenings yet. Every CV you screen is saved here automatically.</div>
+              )}
+              {!scanHistoryLoading && scanHistory.length > 0 && filteredScan.length === 0 && (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '40px 0' }}>No matching screenings.<br />Try a different role name.</div>
+              )}
+              {scanGroups.map(({ group, items }) => (
+                <div key={group} style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,.25)', marginBottom: 8 }}>{group}</div>
+                  {items.map((h: any) => (
+                    <div key={h.id} className="hr-history-card hr-fade-up" onClick={() => selectScan(h)} style={s(card, { marginBottom: 8, border: `1px solid ${scanHistorySelected?.id === h.id ? 'rgba(19,194,142,.25)' : 'rgba(255,255,255,.07)'}` })}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: h.is_shortlisted === 'True' ? '#13c28e' : 'rgba(255,255,255,.4)' }}>{h.is_shortlisted === 'True' ? '✓ Shortlisted' : (h.final_verdict || 'Match Result')}</span>
+                        <span style={{ marginLeft: 'auto', fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600, color: h.candidate_score >= 80 ? '#13c28e' : h.candidate_score >= 60 ? '#e2b04a' : '#ef4444' }}>{h.candidate_score}</span>
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{h.role_title || 'Untitled Role'}</div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,.2)', marginTop: 3 }}>{h.created_at ? new Date(h.created_at).toLocaleString() : ''}</div>
+                    </div>
+                  ))}
                 </div>
-                <span style={{ marginLeft: 'auto', fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 600, color: scanHistorySelected.candidate_score >= 80 ? '#13c28e' : scanHistorySelected.candidate_score >= 60 ? '#e2b04a' : '#ef4444' }}>{scanHistorySelected.candidate_score}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                <div style={s(card, { flex: 1 })}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#13c28e', marginBottom: 8 }}>Matched Skills</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>{(scanHistorySelected.matched_skills || []).map((sk: string) => <span key={sk} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 100, background: 'rgba(19,194,142,.1)', color: '#13c28e', border: '1px solid rgba(19,194,142,.2)' }}>{sk}</span>)}</div>
+              ))}
+            </>
+          )}
+
+          {historyTab === 'interviews' && (
+            <>
+              {interviewHistoryLoading && <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Loading...</div>}
+              {!interviewHistoryLoading && interviewHistory.length === 0 && (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '40px 0' }}>No completed AI interviews yet.</div>
+              )}
+              {!interviewHistoryLoading && interviewHistory.length > 0 && filteredInterviews.length === 0 && (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '40px 0' }}>No matching interviews.<br />Try a different candidate name or job title.</div>
+              )}
+              {interviewGroups.map(({ group, items }) => (
+                <div key={group} style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,.25)', marginBottom: 8 }}>{group}</div>
+                  {items.map((h: any) => (
+                    <div key={h.id} className="hr-history-card hr-fade-up" onClick={() => selectInterview(h)} style={s(card, { marginBottom: 8, border: `1px solid ${interviewHistorySelected?.id === h.id ? 'rgba(19,194,142,.25)' : 'rgba(255,255,255,.07)'}` })}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.5)' }}>{h.final_verdict || 'AI Interview'}</span>
+                        {h.ai_score != null && <span style={{ marginLeft: 'auto', fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600, color: h.ai_score >= 80 ? '#13c28e' : h.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{h.ai_score}</span>}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{h.candidate_name}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginTop: 2 }}>{h.posting_title}</div>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,.2)', marginTop: 3 }}>{h.completed_at ? new Date(h.completed_at).toLocaleString() : ''}</div>
+                    </div>
+                  ))}
                 </div>
-                <div style={s(card, { flex: 1 })}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', marginBottom: 8 }}>Missing Skills</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>{(scanHistorySelected.missing_skills || []).map((sk: string) => <span key={sk} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 100, background: 'rgba(239,68,68,.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,.15)' }}>{sk}</span>)}</div>
-                </div>
-              </div>
-              {scanHistorySelected.deep_analysis && (
-                <div style={card}>
-                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 12 }}>Full Analysis</div>
-                  <AnalysisCarousel text={scanHistorySelected.deep_analysis} />
-                </div>
+              ))}
+            </>
+          )}
+
+          {historyTab === 'actions' && (
+            <>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginBottom: 12 }}>{history.length} candidates you shortlisted/rejected (saved on this device only)</div>
+              {history.length === 0 ? (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '40px 0' }}>No history yet. Shortlist or reject candidates to save them here.</div>
+              ) : filteredActions.length === 0 ? (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', textAlign: 'center', padding: '40px 0' }}>No matching candidates.<br />Try a different filename or role.</div>
+              ) : (
+                actionGroups.map(({ group, items }) => (
+                  <div key={group} style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,.25)', marginBottom: 8 }}>{group}</div>
+                    {items.map((h: any, i: number) => (
+                      <div key={i} className="hr-history-card hr-fade-up" onClick={() => selectAction(h)} style={s(card, { marginBottom: 8, border: `1px solid ${historySelected === h ? 'rgba(19,194,142,.25)' : 'rgba(255,255,255,.07)'}` })}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: h.status === 'shortlisted' ? '#13c28e' : '#ef4444' }}>{h.status === 'shortlisted' ? '✓ Shortlisted' : '✗ Rejected'}</span>
+                          <span style={{ marginLeft: 'auto', fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600, color: h.ai_score >= 80 ? '#13c28e' : h.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{h.ai_score}</span>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{h.filename}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginTop: 2 }}>{h.jobTitle}</div>
+                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,.2)', marginTop: 3 }}>{h.screenedAt}</div>
+                      </div>
+                    ))}
+                  </div>
+                ))
+              )}
+              {history.length > 0 && (
+                <button onClick={() => { if (confirm('Clear all history?')) { setHistory([]); saveHistory([]) } }} style={{ width: '100%', marginTop: 8, fontSize: 11, color: '#ef4444', background: 'transparent', border: '1px solid rgba(239,68,68,.15)', borderRadius: 8, padding: '8px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Clear History</button>
               )}
             </>
-          )
-        )}
+          )}
+        </div>
 
-        {historyTab === 'interviews' && (
-          !interviewHistorySelected ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,.2)', fontSize: 13 }}>Select a candidate to view their interview report</div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <div>
+        <div className={`hr-history-detail${historyDrawerOpen ? ' open' : ''}`} style={{ overflowY: 'auto', padding: 28 }}>
+          <button className="hr-history-back" onClick={closeDrawer} style={{ alignItems: 'center', gap: 6, background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 8, padding: '7px 12px', color: 'rgba(255,255,255,.6)', cursor: 'pointer', fontSize: 12, fontFamily: 'Inter,sans-serif', marginBottom: 18 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+            Back to list
+          </button>
+
+          {historyTab === 'screenings' && (
+            !scanHistorySelected ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,.2)', fontSize: 13 }}>Select a screening from history to view details</div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 600 }}>{scanHistorySelected.role_title}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>{scanHistorySelected.created_at ? new Date(scanHistorySelected.created_at).toLocaleString() : ''}</div>
+                  </div>
+                  <span style={{ marginLeft: 'auto', fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 600, color: scanHistorySelected.candidate_score >= 80 ? '#13c28e' : scanHistorySelected.candidate_score >= 60 ? '#e2b04a' : '#ef4444' }}>{scanHistorySelected.candidate_score}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+                  <div style={s(card, { flex: '1 1 200px' })}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#13c28e', marginBottom: 8 }}>Matched Skills</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>{(scanHistorySelected.matched_skills || []).map((sk: string) => <span key={sk} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 100, background: 'rgba(19,194,142,.1)', color: '#13c28e', border: '1px solid rgba(19,194,142,.2)' }}>{sk}</span>)}</div>
+                  </div>
+                  <div style={s(card, { flex: '1 1 200px' })}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', marginBottom: 8 }}>Missing Skills</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>{(scanHistorySelected.missing_skills || []).map((sk: string) => <span key={sk} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 100, background: 'rgba(239,68,68,.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,.15)' }}>{sk}</span>)}</div>
+                  </div>
+                </div>
+                {scanHistorySelected.deep_analysis && (
+                  <div style={card}>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 12 }}>Full Analysis</div>
+                    <AnalysisCarousel text={scanHistorySelected.deep_analysis} />
+                  </div>
+                )}
+              </>
+            )
+          )}
+
+          {historyTab === 'interviews' && (
+            !interviewHistorySelected ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,.2)', fontSize: 13 }}>Select a candidate to view their interview report</div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 18, fontWeight: 600 }}>{interviewHistorySelected.candidate_name}</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>{interviewHistorySelected.candidate_email} · {interviewHistorySelected.posting_title}</div>
                 </div>
-                {interviewHistorySelected.ai_score != null && (
-                  <span style={{ marginLeft: 'auto', fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 600, color: interviewHistorySelected.ai_score >= 80 ? '#13c28e' : interviewHistorySelected.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{interviewHistorySelected.ai_score}</span>
+                {interviewReportLoading ? (
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Loading report...</div>
+                ) : interviewReport ? (
+                  <AIFeedbackReport data={interviewReport} />
+                ) : (
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Could not load the full report for this session.</div>
                 )}
-              </div>
-              {interviewHistorySelected.final_verdict && (
-                <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 100, marginBottom: 16, background: 'rgba(255,255,255,.06)', color: 'rgba(255,255,255,.7)' }}>{interviewHistorySelected.final_verdict}</div>
-              )}
-              {interviewHistorySelected.experience_assessment && (
-                <div style={s(card, { marginBottom: 14 })}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.4)', marginBottom: 6 }}>Experience Assessment</div>
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', lineHeight: 1.7 }}>{interviewHistorySelected.experience_assessment}</div>
-                </div>
-              )}
-              {interviewHistorySelected.deep_analysis && (
-                <div style={card}>
-                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 12 }}>Deep Analysis</div>
-                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', lineHeight: 1.7 }}>{interviewHistorySelected.deep_analysis}</div>
-                </div>
-              )}
-            </>
-          )
-        )}
+              </>
+            )
+          )}
 
-        {historyTab === 'actions' && (
-          !historySelected ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,.2)', fontSize: 13 }}>Select a candidate from history to view details</div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)', display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 700, color: '#fff' }}>{initials(historySelected.filename)}</div>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 600 }}>{historySelected.filename}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>{historySelected.jobTitle} · {historySelected.screenedAt}</div>
+          {historyTab === 'actions' && (
+            !historySelected ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,.2)', fontSize: 13 }}>Select a candidate from history to view details</div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)', display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 700, color: '#fff' }}>{initials(historySelected.filename)}</div>
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 600 }}>{historySelected.filename}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>{historySelected.jobTitle} · {historySelected.screenedAt}</div>
+                  </div>
+                  <span style={{ marginLeft: 'auto', fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 600, color: historySelected.ai_score >= 80 ? '#13c28e' : historySelected.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{historySelected.ai_score}</span>
                 </div>
-                <span style={{ marginLeft: 'auto', fontFamily: "'Cormorant Garamond',serif", fontSize: 36, fontWeight: 600, color: historySelected.ai_score >= 80 ? '#13c28e' : historySelected.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{historySelected.ai_score}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-                <div style={s(card, { flex: 1 })}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#13c28e', marginBottom: 8 }}>Matched Skills</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>{(historySelected.matched_skills || []).map(sk => <span key={sk} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 100, background: 'rgba(19,194,142,.1)', color: '#13c28e', border: '1px solid rgba(19,194,142,.2)' }}>{sk}</span>)}</div>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+                  <div style={s(card, { flex: '1 1 200px' })}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#13c28e', marginBottom: 8 }}>Matched Skills</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>{(historySelected.matched_skills || []).map(sk => <span key={sk} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 100, background: 'rgba(19,194,142,.1)', color: '#13c28e', border: '1px solid rgba(19,194,142,.2)' }}>{sk}</span>)}</div>
+                  </div>
+                  <div style={s(card, { flex: '1 1 200px' })}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', marginBottom: 8 }}>Missing Skills</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>{(historySelected.missing_skills || []).map(sk => <span key={sk} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 100, background: 'rgba(239,68,68,.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,.15)' }}>{sk}</span>)}</div>
+                  </div>
                 </div>
-                <div style={s(card, { flex: 1 })}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', marginBottom: 8 }}>Missing Skills</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>{(historySelected.missing_skills || []).map(sk => <span key={sk} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 100, background: 'rgba(239,68,68,.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,.15)' }}>{sk}</span>)}</div>
-                </div>
-              </div>
-              {historySelected.deep_analysis && (
-                <div style={card}>
-                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 12 }}>Full Analysis</div>
-                  <AnalysisCarousel text={historySelected.deep_analysis} />
-                </div>
-              )}
-            </>
-          )
-        )}
+                {historySelected.deep_analysis && (
+                  <div style={card}>
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 12 }}>Full Analysis</div>
+                    <AnalysisCarousel text={historySelected.deep_analysis} />
+                  </div>
+                )}
+              </>
+            )
+          )}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
+
 
   const renderChatbot = () => (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 28, maxWidth: 700 }}>
