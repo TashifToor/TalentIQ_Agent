@@ -71,3 +71,19 @@ class GenerateCVRequest(BaseModel):
     template: str = "modern"          # one of ALL_TEMPLATES
     accent_color: Optional[str] = None  # hex string, or one of BASIC_COLORS keys — overrides the template's default accent
     job_description: Optional[str] = None   # if provided, content gets rewritten for ATS fit
+
+
+class ATSScoreRequest(BaseModel):
+    cv_data: CVData
+    template: Optional[str] = None  # if provided, formatting checks account for the chosen template
+
+
+class OptimizeForJobRequest(BaseModel):
+    cv_data: CVData
+    job_description: str
+
+
+class AssistantRewriteRequest(BaseModel):
+    text: str                                  # the exact bullet/summary text to rewrite — never invented
+    instruction: str = "stronger"               # one of: stronger | concise | ats_friendly
+    job_description: Optional[str] = None       # optional — used only to weave in real, already-present context
