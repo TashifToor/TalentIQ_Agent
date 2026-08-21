@@ -3,6 +3,55 @@ from core.llm import llm
 from schemas.cv_builder import CVData
 
 
+REWRITE_PROMPT_TEMPLATE = """You are an ATS resume writing assistant. Rewrite ONLY the single piece of resume text given below. Do not add any fact, tool, number, or outcome that isn't already present or directly implied by the original text.
+
+HARD RULE — INTEGRITY: never invent employers, titles, skills, technologies, or metrics that aren't already in the original text. If asked to add a metric and none is implied by the original, leave it out rather than inventing one.
+
+Instruction: {instruction_text}
+{jd_context}
+
+Original text:
+"{original_text}"
+
+Respond ONLY with valid JSON, no markdown, no backticks:
+{{"rewritten": "<the rewritten text>"}}"""
+
+INSTRUCTION_TEXT = {
+    "stronger": "Make this achievement sound stronger — start with a powerful action verb, tighten the phrasing, and surface the impact that's already implied by the original wording.",
+    "concise": "Make this more concise — cut filler words and redundancy while keeping every real fact intact.",
+    "ats_friendly": "Rewrite this to be more ATS-friendly — plain language, a strong action verb at the start, and natural (not stuffed) keyword phrasing.",
+}
+
+
+def rewrite_text_for_jd(original_text: str, instruction: str, job_description: str | None = None) -> str:
+    """Rewrites ONE piece of resume text (a bullet, a summary line). Used by
+    the AI Resume Assistant. Never adds facts — only rephrases what's given."""
+    instruction_text = INSTRUCTION_TEXT.get(instruction, INSTRUCTION_TEXT["stronger"])
+    jd_context = ""
+    if job_description and job_description.strip():
+        jd_context = f"\nFor context, here is the target job description (only use it to choose phrasing/emphasis — never to add facts):\n{job_description.strip()[:2000]}\n"
+
+    prompt = REWRITE_PROMPT_TEMPLATE.format(
+        instruction_text=instruction_text,
+        jd_context=jd_context,
+        original_text=original_text.strip()[:1000],
+    )
+
+    try:
+        response = llm.invoke(prompt)
+        clean = response.content.strip()
+        if clean.startswith("```"):
+            clean = clean.replace("```json", "").replace("```", "").strip()
+        result = json.loads(clean)
+        rewritten = result.get("rewritten")
+        if isinstance(rewritten, str) and rewritten.strip():
+            return rewritten.strip()
+    except Exception as e:
+        print(f"[CVGenerator] Text rewrite failed, returning original: {e}")
+
+    return original_text
+
+
 OPTIMIZE_PROMPT_TEMPLATE = """You are an ATS resume optimization engine. You will rewrite ONLY the wording of the CV content below to better align with the target job description — improved phrasing, action verbs, and keyword alignment WHERE TRUTHFULLY APPLICABLE.
 
 HARD RULE — INTEGRITY: You may only rephrase what already exists. You must NEVER:
