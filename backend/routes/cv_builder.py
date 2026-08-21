@@ -8,11 +8,15 @@ from sqlalchemy.orm import Session
 from models.database import get_db
 from models.user import User
 from middleware.auth import get_current_user_optional
-from schemas.cv_builder import CVData, GenerateCVRequest, ALL_TEMPLATES
+from schemas.cv_builder import (
+    CVData, GenerateCVRequest, ALL_TEMPLATES,
+    ATSScoreRequest, OptimizeForJobRequest, AssistantRewriteRequest,
+)
 from core.loader import CvLoader
 from core.cv_extractor import extract_cv_data
-from core.cv_generator import optimize_cv_for_jd
+from core.cv_generator import optimize_cv_for_jd, rewrite_text_for_jd
 from core.cv_pdf_renderer import render_cv_pdf
+from core.ats_analysis import analyze_resume
 from core.redis_client import get_ip_usage_count, increment_ip_usage, check_rate_limit
 from core.analytics import track
 
@@ -165,3 +169,97 @@ async def generate_cv(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.post("/ats-score")
+async def ats_score(
+    request: Request,
+    body: ATSScoreRequest,
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """Deterministic, JD-independent resume structure/ATS score. No LLM call --
+    every number is computed straight from the CV data the candidate is
+    editing, so it's free to re-run after every change ("re-run the analysis")."""
+    ip = _client_ip(request)
+    allowed, wait_seconds = check_rate_limit(f"cvbuilder-ats:{current_user.id if current_user else ip}", cooldown_seconds=1)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s and try again.")
+
+    return analyze_resume(body.cv_data, template=body.template)
+
+
+@router.post("/optimize")
+async def optimize_for_job(
+    request: Request,
+    body: OptimizeForJobRequest,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """Job Match Lab's "Optimize Resume for This Job" action -- rewrites the
+    candidate's resume content using ONLY information that already exists in
+    it (the same guardrailed engine /cv-builder/generate already uses when a
+    JD is supplied), and returns the updated CVData plus a plain diff of what
+    actually changed, so the candidate can review before keeping it.
+    Counts against the same CV-build quota as a normal generate, since it's
+    the same underlying LLM rewrite."""
+    ip = _client_ip(request)
+    allowed, wait_seconds = check_rate_limit(f"cvbuilder-optimize:{current_user.id if current_user else ip}", cooldown_seconds=5)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s and try again.")
+
+    if not body.job_description or not body.job_description.strip():
+        raise HTTPException(status_code=400, detail="A job description is required to optimize against.")
+
+    _check_and_consume_quota(request, db, current_user)
+
+    try:
+        optimized = optimize_cv_for_jd(body.cv_data, body.job_description.strip())
+    except Exception as e:
+        print(f"[CVBuilder] /optimize failed: {e}")
+        raise HTTPException(status_code=500, detail="Could not optimize the resume right now. Please try again.")
+
+    _consume_quota(request, db, current_user)
+    track(current_user.id if current_user else f"anon:{ip}", "cv_optimized_for_job", {"anonymous": current_user is None})
+
+    changed_sections = []
+    if optimized.summary != body.cv_data.summary:
+        changed_sections.append("summary")
+    old_bullets = [tuple(e.bullets) for e in body.cv_data.experience]
+    new_bullets = [tuple(e.bullets) for e in optimized.experience]
+    changed_experience_indexes = [i for i, (o, n) in enumerate(zip(old_bullets, new_bullets)) if o != n]
+    if changed_experience_indexes:
+        changed_sections.append("experience")
+    if optimized.skills != body.cv_data.skills or optimized.skill_groups != body.cv_data.skill_groups:
+        changed_sections.append("skills order")
+
+    return {
+        "cv_data": optimized.model_dump(),
+        "changed_sections": changed_sections,
+        "changed_experience_indexes": changed_experience_indexes,
+    }
+
+
+@router.post("/assistant/rewrite")
+async def assistant_rewrite(
+    request: Request,
+    body: AssistantRewriteRequest,
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """AI Resume Assistant's generative actions ("Improve this bullet",
+    "Make this more concise", "Make this ATS-friendly"). Rewrites ONLY the
+    exact text handed in -- never invents experience. Informational assistant
+    actions (why is my score low, what keywords are missing...) don't need
+    this endpoint at all -- they're answered directly from the already-computed
+    ATS/Job-Match results already sitting in the client."""
+    ip = _client_ip(request)
+    allowed, wait_seconds = check_rate_limit(f"cvbuilder-rewrite:{current_user.id if current_user else ip}", cooldown_seconds=3)
+    if not allowed:
+        raise HTTPException(status_code=429, detail=f"Please wait {wait_seconds}s and try again.")
+
+    if not body.text or not body.text.strip():
+        raise HTTPException(status_code=400, detail="text is required.")
+    if body.instruction not in ("stronger", "concise", "ats_friendly"):
+        raise HTTPException(status_code=400, detail="instruction must be one of: stronger, concise, ats_friendly")
+
+    rewritten = rewrite_text_for_jd(body.text, body.instruction, body.job_description)
+    return {"original": body.text, "rewritten": rewritten}
