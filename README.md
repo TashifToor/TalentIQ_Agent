@@ -1,4 +1,4 @@
-# TalentIQ v2 — Agentic Recruiment And Candidate Screening Platform
+# TalentIQ v2 — Agentic Recruiment for HR And Candidate Screening Platform
 
 TalentIQ is a next-generation, asynchronous AI Multi-Tennat SAAS recruiting platform designed to automate deep technical candidate screening. Moving away from legacy keyword-matching ATS, TalentIQ uses an advanced multi-modal agentic graph workflow powered by **LLaMA 3.3 (70B)** and **FAISS (Facebook AI Search System) Vector Storage** to read, analyze, and grade candidate CVs against complex Job Descriptions with absolute chain-of-thought through reasoning.
 
