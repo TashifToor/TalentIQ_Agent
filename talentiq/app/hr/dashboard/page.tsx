@@ -125,6 +125,7 @@ function saveHistory(h: HistoryEntry[]) {
 
 export default function HRDashboard() {
   const [section, setSection] = useState<Section>('dashboard')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [userName, setUserName] = useState('HR Manager')
   const [userEmail, setUserEmail] = useState('')
 
@@ -640,7 +641,7 @@ export default function HRDashboard() {
   }
 
   const renderDashboard = () => (
-    <div style={{ padding: 28, overflowY: 'auto', height: '100%', display: 'flex', gap: 20 }}>
+    <div className="copilot-layout-row" style={{ padding: 28, overflowY: 'auto', height: '100%', display: 'flex', gap: 20 }}>
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
@@ -653,7 +654,7 @@ export default function HRDashboard() {
           </button>
         )}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
+      <div className="responsive-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
         {[
           { v: totalProcessed || '—', l: 'Total Screened' },
           { v: shortlistedList.length || '—', l: 'Shortlisted', sub: totalProcessed ? `${Math.round(shortlistedList.length / totalProcessed * 100)}% pass rate` : '' },
@@ -1329,9 +1330,9 @@ export default function HRDashboard() {
       )}
 
       {interviewPostings.length > 0 && (
-        <div style={{ display: 'flex', gap: 20, height: 'calc(100% - 100px)', overflow: 'hidden', marginTop: showInterviewForm ? 0 : 12 }}>
+        <div className={`interview-master-detail${selectedPosting ? ' has-detail' : ''}`} style={{ display: 'flex', gap: 20, height: 'calc(100% - 100px)', overflow: 'hidden', marginTop: showInterviewForm ? 0 : 12 }}>
           {/* Posting list */}
-          <div style={{ width: 300, flexShrink: 0, overflowY: 'auto' }}>
+          <div className="interview-master" style={{ width: 300, flexShrink: 0, overflowY: 'auto' }}>
             {interviewPostings.map((p: any) => (
               <div key={p.id} onClick={() => openPosting(p)}
                 style={s(card, {
@@ -1369,7 +1370,8 @@ export default function HRDashboard() {
           </div>
 
           {/* Candidates / report */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="interview-detail" style={{ flex: 1, overflowY: 'auto' }}>
+            <button onClick={() => setSelectedPosting(null)} className="interview-mobile-back" style={{ display: 'none', background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 12, cursor: 'pointer', marginBottom: 14, padding: 0, fontFamily: 'Inter,sans-serif' }}>← All interview links</button>
             {!selectedPosting ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,.2)', fontSize: 13 }}>
                 Select an interview link to see candidates
@@ -1615,27 +1617,42 @@ export default function HRDashboard() {
   }
 
   return (
-    <div style={s(base, { display: 'flex', height: '100vh', overflow: 'hidden' })}>
+    <div style={s(base, { display: 'flex', height: '100vh', overflow: 'hidden' })} className="app-shell">
       <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-4px)}} @keyframes pulse{0%,100%{opacity:.35}50%{opacity:.8}}` }} />
+
+      {/* Mobile top bar — hamburger only, hidden on laptop/desktop via CSS */}
+      <div className="app-mobile-topbar">
+        <button onClick={() => setMobileNavOpen(true)} aria-label="Open menu" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.12)', borderRadius: 8, padding: 8, cursor: 'pointer', display: 'flex' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+        <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600, color: 'rgba(255,255,255,.9)' }}>Talent <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#13c28e', padding: '2px 7px', borderRadius: 100, marginLeft: 4, border: '1px solid rgba(19,194,142,.18)' }}>HR</span></span>
+      </div>
+
+      {/* Backdrop — mobile/tablet drawer only */}
+      <div className={`app-sidebar-backdrop${mobileNavOpen ? ' open' : ''}`} onClick={() => setMobileNavOpen(false)} />
+
       {/* SIDEBAR */}
-      <div style={{ width: 224, flexShrink: 0, background: '#0c0c0b', borderRight: '1px solid rgba(255,255,255,.05)', display: 'flex', flexDirection: 'column' }}>
+      <div className={`app-sidebar${mobileNavOpen ? ' open' : ''}`} style={{ width: 224, flexShrink: 0, background: '#0c0c0b', borderRight: '1px solid rgba(255,255,255,.05)', display: 'flex', flexDirection: 'column' }}>
         <Link href="/" style={{ padding: '22px 20px', borderBottom: '1px solid rgba(255,255,255,.05)', display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <div style={{ width: 28, height: 28, background: '#e2b04a', borderRadius: 7, display: 'grid', placeItems: 'center' }}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="#0a0a08"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg>
           </div>
           <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,.9)' }}>Talent</span>
           <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#13c28e', padding: '3px 8px', borderRadius: 100, marginLeft: 'auto', border: '1px solid rgba(19,194,142,.18)' }}>HR</span>
+          <button onClick={(e) => { e.preventDefault(); setMobileNavOpen(false) }} aria-label="Close menu" className="app-sidebar-close" style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,.5)', cursor: 'pointer', padding: 4 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
         </Link>
         <div style={{ padding: '20px 16px 6px', fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.18)' }}>Workspace</div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {NAV.map(n => (
-            <button key={n.id} onClick={() => setSection(n.id as Section)}
+            <button key={n.id} onClick={() => { setSection(n.id as Section); setMobileNavOpen(false) }}
               style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px', borderRadius: 6, fontSize: 12, fontWeight: 500, letterSpacing: '.01em',
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderRadius: 6, fontSize: 13, fontWeight: 500, letterSpacing: '.01em',
                 color: section === n.id ? 'rgba(255,255,255,.88)' : 'rgba(255,255,255,.38)', cursor: 'pointer', transition: 'all .15s',
                 margin: '0 6px 2px', border: section === n.id ? '1px solid rgba(255,255,255,.08)' : '1px solid transparent',
                 background: section === n.id ? 'rgba(255,255,255,.04)' : 'transparent',
-                fontFamily: 'Inter,sans-serif', width: 'calc(100% - 12px)', textAlign: 'left'
+                fontFamily: 'Inter,sans-serif', width: 'calc(100% - 12px)', textAlign: 'left', minHeight: 40
               }}>
               {n.label}
               {'badge' in n && n.badge ? <span style={{ marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9, background: 'rgba(19,194,142,.15)', color: '#13c28e', fontSize: 10, fontWeight: 700, display: 'grid', placeItems: 'center', padding: '0 4px' }}>{n.badge}</span> : null}
@@ -1650,7 +1667,7 @@ export default function HRDashboard() {
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,.3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
             </div>
           </div>
-          <button onClick={handleLogout} style={{ width: '100%', marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '8px', borderRadius: 8, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.06)', color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
+          <button onClick={handleLogout} style={{ width: '100%', marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', borderRadius: 8, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.06)', color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', minHeight: 40 }}>
             <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" /></svg>
             Logout
           </button>
@@ -1658,7 +1675,7 @@ export default function HRDashboard() {
       </div>
 
       {/* MAIN CONTENT */}
-      <div style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto', background: '#0a0a09' }}>
+      <div className="app-main" style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto', background: '#0a0a09', minWidth: 0 }}>
         {renderSection()}
       </div>
     </div>
