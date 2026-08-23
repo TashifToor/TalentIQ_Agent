@@ -49,7 +49,7 @@ export default function AIReviewStep({ data }: { data: BuilderFormData }) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${questionCount !== null ? 3 : 2}, 1fr)`, gap: 12, marginBottom: 20 }}>
+      <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: `repeat(${questionCount !== null ? 3 : 2}, 1fr)`, gap: 12, marginBottom: 20 }}>
         <MetricCard label="Estimated Duration" value={estimateDuration(data)} icon="⏱" accent={mode.accent} />
         <MetricCard label="Mode" value={mode.title.replace('AI ', '')} icon={mode.icon} accent={mode.accent} />
         {questionCount !== null && <MetricCard label="Questions" value={String(questionCount)} icon="#" accent={mode.accent} />}
