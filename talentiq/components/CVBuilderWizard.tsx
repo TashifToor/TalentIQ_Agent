@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { api } from '@/lib/api'
+import AIResumeAssistant from './AIResumeAssistant'
 
 type Education = { degree: string; institution: string; start_year: string; end_year: string; details: string }
 type Experience = { title: string; company: string; start_date: string; end_date: string; bullets: string[] }
@@ -272,7 +273,7 @@ export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: C
             </div>
 
             {activeTab === 'info' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="resume-builder-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div style={{ gridColumn: '1 / -1' }}><label style={labelStyle}>Professional headline (e.g. "Python Developer | AI & Backend Engineer")</label><input style={inputStyle} value={cv.role_title} onChange={e => updateField('role_title', e.target.value)} /></div>
                 <div><label style={labelStyle}>Full name</label><input style={inputStyle} value={cv.full_name} onChange={e => updateField('full_name', e.target.value)} /></div>
                 <div><label style={labelStyle}>Email</label><input style={inputStyle} value={cv.email} onChange={e => updateField('email', e.target.value)} /></div>
@@ -349,7 +350,7 @@ export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: C
                 <button onClick={() => updateField('experience', [...cv.experience, emptyExperience()])} style={{ fontSize: 11.5, color: gold, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10 }}>+ Add role</button>
                 {cv.experience.map((exp, i) => (
                   <div key={i} style={{ background: panel, border: `1px solid ${border}`, borderRadius: 10, padding: 12, marginBottom: 10 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div className="resume-builder-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       <input style={inputStyle} placeholder="Job title" value={exp.title} onChange={e => { const next = [...cv.experience]; next[i] = { ...exp, title: e.target.value }; updateField('experience', next) }} />
                       <input style={inputStyle} placeholder="Company" value={exp.company} onChange={e => { const next = [...cv.experience]; next[i] = { ...exp, company: e.target.value }; updateField('experience', next) }} />
                       <input style={inputStyle} placeholder="Start" value={exp.start_date} onChange={e => { const next = [...cv.experience]; next[i] = { ...exp, start_date: e.target.value }; updateField('experience', next) }} />
@@ -386,7 +387,7 @@ export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: C
                 <button onClick={() => updateField('education', [...cv.education, emptyEducation()])} style={{ fontSize: 11.5, color: gold, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10 }}>+ Add</button>
                 {cv.education.map((edu, i) => (
                   <div key={i} style={{ background: panel, border: `1px solid ${border}`, borderRadius: 10, padding: 12, marginBottom: 10 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div className="resume-builder-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       <input style={inputStyle} placeholder="Degree" value={edu.degree} onChange={e => { const next = [...cv.education]; next[i] = { ...edu, degree: e.target.value }; updateField('education', next) }} />
                       <input style={inputStyle} placeholder="Institution" value={edu.institution} onChange={e => { const next = [...cv.education]; next[i] = { ...edu, institution: e.target.value }; updateField('education', next) }} />
                       <input style={inputStyle} placeholder="Start year" value={edu.start_year} onChange={e => { const next = [...cv.education]; next[i] = { ...edu, start_year: e.target.value }; updateField('education', next) }} />
@@ -409,6 +410,10 @@ export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: C
             <div style={{ fontSize: 11, color: textDim, marginBottom: 8 }}>Live preview — {tCfg.label} {!tCfg.atsSafe && '(visual only)'}</div>
             <LivePreview cv={cv} template={template} accentColor={accentColor} />
           </div>
+
+          {/* Far right: AI Resume Assistant — real 3rd column on desktop,
+              collapsible drawer/bottom-sheet on tablet/mobile (see globals.css) */}
+          <AIResumeAssistant cv={cv} onCvChange={setCv} jobDescription={jd} template={template} />
         </div>
       )}
 
