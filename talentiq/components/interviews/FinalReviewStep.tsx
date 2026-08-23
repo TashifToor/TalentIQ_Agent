@@ -28,7 +28,7 @@ export default function FinalReviewStep({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${questionCount !== null ? 3 : 2}, 1fr)`, gap: 10 }}>
+          <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: `repeat(${questionCount !== null ? 3 : 2}, 1fr)`, gap: 10 }}>
             <MetricCard label="Duration" value={mode.duration} accent={mode.accent} />
             <MetricCard label="Interviewer" value={data.interviewerName.trim() || 'Random'} accent={mode.accent} />
             {questionCount !== null && <MetricCard label="Questions" value={String(questionCount)} accent={mode.accent} />}
