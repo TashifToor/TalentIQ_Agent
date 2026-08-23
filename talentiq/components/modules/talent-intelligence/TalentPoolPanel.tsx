@@ -134,7 +134,7 @@ export default function TalentPoolPanel({ interviewPostings }: {
     }
 
     return (
-        <div style={{ maxWidth: 780 }}>
+        <div style={{ maxWidth: 780, width: '100%' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, or ID…" style={{ ...selectSt, width: 200 }} />
                 <select value={tierFilter} onChange={e => setTierFilter(e.target.value as TierFilter)} style={selectSt}>
@@ -226,18 +226,18 @@ export default function TalentPoolPanel({ interviewPostings }: {
                                     border: decisionSelected.includes(c.id) ? 'none' : '1.5px solid rgba(255,255,255,.25)', background: decisionSelected.includes(c.id) ? '#7c3aed' : 'transparent',
                                 }}>{decisionSelected.includes(c.id) && <span style={{ color: '#fff', fontSize: 12, fontWeight: 900 }}>✓</span>}</div>
                             )}
-                            <div onClick={() => (decisionMode ? toggleDecisionSelect(c.id) : setOpenId(c.id))} style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                            <div onClick={() => (decisionMode ? toggleDecisionSelect(c.id) : setOpenId(c.id))} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, cursor: 'pointer', rowGap: 6 }}>
                                 <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)' }}>
                                     {(c.candidate_name || c.cv_filename || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')}
                                 </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ flex: '1 1 140px', minWidth: 140 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                         <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{c.candidate_name || c.cv_filename || 'Unnamed candidate'}</div>
                                         <GradientBadge label={FIT_TIER_LABEL[c.fit_tier]} tone={c.fit_tier === 'strong' || c.fit_tier === 'good' ? 'teal' : c.fit_tier === 'possible' ? 'gold' : 'neutral'} />
                                         {c.is_shortlisted === 'yes' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(19,194,142,.12)', color: '#13c28e' }}>Shortlisted</span>}
                                         {c.is_shortlisted === 'no' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(239,68,68,.1)', color: '#ef4444' }}>Rejected</span>}
                                     </div>
-                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)' }}>{c.job_title}{c.candidate_email ? ` · ${c.candidate_email}` : ''}</div>
+                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.job_title}{c.candidate_email ? ` · ${c.candidate_email}` : ''}</div>
                                 </div>
                                 <div style={{ textAlign: 'center', flexShrink: 0 }}>
                                     <div style={{ fontSize: 16, fontWeight: 700, color: FIT_TIER_COLOR[c.fit_tier] }}>{c.ats_score ?? '—'}</div>
