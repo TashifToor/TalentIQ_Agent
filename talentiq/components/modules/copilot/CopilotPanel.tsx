@@ -98,7 +98,7 @@ function RecommendationView({ data }: { data: RecommendationData }) {
 
 function TileGrid({ tiles }: { tiles: (StatTile | CandidateStatTile)[] }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, paddingLeft: 20 }}>
+    <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, paddingLeft: 20 }}>
       {tiles.map(t => (
         <div key={t.label} style={{ background: '#161614', border: '1px solid rgba(255,255,255,.06)', borderRadius: 8, padding: '7px 9px' }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: (t as CandidateStatTile).accent || '#fff' }}>{t.value}</div>
@@ -230,7 +230,7 @@ export default function CopilotPanel({
 
   if (collapsed) {
     return (
-      <button onClick={() => setCollapsed(false)} style={{
+      <button onClick={() => setCollapsed(false)} className="copilot-panel-collapsed" style={{
         width: 44, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 20,
         background: 'rgba(22,22,20,.55)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12,
         padding: '14px 0', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
@@ -244,7 +244,7 @@ export default function CopilotPanel({
   }
 
   return (
-    <GlassCard style={{ width: 280, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 20, maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}>
+    <GlassCard className="copilot-panel-expanded" style={{ width: 280, flexShrink: 0, alignSelf: 'flex-start', position: 'sticky', top: 20, maxHeight: 'calc(100vh - 140px)', overflowY: 'auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         <div style={{ width: 26, height: 26, borderRadius: 8, display: 'grid', placeItems: 'center', flexShrink: 0, background: 'linear-gradient(135deg,#7c3aed,#a78bfa)' }}>
           <svg width="13" height="13" viewBox="0 0 16 16" fill="#fff"><path d="M8 1l1.6 4.4L14 7l-4.4 1.6L8 13l-1.6-4.4L2 7l4.4-1.6z" /></svg>
