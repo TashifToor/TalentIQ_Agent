@@ -215,8 +215,8 @@ body { font-family: 'Syne', system-ui, sans-serif; overflow-x: hidden; line-heig
 }
 
 /* Generic responsive card grids used across HR + candidate dashboards —
-  apply className="responsive-grid" alongside an inline gridTemplateColumns
-  for a fixed column count and it collapses gracefully. */
+   apply className="responsive-grid" alongside an inline gridTemplateColumns
+   for a fixed column count and it collapses gracefully. */
 @media (max-width: 1023px) { .responsive-grid-3, .responsive-grid-4 { grid-template-columns: repeat(2, 1fr) !important; } }
 @media (max-width: 640px) { .responsive-grid-3, .responsive-grid-2, .responsive-grid-4 { grid-template-columns: 1fr !important; } }
 
@@ -257,7 +257,7 @@ body { font-family: 'Syne', system-ui, sans-serif; overflow-x: hidden; line-heig
 }
 
 /* Copilot side panel (fixed 280px) — stacks below the main content instead
-  of squeezing it, on any layout it appears in (dashboard overview, and
+   of squeezing it, on any layout it appears in (dashboard overview, and
    inside .interview-master-detail which already stacks on its own). */
 @media (max-width: 1100px) {
   .copilot-layout-row { flex-direction: column; }
@@ -265,6 +265,42 @@ body { font-family: 'Syne', system-ui, sans-serif; overflow-x: hidden; line-heig
 }
 @media (max-width: 900px) {
   .interview-master-detail .copilot-panel-expanded { width: 100% !important; position: static !important; max-height: none !important; }
+}
+
+/* AI Resume Assistant (CV Builder step 2) — a real inline 3rd column on
+   desktop; below that it becomes a floating-button-triggered drawer
+   (tablet: slides in from the right) or bottom sheet (mobile: slides up),
+   so it never permanently squeezes the editor+preview layout. */
+@media (min-width: 1280px) {
+  .ai-assistant-trigger { display: none !important; }
+  .ai-assistant-backdrop { display: none !important; }
+}
+@media (max-width: 1279px) {
+  .ai-assistant-trigger { display: flex !important; }
+  .ai-assistant-close { display: block !important; }
+  .ai-assistant-col {
+    position: fixed !important; top: 0; z-index: 95; margin: 0 !important;
+    background: #141412; box-shadow: -8px 0 32px rgba(0,0,0,.5);
+    transition: transform .25s var(--ease, ease); flex: none !important;
+  }
+  .ai-assistant-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 94;
+  }
+  .ai-assistant-backdrop.open { display: block; }
+}
+/* Tablet: right-hand drawer */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .ai-assistant-col { right: 0; height: 100dvh; width: min(380px, 88vw) !important; min-width: 0 !important; max-height: 100dvh !important; border-radius: 0; transform: translateX(100%); }
+  .ai-assistant-col.open { transform: translateX(0); }
+}
+/* Mobile: bottom sheet */
+@media (max-width: 767px) {
+  .ai-assistant-col {
+    left: 0; right: 0; bottom: 0; top: auto; width: 100% !important; min-width: 0 !important;
+    max-height: 82dvh !important; border-radius: 18px 18px 0 0 !important; transform: translateY(100%);
+  }
+  .ai-assistant-col.open { transform: translateY(0); }
+  .ai-assistant-trigger { bottom: 16px !important; right: 16px !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
