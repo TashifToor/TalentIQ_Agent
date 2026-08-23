@@ -78,7 +78,7 @@ export default function PracticeConfigForm({
 
                     <input placeholder="Target role — e.g. Backend Engineer" value={targetRole} onChange={e => setTargetRole(e.target.value)} className="premium-input" style={{ ...inputSt, marginBottom: 10 }} />
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                    <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                         <select value={experienceLevel} onChange={e => setExperienceLevel(e.target.value)} className="premium-input" style={inputSt}>
                             <option value="">Experience level (optional)</option>
                             <option value="junior">Junior</option>
