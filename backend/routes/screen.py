@@ -29,6 +29,10 @@ async def check_screening_access(user: User, db: Session):
         teammate from the workspace revokes this immediately — it's never
         a one-time grant baked into their own account.
     """
+    from core.unlimited_access import has_unlimited_access
+    if has_unlimited_access(user.email):
+        return  # allowlisted account — unlimited, no expiry, any role (candidate or HR)
+
     now = datetime.now(timezone.utc)
 
     if user.role == "candidate":
@@ -133,9 +137,12 @@ async def screen_candidate(
             db.commit()
             print(f"[Screen] Updated scans_used for {current_user.email}: {current_user.scans_used}")
 
+        from core.unlimited_access import has_unlimited_access
         scans_remaining = None
-        if current_user.role == "candidate" and current_user.subscription_status != "active":
+        if current_user.role == "candidate" and current_user.subscription_status != "active" and not has_unlimited_access(current_user.email):
             scans_remaining = max(0, FREE_SCANS - (current_user.scans_used or 0))
+        elif current_user.role == "candidate" and has_unlimited_access(current_user.email):
+            scans_remaining = 999  # same "no meaningful limit" sentinel used by /auth/me
 
         metrics = {
             "candidate_score": final_report.get("candidate_score", 0),
@@ -200,4 +207,4 @@ async def screen_candidate(
         raise
     except Exception as e:
         print(f"[Screen ERROR] {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Screening failed: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Screening failed: {str(e)}")
