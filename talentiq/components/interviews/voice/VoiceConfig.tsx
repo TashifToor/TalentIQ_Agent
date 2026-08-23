@@ -8,7 +8,7 @@ export default function VoiceConfig({ data, onChange }: { data: BuilderFormData;
   return (
     <div className="builder-2col">
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+        <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
           <input placeholder="Role title (e.g. Senior Backend Engineer)" value={data.title} onChange={e => onChange({ title: e.target.value })} style={inputSt} className="premium-input accent-purple" />
           <input placeholder="Company (optional)" value={data.company} onChange={e => onChange({ company: e.target.value })} style={inputSt} className="premium-input accent-purple" />
         </div>
