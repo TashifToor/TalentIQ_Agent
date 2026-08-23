@@ -21,6 +21,25 @@ async def build_user_response(user: User) -> dict:
     """Compute drives field for userResponse"""
     now = datetime.now(timezone.utc)
 
+    from core.unlimited_access import has_unlimited_access
+    if has_unlimited_access(user.email):
+        # Allowlisted account — same source of truth check_screening_access()
+        # and the CV Builder quota use. Mirror the existing "no meaningful
+        # limit" sentinel already used below for HR (999) so the frontend's
+        # existing scans-remaining UI renders correctly without any new logic.
+        return {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "is_active": user.is_active,
+            "role": user.role,
+            "subscription_status": user.subscription_status,
+            "scans_used": user.scans_used or 0,
+            "scans_remaining": 999,
+            "trial_days_left": None,
+            "can_screen": True,
+        }
+
     if user.role == "candidate":
         scans_remaining = max(0, FREE_SCANS - (user.scans_used or 0))
         can_screen = (
