@@ -71,7 +71,7 @@ export default function BulkDecisionModal({ applicationIds, decision, onClose, o
         <div role="dialog" aria-modal="true" aria-label="Bulk Decision" style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'grid', placeItems: 'center', zIndex: 200, padding: 20,
         }} onClick={e => e.target === e.currentTarget && onClose()}>
-            <GlassCard style={{ width: 620, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto', padding: 0 }}>
+            <GlassCard className="modal-sheet" style={{ width: 620, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto', padding: 0 }}>
                 <div style={{ padding: '18px 22px', borderBottom: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center' }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', flex: 1 }}>{label} {applicationIds.length} Candidate{applicationIds.length === 1 ? '' : 's'}</div>
                     <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 18, cursor: 'pointer' }}>✕</button>
