@@ -66,7 +66,7 @@ export default function AIFeedbackReport({ data }: { data: AIFeedbackData }) {
       {/* Technical / Problem Solving / Behavioral — real, only for MCQ mode with a breakdown */}
       <SectionCard title="Skill Breakdown" icon="🧩">
         {hasBreakdown ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {Object.entries(breakdown!).map(([cat, stat]) => {
               const pct = stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0
               return (
