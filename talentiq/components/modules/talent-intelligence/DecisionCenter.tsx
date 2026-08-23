@@ -73,7 +73,7 @@ export default function DecisionCenter({ candidate, onClose, onDecided }: {
         <div role="dialog" aria-modal="true" aria-label="Decision Center" style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'grid', placeItems: 'center', zIndex: 200, padding: 20,
         }} onClick={e => e.target === e.currentTarget && onClose()}>
-            <GlassCard style={{ width: 520, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto', padding: 0 }}>
+            <GlassCard className="modal-sheet" style={{ width: 520, maxWidth: '100%', maxHeight: '90vh', overflowY: 'auto', padding: 0 }}>
                 <div style={{ padding: '18px 22px', borderBottom: '1px solid rgba(255,255,255,.06)', display: 'flex', alignItems: 'center' }}>
                     <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', flex: 1 }}>Decision Center</div>
                     <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 18, cursor: 'pointer' }}>✕</button>
@@ -99,7 +99,7 @@ export default function DecisionCenter({ candidate, onClose, onDecided }: {
                             <div style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', marginBottom: 16 }}>
                                 {candidate.candidate_name || 'This candidate'} — {candidate.job_title || 'this role'}
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                                 <button onClick={() => choose('accepted')} style={decisionCardSt('#13c28e')}>
                                     <div style={{ fontSize: 18, marginBottom: 6 }}>✓</div>
                                     <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 3 }}>Accept Candidate</div>
