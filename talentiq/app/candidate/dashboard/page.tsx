@@ -27,6 +27,7 @@ const NAV = [
 
 export default function CandidateDashboard() {
   const [activeNav, setActiveNav] = useState('dashboard')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [user, setUser] = useState<{ name?: string; email?: string } | null>(null)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [file, setFile] = useState<File | null>(null)
@@ -157,7 +158,7 @@ export default function CandidateDashboard() {
   const S = { sidebar: { width: 220, flexShrink: 0, background: '#111110', borderRight: '1px solid rgba(255,255,255,.07)', display: 'flex', flexDirection: 'column' as const } }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0c0c0a', fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.88)' }}>
+    <div className="app-shell" style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0c0c0a', fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.88)' }}>
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Syne:wght@400;500;600;700&display=swap');
 
@@ -185,17 +186,28 @@ export default function CandidateDashboard() {
 
       {showUpgrade && <UpgradeModal role="candidate" onClose={() => setShowUpgrade(false)} />}
 
+      <div className="app-mobile-topbar">
+        <button onClick={() => setMobileNavOpen(true)} aria-label="Open menu" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.12)', borderRadius: 8, padding: 8, cursor: 'pointer', display: 'flex' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
+        <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600 }}>TalentIQ</span>
+      </div>
+      <div className={`app-sidebar-backdrop${mobileNavOpen ? ' open' : ''}`} onClick={() => setMobileNavOpen(false)} />
+
       {/* SIDEBAR */}
-      <div style={S.sidebar}>
+      <div className={`app-sidebar${mobileNavOpen ? ' open' : ''}`} style={S.sidebar}>
         <Link href="/" style={{ padding: '22px 18px', borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', gap: 10, fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,.9)', textDecoration: 'none' }}>
           <div style={{ width: 28, height: 28, background: '#e2b04a', borderRadius: 7, display: 'grid', placeItems: 'center' }}><svg width="12" height="12" viewBox="0 0 16 16" fill="#0a0a09"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg></div>
           TalentIQ
+          <button onClick={(e) => { e.preventDefault(); setMobileNavOpen(false) }} aria-label="Close menu" className="app-sidebar-close" style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,.5)', cursor: 'pointer', padding: 4, marginLeft: 'auto' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
         </Link>
         <div style={{ padding: '18px 12px 6px', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,.25)' }}>Menu</div>
         {NAV.map(n => {
           const active = activeNav === n.key
           return (
-            <Link key={n.key} href={n.href} onClick={() => handleNavClick(n)} className="nav-btn" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, color: active ? '#e2b04a' : 'rgba(255,255,255,.45)', cursor: 'pointer', margin: '0 6px 2px', border: active ? '1px solid rgba(226,176,74,.15)' : '1px solid transparent', background: active ? 'rgba(226,176,74,.1)' : 'transparent', fontFamily: 'Syne, sans-serif', width: 'calc(100% - 12px)', textAlign: 'left', textDecoration: 'none' }}>
+            <Link key={n.key} href={n.href} onClick={() => { handleNavClick(n); setMobileNavOpen(false) }} className="nav-btn" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, color: active ? '#e2b04a' : 'rgba(255,255,255,.45)', cursor: 'pointer', margin: '0 6px 2px', border: active ? '1px solid rgba(226,176,74,.15)' : '1px solid transparent', background: active ? 'rgba(226,176,74,.1)' : 'transparent', fontFamily: 'Syne, sans-serif', width: 'calc(100% - 12px)', textAlign: 'left', textDecoration: 'none', minHeight: 40 }}>
               <span style={{ display: 'flex' }}>{ICONS[n.key]}</span>{n.label}
             </Link>
           )
@@ -224,7 +236,7 @@ export default function CandidateDashboard() {
       </div>
 
       {/* MAIN */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className="app-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
         {/* Topbar */}
         <div style={{ height: 60, borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', padding: '0 28px', justifyContent: 'space-between', flexShrink: 0 }}>
           <div><div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600 }}>My Dashboard</div><div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginTop: 1 }}>Welcome back — {3 - scansLeft} scans used</div></div>
@@ -239,7 +251,7 @@ export default function CandidateDashboard() {
         </div>
 
         {/* Content */}
-        <div className="dark-scroll" style={{ flex: 1, overflowY: 'auto', padding: 28, display: 'flex', gap: 20 }}>
+        <div className="dark-scroll copilot-layout-row" style={{ flex: 1, overflowY: 'auto', padding: 28, display: 'flex', gap: 20 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* Scan Area */}
