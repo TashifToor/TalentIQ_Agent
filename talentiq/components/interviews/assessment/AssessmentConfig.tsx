@@ -18,7 +18,7 @@ export default function AssessmentConfig({ data, onChange }: { data: BuilderForm
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+      <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
         <input placeholder="Role title (e.g. Backend Engineer)" value={data.title} onChange={e => onChange({ title: e.target.value })} style={inputSt} className="premium-input accent-teal" />
         <input placeholder="Company (optional)" value={data.company} onChange={e => onChange({ company: e.target.value })} style={inputSt} className="premium-input accent-teal" />
       </div>
@@ -46,7 +46,7 @@ export default function AssessmentConfig({ data, onChange }: { data: BuilderForm
 
           {data.assessmentSource === 'ai' ? (
             <div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                 {CATEGORY_META.map(({ key, label, icon }) => (
                   <div key={key} style={{ background: '#161614', border: '1px solid rgba(255,255,255,.06)', borderRadius: 8, padding: '10px 12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: 'rgba(255,255,255,.4)', marginBottom: 6 }}>
