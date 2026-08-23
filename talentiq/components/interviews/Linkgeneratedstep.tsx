@@ -67,7 +67,7 @@ export default function LinkGeneratedStep({ posting, onDone }: { posting: any; o
             {posting.notify_hr_on_completion && <GradientBadge label="Email on completion" tone="neutral" icon="✉" />}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${posting.mode === 'mcq' ? 3 : 2}, 1fr)`, gap: 8, marginBottom: 16 }}>
+          <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: `repeat(${posting.mode === 'mcq' ? 3 : 2}, 1fr)`, gap: 8, marginBottom: 16 }}>
             <MetricCard label="Duration" value={mode.duration} accent={mode.accent} />
             <MetricCard label="Difficulty" value={mode.difficulty} accent={mode.accent} />
             {posting.mode === 'mcq' && <MetricCard label="Questions" value={String(posting.assessment_question_count ?? 0)} accent={mode.accent} />}
