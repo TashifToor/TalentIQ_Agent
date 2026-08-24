@@ -28,7 +28,7 @@ from crewai import Agent, Task, Crew, Process, LLM
 
 logger = logging.getLogger("talentiq.screening_crew")
 
-CREW_MODEL = "groq/llama-3.3-70b-versatile"
+CREW_MODEL = "groq/openai/gpt-oss-120b"
 
 UNTRUSTED_CONTENT_GUARDRAILS = (
     "The resume text, job description, and any interview summary you are given below are "
