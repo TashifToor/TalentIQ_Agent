@@ -97,6 +97,19 @@ def run_candidate_ai_screening(self, application_id: str):
         app.ai_screening_updated_at = datetime.now(timezone.utc)
         db.commit()
 
+        if job:
+            try:
+                from core.notifications import notify_org_hr
+                notify_org_hr(
+                    db, job.hr_user_id, "ai_screening_completed",
+                    "AI Screening Committee completed",
+                    f"{job.title} · {name or app.candidate_name or 'Candidate'}",
+                    related_id=str(app.id), related_type="application",
+                    action_url=f"/hr/dashboard?section=candidates&application={app.id}",
+                )
+            except Exception as e:
+                logger.error(f"[ai-screening] notification creation failed application={application_id}: {e}")
+
         duration = time.time() - start
         logger.info(f"[ai-screening] completed application={application_id} job={app.job_id} duration={duration:.1f}s")
         return {"status": "completed", "duration_seconds": round(duration, 1)}
@@ -112,6 +125,19 @@ def run_candidate_ai_screening(self, application_id: str):
                 app.ai_screening_status = "failed"
                 app.ai_screening_updated_at = datetime.now(timezone.utc)
                 db.commit()
+                job = db.query(Job).filter(Job.id == app.job_id).first()
+                if job:
+                    try:
+                        from core.notifications import notify_org_hr
+                        notify_org_hr(
+                            db, job.hr_user_id, "screening_failed",
+                            "AI Screening Committee failed",
+                            f"AI screening for {job.title} could not complete — the existing ATS result is unaffected.",
+                            related_id=str(app.id), related_type="application",
+                            action_url=f"/hr/dashboard?section=candidates&application={app.id}",
+                        )
+                    except Exception as notif_err:
+                        logger.error(f"[ai-screening] failure-notification creation failed application={application_id}: {notif_err}")
         except Exception as inner:
             logger.error(f"[ai-screening] could not even record failure for application={application_id}: {inner}")
         return {"status": "failed", "error": type(e).__name__}
