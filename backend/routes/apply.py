@@ -123,6 +123,35 @@ async def apply_to_job(
     db.commit()
     db.refresh(application)
 
+    # Notifications — fire only now that the application + inline ATS
+    # screening have both genuinely succeeded and been committed.
+    try:
+        from core.notifications import create_notification, notify_org_hr
+        create_notification(
+            db, current_user.id, "application_received",
+            "Application received",
+            f"Your application for {job.title} has been submitted and screened.",
+            related_id=str(application.id), related_type="application",
+            action_url="/candidate/dashboard/history",
+        )
+        notify_org_hr(
+            db, job.hr_user_id, "new_application",
+            "New application received",
+            f"{application.candidate_name or 'A candidate'} applied for {job.title}.",
+            related_id=str(application.id), related_type="application",
+            action_url=f"/hr/dashboard?section=candidates&application={application.id}",
+        )
+        if cv_text.strip():
+            notify_org_hr(
+                db, job.hr_user_id, "ats_screening_completed",
+                "ATS screening completed",
+                f"{application.candidate_name or 'A candidate'}'s resume scored {ai_score} for {job.title}.",
+                related_id=str(application.id), related_type="application",
+                action_url=f"/hr/dashboard?section=candidates&application={application.id}",
+            )
+    except Exception as e:
+        print(f"[Apply] Notification creation failed (non-fatal): {e}")
+
     return {
         "status": "success",
         "message": "Application submitted and screened successfully.",
