@@ -192,6 +192,24 @@ def run_bulk_screening(
         except Exception as e:
             print(f"[Task] Analytics tracking failed: {e}")
 
+    if hr_user_id and job_id:
+        try:
+            from models.database import session_local
+            from core.notifications import notify_org_hr
+            notif_db = session_local()
+            try:
+                notify_org_hr(
+                    notif_db, hr_user_id, "ats_screening_completed",
+                    "ATS screening completed",
+                    f"Bulk screening for \"{job_title or 'Untitled Role'}\" finished — {total} resume(s) screened.",
+                    related_id=job_id, related_type="job",
+                    action_url=f"/hr/dashboard?section=history&job={job_id}",
+                )
+            finally:
+                notif_db.close()
+        except Exception as e:
+            print(f"[Task] Notification creation failed (non-fatal): {e}")
+
     # Don't ship raw resume text back to the frontend in poll responses —
     # it's already persisted to Application.cv_text for later use (e.g. the
     # CrewAI screening committee), the client never needs it directly.
