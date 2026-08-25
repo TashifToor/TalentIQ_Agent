@@ -8,6 +8,7 @@ import tempfile
 import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from utils.email_template import render_email
 from datetime import datetime
 
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
@@ -208,40 +209,36 @@ def send_screening_complete_email(hr_email: str, hr_name: str, job_title: str, t
         name = c.get("candidate_name") or c.get("filename", f"Candidate {i}")
         score = c.get("ai_score", 0)
         verdict = c.get("final_verdict", "")
-        color = "#13c28e" if score >= 75 else "#e2b04a" if score >= 55 else "#ef4444"
+        color = "#0e8f6b" if score >= 75 else "#b8862c" if score >= 55 else "#c0392b"
         top_rows += f"""
         <tr>
-          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.5);font-size:12px">#{i}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.8);font-size:13px;font-weight:600">{name}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;font-size:14px;font-weight:700;color:{color}">{score}</td>
-          <td style="padding:10px 12px;border-bottom:1px solid #1e1e1b;color:rgba(255,255,255,.4);font-size:11px">{verdict}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e5e2d9;color:#8a8678;font-size:12px">#{i}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e5e2d9;color:#1a1815;font-size:13px;font-weight:600">{name}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e5e2d9;font-size:14px;font-weight:700;color:{color}">{score}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e5e2d9;color:#8a8678;font-size:11px">{verdict}</td>
         </tr>"""
 
-    html = f"""
-    <div style="font-family:'Inter',sans-serif;max-width:560px;margin:0 auto;background:#0a0a08;color:#fff;border-radius:12px;overflow:hidden;border:1px solid #1e1e1b">
-      <div style="padding:28px 32px;border-bottom:1px solid #1e1e1b">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#13c28e;margin-bottom:8px">TalentIQ</div>
-        <h1 style="font-size:22px;font-weight:600;margin:0 0 6px">Screening Complete</h1>
-        <p style="color:rgba(255,255,255,.4);font-size:13px;margin:0">{job_title}</p>
-      </div>
-      <div style="padding:24px 32px">
-        <p style="color:rgba(255,255,255,.6);font-size:13px;margin:0 0 20px">Hi {hr_name}, your bulk screening of <strong style="color:#fff">{total} CV(s)</strong> is complete.</p>
-        <table style="width:100%;border-collapse:collapse;background:#111110;border-radius:8px;overflow:hidden;border:1px solid #1e1e1b">
+    results_table = f"""
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;background:#f4f3ef;border-radius:8px;overflow:hidden;border:1px solid #e5e2d9;margin:16px 0;">
           <thead>
-            <tr style="background:#161614">
-              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.3)">#</th>
-              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.3)">Candidate</th>
-              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.3)">Score</th>
-              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.3)">Verdict</th>
+            <tr style="background:#efece3">
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8a8678">#</th>
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8a8678">Candidate</th>
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8a8678">Score</th>
+              <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8a8678">Verdict</th>
             </tr>
           </thead>
           <tbody>{top_rows}</tbody>
-        </table>
-        <div style="margin-top:24px">
-          <a href="http://localhost:3000/hr/dashboard" style="display:inline-block;padding:11px 22px;background:#13c28e;color:#0a0a08;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">View Full Results</a>
-        </div>
-      </div>
-    </div>"""
+        </table>"""
+
+    html = render_email(
+        heading="Screening complete",
+        subheading=job_title,
+        preheader=f"Your bulk screening of {total} CV(s) for {job_title} is complete.",
+        body_html=f"<p style=\"margin:0;\">Hi {hr_name}, your bulk screening of <strong>{total} CV(s)</strong> is complete.</p>{results_table}",
+        cta_label="View Full Results",
+        cta_url=f"{FRONTEND_URL}/hr/dashboard",
+    )
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"TalentIQ — Screening complete: {job_title} ({total} CVs)"
@@ -450,17 +447,14 @@ def send_interview_invite_email(candidate_email: str, candidate_name: str, posti
         print(f"[Email] Skipping invite (not configured). Candidate: {candidate_email}, Posting: {posting_title}")
         return False
 
-    html = f"""
-    <div style="font-family:'Inter',sans-serif;max-width:520px;margin:0 auto;background:#0a0a08;color:#fff;border-radius:12px;overflow:hidden;border:1px solid #1e1e1b">
-      <div style="padding:28px 32px;border-bottom:1px solid #1e1e1b">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#13c28e;margin-bottom:8px">TalentIQ</div>
-        <h1 style="font-size:20px;font-weight:600;margin:0">You're invited to interview</h1>
-      </div>
-      <div style="padding:24px 32px">
-        <p style="color:rgba(255,255,255,.6);font-size:13px;margin:0 0 18px">Hi {candidate_name or 'there'}, you've been invited to complete an AI interview for <strong style="color:#fff">{posting_title}</strong>.</p>
-        <a href="{public_link}" style="display:inline-block;padding:11px 22px;background:#13c28e;color:#0a0a08;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Start Interview</a>
-      </div>
-    </div>"""
+    html = render_email(
+        heading="You're invited to interview",
+        subheading=posting_title,
+        preheader=f"You've been invited to complete an AI interview for {posting_title}.",
+        body_html=f"<p style=\"margin:0;\">Hi {candidate_name or 'there'}, you've been invited to complete an AI interview for <strong>{posting_title}</strong>.</p>",
+        cta_label="Start Interview",
+        cta_url=public_link,
+    )
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"You're invited to interview — {posting_title}"
@@ -579,6 +573,23 @@ def move_to_interview(
     public_link = f"{FRONTEND_URL}/interview/{posting.public_slug}"
     name, _, _ = resolve_application_identity(db, app)
     emailed = send_interview_invite_email(email, name or "", posting.title, public_link)
+
+    try:
+        from utils.email_utils import normalize_email as _norm
+        candidate_user = db.query(User).filter(
+            User.normalized_email == _norm(email), User.role == "candidate"
+        ).first()
+        if candidate_user:
+            from core.notifications import create_notification
+            create_notification(
+                db, candidate_user.id, "interview_invitation",
+                "Interview invitation",
+                f"You've been invited to interview for {posting.title}.",
+                related_id=str(posting.id), related_type="posting",
+                action_url=f"/interview/{posting.public_slug}",
+            )
+    except Exception as e:
+        logger.error(f"[move_to_interview] notification creation failed application={application_id}: {e}")
 
     return {"already_exists": False, "public_link": public_link, "emailed": emailed, "candidate_email": email}
 
@@ -796,8 +807,9 @@ def _send_decision_email(to_email: str, subject: str, body: str) -> bool:
     if not MAIL_PASSWORD or MAIL_PASSWORD == "your_gmail_app_password_here":
         print(f"[Email] Skipping decision notification (not configured). To: {to_email}")
         return False
-    html = "<div style=\"font-family:Inter,sans-serif;white-space:pre-wrap;line-height:1.6;color:#1a1a16;max-width:520px;margin:0 auto\">" + \
+    body_html = "<div style=\"white-space:pre-wrap;margin:0;\">" + \
         body.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") + "</div>"
+    html = render_email(heading=subject, body_html=body_html)
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = MAIL_FROM
@@ -877,6 +889,37 @@ def submit_decision(
             db.refresh(app)
             if app.decision != payload.decision:
                 raise HTTPException(status_code=409, detail=f"Candidate already {app.decision}.")
+        else:
+            # Genuinely just transitioned pending -> accepted/rejected (this
+            # branch only runs once per real decision, thanks to the atomic
+            # claim above) — notify the candidate, but only when the
+            # applicant is a real registered account (resolve_application_identity
+            # already tells us this reliably; bulk-uploaded CVs have no
+            # account to notify, and that's fine, not an error).
+            try:
+                _, _, is_real_account = resolve_application_identity(db, app)
+                if is_real_account:
+                    from core.notifications import create_notification
+                    job = db.query(Job).filter(Job.id == app.job_id).first()
+                    job_title = job.title if job else "the role"
+                    if payload.decision == "accepted":
+                        create_notification(
+                            db, app.candidate_id, "application_accepted",
+                            "Application accepted",
+                            f"Great news — you've been accepted for {job_title}.",
+                            related_id=str(app.id), related_type="application",
+                            action_url="/candidate/dashboard/history",
+                        )
+                    elif payload.decision == "rejected":
+                        create_notification(
+                            db, app.candidate_id, "application_rejected",
+                            "Application update",
+                            f"There's an update on your application for {job_title}.",
+                            related_id=str(app.id), related_type="application",
+                            action_url="/candidate/dashboard/history",
+                        )
+            except Exception as e:
+                logger.error(f"[submit_decision] notification creation failed application={application_id}: {e}")
     db.refresh(app)
 
     scoped_ids = get_org_scoped_user_ids(current_user, db)
