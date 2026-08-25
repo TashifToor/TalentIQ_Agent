@@ -126,6 +126,31 @@ def _finalize(session: InterviewSession, posting: InterviewPosting, transcript: 
             print(f"[Interview] Could not send HR notification email: {e}")
 
     try:
+        from core.notifications import notify_org_hr, create_notification
+        from utils.email_utils import normalize_email as _norm
+        notify_org_hr(
+            db, posting.hr_user_id, "interview_completed",
+            "Interview completed",
+            f"{session.candidate_name or 'A candidate'} completed the {posting.title} interview.",
+            related_id=str(session.id), related_type="interview_session",
+            action_url=f"/hr/dashboard?section=interviews&posting={posting.id}",
+        )
+        if session.candidate_email:
+            candidate_user = db.query(User).filter(
+                User.normalized_email == _norm(session.candidate_email), User.role == "candidate"
+            ).first()
+            if candidate_user:
+                create_notification(
+                    db, candidate_user.id, "interview_completed",
+                    "Interview completed",
+                    f"You've completed your interview for {posting.title}. The team will review your results.",
+                    related_id=str(session.id), related_type="interview_session",
+                    action_url="/candidate/dashboard/history",
+                )
+    except Exception as e:
+        print(f"[Interview] Notification creation failed (non-fatal): {e}")
+
+    try:
         what = "assessment" if posting.mode == "mcq" else "voice interview" if posting.mode == "voice_agent" else "interview"
         send_candidate_completion_email(
             to_email=session.candidate_email,
@@ -604,6 +629,18 @@ def terminate_for_cheating(slug: str, session_id: str, payload: AssessmentFlagRe
                 )
         except Exception as e:
             print(f"[Interview] Could not send HR cheating-flag email: {e}")
+
+    try:
+        from core.notifications import notify_org_hr
+        notify_org_hr(
+            db, posting.hr_user_id, "interview_completed",
+            "Interview flagged — possible cheating",
+            f"{session.candidate_name or 'A candidate'}'s {posting.title} session was flagged for leaving the page.",
+            related_id=str(session.id), related_type="interview_session",
+            action_url=f"/hr/dashboard?section=interviews&posting={posting.id}",
+        )
+    except Exception as e:
+        print(f"[Interview] Notification creation failed (non-fatal): {e}")
 
     return {"status": "terminated", "message": "Your session was ended because you left the page during the proctored assessment. This has been flagged for the hiring team."}
 
