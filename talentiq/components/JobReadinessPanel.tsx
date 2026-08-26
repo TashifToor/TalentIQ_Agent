@@ -45,7 +45,7 @@ const red = '#f87171'
 const yellow = '#e2b04a'
 
 const card: React.CSSProperties = { background: panel, border: `1px solid ${border}`, borderRadius: 14, padding: 22 }
-const sectionHeading: React.CSSProperties = { fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600, color: textMain, marginBottom: 4 }
+const sectionHeading: React.CSSProperties = { fontFamily: "Inter, sans-serif", fontSize: 22, fontWeight: 600, color: textMain, marginBottom: 4 }
 const sectionSub: React.CSSProperties = { fontSize: 13, color: textDim, marginBottom: 16, lineHeight: 1.6 }
 const btn: React.CSSProperties = { fontSize: 13, fontWeight: 700, padding: '10px 18px', borderRadius: 9, border: 'none', background: gold, color: '#0a0a08', cursor: 'pointer', fontFamily: 'inherit' }
 const btnGhost: React.CSSProperties = { fontSize: 12.5, fontWeight: 600, padding: '8px 14px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: textDim, cursor: 'pointer', fontFamily: 'inherit' }
@@ -333,10 +333,10 @@ export default function JobReadinessPanel({
     }
 
     return (
-        <div style={{ maxWidth: 1100, margin: '48px auto 0', padding: '0 16px 60px', fontFamily: 'Syne, sans-serif', color: textMain }}>
+        <div style={{ maxWidth: 1100, margin: '48px auto 0', padding: '0 16px 60px', fontFamily: 'Inter, sans-serif', color: textMain }}>
             <div style={{ marginBottom: 28 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: gold, marginBottom: 8 }}>Job Readiness System</p>
-                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(26px,3vw,36px)', fontWeight: 600, marginBottom: 8 }}>
+                <h2 style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(26px,3vw,36px)', fontWeight: 600, marginBottom: 8 }}>
                     Turn this resume into an offer
                 </h2>
                 <p style={{ fontSize: 13.5, color: textDim, lineHeight: 1.7, maxWidth: 640 }}>
@@ -371,7 +371,7 @@ export default function JobReadinessPanel({
             <div style={{ ...card, marginBottom: 20 }}>
                 <h3 style={sectionHeading}>ATS Resume Optimization</h3>
                 <p style={sectionSub}>Formatting, section completeness, keyword grounding, and bullet quality — scored directly from your actual resume content.</p>
-                {!ats && !atsLoading && <button style={btn} onClick={runAtsScore}>✨ Make My Resume ATS-Friendly</button>}
+                {!ats && !atsLoading && <button style={btn} onClick={runAtsScore}>Make My Resume ATS-Friendly</button>}
                 {atsLoading && <div style={{ fontSize: 13, color: textDim }}>Analyzing…</div>}
                 {atsError && <div style={{ fontSize: 12.5, color: red, marginTop: 8 }}>{atsError}</div>}
 
