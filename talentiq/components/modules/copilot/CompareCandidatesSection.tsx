@@ -92,7 +92,7 @@ export default function CompareCandidatesSection({ data }: { data: CompareData }
                                     <span style={{ fontSize: 10.5, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.name}</span>
                                 </div>
                                 {b.score != null && (
-                                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 700, color: '#13c28e', marginBottom: 4 }}>{b.score}</div>
+                                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: 20, fontWeight: 700, color: '#13c28e', marginBottom: 4 }}>{b.score}</div>
                                 )}
                                 {b.verdict && <div style={{ marginBottom: 6 }}><GradientBadge label={b.verdict} tone="gold" /></div>}
                                 {b.topStrength && (
