@@ -36,7 +36,7 @@ const inputStyle: React.CSSProperties = {
   marginBottom: 10, boxSizing: 'border-box',
 }
 const labelStyle: React.CSSProperties = { fontSize: 11, color: textDim, marginBottom: 4, display: 'block', fontWeight: 500 }
-const sectionTitle: React.CSSProperties = { fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 600, color: textMain, marginBottom: 14 }
+const sectionTitle: React.CSSProperties = { fontFamily: "Inter, sans-serif", fontSize: 20, fontWeight: 600, color: textMain, marginBottom: 14 }
 
 // Mirrors core/cv_pdf_renderer.py style configs — used for gallery cards + live preview
 const TEMPLATES: Record<string, { label: string; font: string; accent: string; atsSafe: boolean; layout: 'single' | 'sidebar' | 'decorative' }> = {
@@ -158,7 +158,7 @@ export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: C
   const tCfg = TEMPLATES[template]
 
   return (
-    <div style={{ maxWidth: step === 2 ? 1100 : 720, margin: '0 auto', padding: '24px 16px', fontFamily: 'Syne, sans-serif', color: textMain }}>
+    <div style={{ maxWidth: step === 2 ? 1100 : 720, margin: '0 auto', padding: '24px 16px', fontFamily: 'Inter, sans-serif', color: textMain }}>
 
       {/* Progress */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
