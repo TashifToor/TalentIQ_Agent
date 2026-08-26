@@ -327,6 +327,27 @@ export const api = {
       body: JSON.stringify({ text, instruction, job_description: jobDescription || undefined }),
     }),
 
+  // --- Notifications ---
+  getNotifications: (params?: { unread_only?: boolean; limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.unread_only) qs.set("unread_only", "true");
+    if (params?.limit) qs.set("limit", String(params.limit));
+    if (params?.offset) qs.set("offset", String(params.offset));
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return apiFetch(`/notifications${suffix}`);
+  },
+
+  getUnreadNotificationCount: () => apiFetch("/notifications/unread-count"),
+
+  markNotificationRead: (id: string) =>
+    apiFetch(`/notifications/${id}/read`, { method: "PATCH" }),
+
+  markAllNotificationsRead: () =>
+    apiFetch("/notifications/read-all", { method: "PATCH" }),
+
+  deleteNotification: (id: string) =>
+    apiFetch(`/notifications/${id}`, { method: "DELETE" }),
+
   // --- AI Chatbot Interviewer — HR side (authenticated) ---
   createInterviewPosting: (payload: {
     title: string; company?: string; job_description: string; extra_questions: string[]; interviewer_name?: string;
