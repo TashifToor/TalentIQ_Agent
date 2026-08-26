@@ -8,8 +8,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-syne)', 'system-ui', 'sans-serif'],
-        serif: ['var(--font-cormorant)', 'Georgia', 'serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        serif: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
         gold: { DEFAULT: '#c5931f', 2: '#e2b04a', 3: '#f5d87a', light: '#fdf3db' },
