@@ -183,7 +183,7 @@ export default function AIResumeAssistant({
         <>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
                 <div>
-                    <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 600, color: textMain }}>✨ AI Resume Assistant</div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: 18, fontWeight: 600, color: textMain }}>AI Resume Assistant</div>
                     <div style={{ fontSize: 11, color: textDim, marginTop: 1 }}>Improve your resume with AI</div>
                 </div>
                 <button onClick={() => setOpen(false)} className="ai-assistant-close" style={{ display: 'none', background: 'none', border: 'none', color: textDim, cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 4 }}>✕</button>
@@ -201,11 +201,11 @@ export default function AIResumeAssistant({
 
             {/* Quick actions */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                <button style={btnGhost} onClick={startSummary} disabled={!cv.summary.trim()}>📝 Improve my summary</button>
-                <button style={btnGhost} onClick={() => startBulletPicker('strengthen')} disabled={!hasBullets}>💪 Strengthen this experience</button>
-                <button style={btnGhost} onClick={() => runGaps('keywords')}>🔑 Add relevant keywords</button>
-                <button style={btnGhost} onClick={() => startBulletPicker('bullet')} disabled={!hasBullets}>✏️ Improve this bullet point</button>
-                <button style={btnGhost} onClick={() => runGaps('gaps')}>🎯 What am I missing for this job?</button>
+                <button style={btnGhost} onClick={startSummary} disabled={!cv.summary.trim()}>Improve my summary</button>
+                <button style={btnGhost} onClick={() => startBulletPicker('strengthen')} disabled={!hasBullets}>Strengthen this experience</button>
+                <button style={btnGhost} onClick={() => runGaps('keywords')}>Add relevant keywords</button>
+                <button style={btnGhost} onClick={() => startBulletPicker('bullet')} disabled={!hasBullets}>Improve this bullet point</button>
+                <button style={btnGhost} onClick={() => runGaps('gaps')}>What am I missing for this job?</button>
             </div>
 
             {/* Bullet picker — shared by "strengthen this experience" and "improve this bullet point" (same real capability, two entry points) */}
@@ -284,7 +284,7 @@ export default function AIResumeAssistant({
                 background: gold, color: '#0a0a08', border: 'none', borderRadius: 100, padding: '12px 18px',
                 fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,.4)',
                 alignItems: 'center', gap: 6,
-            }}>✨ AI Assistant</button>
+            }}>AI Assistant</button>
 
             <div className={`ai-assistant-backdrop${open ? ' open' : ''}`} onClick={() => setOpen(false)} />
 
