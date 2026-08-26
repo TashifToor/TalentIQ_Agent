@@ -70,7 +70,7 @@ export default function NotificationsPage({ role }: { role: 'hr' | 'candidate' }
     return (
         <div style={{ padding: role === 'hr' ? 28 : '28px 28px 60px', maxWidth: 780, margin: role === 'hr' ? 0 : '0 auto' }}>
             <div style={{ marginBottom: 20 }}>
-                <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 600, color: textMain }}>Notifications</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: 24, fontWeight: 600, color: textMain }}>Notifications</div>
                 <div style={{ fontSize: 12.5, color: textDim, marginTop: 2 }}>Everything that's happened, in one place.</div>
             </div>
 
