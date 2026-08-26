@@ -7,6 +7,9 @@ import CopilotPanel from '@/components/modules/copilot/CopilotPanel'
 import TalentIntelligencePanel from '@/components/modules/talent-intelligence/TalentIntelligencePanel'
 import TalentPoolPanel from '@/components/modules/talent-intelligence/TalentPoolPanel'
 import AIFeedbackReport from '@/components/modules/reports/AIFeedbackReport'
+import NotificationBell from '@/components/NotificationBell'
+import NotificationsPage from '@/components/NotificationsPage'
+import { useBrowserNotificationPermission } from '@/lib/useBrowserNotificationPermission'
 
 type Candidate = {
   filename: string
@@ -28,7 +31,7 @@ type Candidate = {
 }
 
 type HistoryEntry = Candidate & { jobTitle: string; screenedAt: string }
-type Section = 'dashboard' | 'candidates' | 'bulk' | 'talent-pool' | 'shortlist' | 'chatbot' | 'history' | 'open-roles' | 'settings' | 'profile'
+type Section = 'dashboard' | 'candidates' | 'bulk' | 'talent-pool' | 'shortlist' | 'chatbot' | 'history' | 'open-roles' | 'settings' | 'profile' | 'notifications'
 
 const STEP_ICONS = ['📋', '💪', '⚠️', '✅']
 const STEP_COLORS_C = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
@@ -124,7 +127,17 @@ function saveHistory(h: HistoryEntry[]) {
 }
 
 export default function HRDashboard() {
+  useBrowserNotificationPermission()
   const [section, setSection] = useState<Section>('dashboard')
+
+  // Deep-link support so notification click-throughs (?section=candidates
+  // etc.) actually land somewhere real instead of always the default tab.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const s = new URLSearchParams(window.location.search).get('section') as Section | null
+    const valid: Section[] = ['dashboard', 'candidates', 'bulk', 'talent-pool', 'shortlist', 'chatbot', 'history', 'open-roles', 'settings', 'profile', 'notifications']
+    if (s && valid.includes(s)) setSection(s)
+  }, [])
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [userName, setUserName] = useState('HR Manager')
   const [userEmail, setUserEmail] = useState('')
@@ -1612,6 +1625,7 @@ export default function HRDashboard() {
       case 'open-roles': return renderInterviewer()
       case 'settings': return renderSettings()
       case 'profile': return renderProfile()
+      case 'notifications': return <NotificationsPage role="hr" />
       default: return renderDashboard()
     }
   }
@@ -1625,7 +1639,8 @@ export default function HRDashboard() {
         <button onClick={() => setMobileNavOpen(true)} aria-label="Open menu" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.12)', borderRadius: 8, padding: 8, cursor: 'pointer', display: 'flex' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
-        <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600, color: 'rgba(255,255,255,.9)' }}>Talent <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#13c28e', padding: '2px 7px', borderRadius: 100, marginLeft: 4, border: '1px solid rgba(19,194,142,.18)' }}>HR</span></span>
+        <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, fontWeight: 600, color: 'rgba(255,255,255,.9)', flex: 1 }}>Talent <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#13c28e', padding: '2px 7px', borderRadius: 100, marginLeft: 4, border: '1px solid rgba(19,194,142,.18)' }}>HR</span></span>
+        <NotificationBell role="hr" />
       </div>
 
       {/* Backdrop — mobile/tablet drawer only */}
@@ -1675,8 +1690,13 @@ export default function HRDashboard() {
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="app-main" style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto', background: '#0a0a09', minWidth: 0 }}>
-        {renderSection()}
+      <div className="app-main" style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto', background: '#0a0a09', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div className="hr-desktop-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '14px 28px 0' }}>
+          <NotificationBell role="hr" />
+        </div>
+        <div style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto' }}>
+          {renderSection()}
+        </div>
       </div>
     </div>
   )
