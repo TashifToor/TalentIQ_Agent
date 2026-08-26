@@ -8,7 +8,7 @@ import tempfile
 import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from utils.email_template import render_email
+# from utils.email_template import render_email
 from datetime import datetime
 
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
