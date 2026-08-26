@@ -22,7 +22,7 @@ export default function ModeSelectionScreen({
       <div style={{ flex: 1 }}>
         <div style={{ marginBottom: 28, textAlign: 'center' }}>
           <GradientBadge label={eyebrow} tone="gold" icon="✦" />
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 32, fontWeight: 600, color: '#fff', margin: '14px 0 6px' }}>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: 32, fontWeight: 600, color: '#fff', margin: '14px 0 6px' }}>
             {heading}
           </div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)' }}>{subheading}</div>
