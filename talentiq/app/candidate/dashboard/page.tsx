@@ -160,9 +160,9 @@ export default function CandidateDashboard() {
   const S = { sidebar: { width: 220, flexShrink: 0, background: '#111110', borderRight: '1px solid rgba(255,255,255,.07)', display: 'flex', flexDirection: 'column' as const } }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0c0c0a', fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.88)' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0c0c0a', fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.88)' }}>
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Syne:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -190,7 +190,7 @@ export default function CandidateDashboard() {
 
       {/* SIDEBAR */}
       <div style={S.sidebar}>
-        <Link href="/" style={{ padding: '22px 18px', borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', gap: 10, fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,.9)', textDecoration: 'none' }}>
+        <Link href="/" style={{ padding: '22px 18px', borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', gap: 10, fontFamily: "Inter, sans-serif", fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,.9)', textDecoration: 'none' }}>
           <div style={{ width: 28, height: 28, background: '#e2b04a', borderRadius: 7, display: 'grid', placeItems: 'center' }}><svg width="12" height="12" viewBox="0 0 16 16" fill="#0a0a09"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg></div>
           TalentIQ
         </Link>
@@ -198,7 +198,7 @@ export default function CandidateDashboard() {
         {NAV.map(n => {
           const active = activeNav === n.key
           return (
-            <Link key={n.key} href={n.href} onClick={() => handleNavClick(n)} className="nav-btn" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, color: active ? '#e2b04a' : 'rgba(255,255,255,.45)', cursor: 'pointer', margin: '0 6px 2px', border: active ? '1px solid rgba(226,176,74,.15)' : '1px solid transparent', background: active ? 'rgba(226,176,74,.1)' : 'transparent', fontFamily: 'Syne, sans-serif', width: 'calc(100% - 12px)', textAlign: 'left', textDecoration: 'none' }}>
+            <Link key={n.key} href={n.href} onClick={() => handleNavClick(n)} className="nav-btn" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, color: active ? '#e2b04a' : 'rgba(255,255,255,.45)', cursor: 'pointer', margin: '0 6px 2px', border: active ? '1px solid rgba(226,176,74,.15)' : '1px solid transparent', background: active ? 'rgba(226,176,74,.1)' : 'transparent', fontFamily: 'Inter, sans-serif', width: 'calc(100% - 12px)', textAlign: 'left', textDecoration: 'none' }}>
               <span style={{ display: 'flex' }}>{ICONS[n.key]}</span>{n.label}
             </Link>
           )
@@ -230,13 +230,13 @@ export default function CandidateDashboard() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Topbar */}
         <div style={{ height: 60, borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', padding: '0 28px', justifyContent: 'space-between', flexShrink: 0 }}>
-          <div><div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600 }}>My Dashboard</div><div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginTop: 1 }}>Welcome back — {3 - scansLeft} scans used</div></div>
+          <div><div style={{ fontFamily: "Inter, sans-serif", fontSize: 22, fontWeight: 600 }}>My Dashboard</div><div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginTop: 1 }}>Welcome back — {3 - scansLeft} scans used</div></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <NotificationBell role="candidate" />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#161614', border: '1px solid rgba(255,255,255,.07)', borderRadius: 8, padding: '6px 12px', fontSize: 12, color: 'rgba(255,255,255,.5)' }}>
               <strong style={{ color: '#e2b04a' }}>{scansLeft}</strong>&nbsp;free scan{scansLeft === 1 ? '' : 's'} remaining
             </div>
-            <button onClick={() => setShowUpgrade(true)} style={{ fontSize: 12, fontWeight: 700, background: '#e2b04a', color: '#0a0a09', padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif', letterSpacing: '.03em' }}>
+            <button onClick={() => setShowUpgrade(true)} style={{ fontSize: 12, fontWeight: 700, background: '#e2b04a', color: '#0a0a09', padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif', letterSpacing: '.03em' }}>
               Upgrade to Pro — $9/mo
             </button>
           </div>
@@ -280,8 +280,8 @@ export default function CandidateDashboard() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.3)', letterSpacing: '.06em', textTransform: 'uppercase' }}>Job Description</div>
-                <textarea value={jd} onChange={e => setJd(e.target.value)} placeholder={"Paste the job description here…\n\ne.g. 'We're looking for a Senior React Developer with 4+ years…'"} style={{ flex: 1, background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, padding: 14, fontSize: 13, fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.8)', outline: 'none', resize: 'none', lineHeight: 1.6, minHeight: 100 }} />
-                <button onClick={handleScan} disabled={scanning || uploading} style={{ width: '100%', background: scanning ? 'rgba(226,176,74,.15)' : '#e2b04a', color: scanning ? '#e2b04a' : '#0a0a09', fontSize: 14, fontWeight: 700, fontFamily: 'Syne, sans-serif', padding: 13, borderRadius: 10, border: scanning ? '1px solid rgba(226,176,74,.3)' : 'none', cursor: scanning ? 'default' : 'pointer', letterSpacing: '.04em' }}>
+                <textarea value={jd} onChange={e => setJd(e.target.value)} placeholder={"Paste the job description here…\n\ne.g. 'We're looking for a Senior React Developer with 4+ years…'"} style={{ flex: 1, background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, padding: 14, fontSize: 13, fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.8)', outline: 'none', resize: 'none', lineHeight: 1.6, minHeight: 100 }} />
+                <button onClick={handleScan} disabled={scanning || uploading} style={{ width: '100%', background: scanning ? 'rgba(226,176,74,.15)' : '#e2b04a', color: scanning ? '#e2b04a' : '#0a0a09', fontSize: 14, fontWeight: 700, fontFamily: 'Inter, sans-serif', padding: 13, borderRadius: 10, border: scanning ? '1px solid rgba(226,176,74,.3)' : 'none', cursor: scanning ? 'default' : 'pointer', letterSpacing: '.04em' }}>
                   {scanning ? SCAN_STEPS[scanStep] || 'Analyzing...' : result ? 'Analysis Complete — Scan Again' : 'Analyze Match'}
                 </button>
                 {scanning && (
@@ -290,7 +290,7 @@ export default function CandidateDashboard() {
                       {SCAN_STEPS.map((step, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: i <= scanStep ? 1 : 0.2, transition: 'opacity 0.4s ease', fontSize: 11, color: i === scanStep ? '#e2b04a' : i < scanStep ? '#13c28e' : 'rgba(255,255,255,.3)' }}>
                           <div style={{ width: 5, height: 5, borderRadius: '50%', background: i === scanStep ? '#e2b04a' : i < scanStep ? '#13c28e' : 'rgba(255,255,255,.15)', flexShrink: 0, transition: 'background 0.4s' }} />
-                          <span style={{ fontFamily: 'Syne, sans-serif' }}>{step}</span>
+                          <span style={{ fontFamily: 'Inter, sans-serif' }}>{step}</span>
                           {i < scanStep && <span style={{ marginLeft: 'auto', color: '#13c28e', fontSize: 10 }}>done</span>}
                           {i === scanStep && <span style={{ marginLeft: 'auto', fontSize: 10, animation: 'pulse 1s infinite' }}>...</span>}
                         </div>
@@ -317,7 +317,7 @@ export default function CandidateDashboard() {
                     <circle className="ring-anim" cx="60" cy="60" r="54" fill="none" stroke="url(#rg)" strokeWidth="10" strokeLinecap="round" strokeDasharray="339" strokeDashoffset={339 - (339 * (result.metrics?.candidate_score ?? 0)) / 100} />
                   </svg>
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 38, fontWeight: 600, lineHeight: 1 }}>{result.metrics?.candidate_score ?? 0}</span>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontSize: 38, fontWeight: 600, lineHeight: 1 }}>{result.metrics?.candidate_score ?? 0}</span>
                     <small style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>/ 100</small>
                   </div>
                 </div>
@@ -340,7 +340,7 @@ export default function CandidateDashboard() {
               <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24 }}>
                 <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid rgba(255,255,255,.07)', marginBottom: 20 }}>
                   {['skills', 'gaps', 'recos'].map(t => (
-                    <button key={t} onClick={() => setActiveTab(t)} className="tab-btn" style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, color: activeTab === t ? '#e2b04a' : 'rgba(255,255,255,.3)', cursor: 'pointer', borderBottom: `2px solid ${activeTab === t ? '#e2b04a' : 'transparent'}`, marginBottom: -1, border: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none', background: 'none', fontFamily: 'Syne, sans-serif' }}>
+                    <button key={t} onClick={() => setActiveTab(t)} className="tab-btn" style={{ padding: '8px 16px', fontSize: 13, fontWeight: 500, color: activeTab === t ? '#e2b04a' : 'rgba(255,255,255,.3)', cursor: 'pointer', borderBottom: `2px solid ${activeTab === t ? '#e2b04a' : 'transparent'}`, marginBottom: -1, border: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none', background: 'none', fontFamily: 'Inter, sans-serif' }}>
                       {t === 'skills' ? 'Skills' : t === 'gaps' ? 'Skill Gaps' : 'Suggestions'}
                     </button>
                   ))}
@@ -400,7 +400,7 @@ export default function CandidateDashboard() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 600 }}>Recent Scans</div>
               {history.length > 0 && (
-                <button onClick={() => setHistory([])} style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>Clear</button>
+                <button onClick={() => setHistory([])} style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>Clear</button>
               )}
             </div>
             {history.length === 0 ? (
@@ -409,7 +409,7 @@ export default function CandidateDashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {history.map((h, i) => (
                   <div key={i} className="history-row fade-up" style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#161614', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, padding: '14px 18px', cursor: 'pointer', animationDelay: `${i * 50}ms` }}>
-                    <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 600, color: h.color, width: 40, textAlign: 'center' }}>{h.score}</div>
+                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: 24, fontWeight: 600, color: h.color, width: 40, textAlign: 'center' }}>{h.score}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{h.role}</div>
                       <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>{h.skills}</div>
