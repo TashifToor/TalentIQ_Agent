@@ -9,6 +9,7 @@ import TalentPoolPanel from '@/components/modules/talent-intelligence/TalentPool
 import AIFeedbackReport from '@/components/modules/reports/AIFeedbackReport'
 import NotificationBell from '@/components/NotificationBell'
 import NotificationsPage from '@/components/NotificationsPage'
+import ActivityTimeline from '@/components/ActivityTimeline'
 import { useBrowserNotificationPermission } from '@/lib/useBrowserNotificationPermission'
 
 type Candidate = {
@@ -31,7 +32,7 @@ type Candidate = {
 }
 
 type HistoryEntry = Candidate & { jobTitle: string; screenedAt: string }
-type Section = 'dashboard' | 'candidates' | 'bulk' | 'talent-pool' | 'shortlist' | 'chatbot' | 'history' | 'open-roles' | 'settings' | 'profile' | 'notifications'
+type Section = 'dashboard' | 'candidates' | 'bulk' | 'talent-pool' | 'shortlist' | 'chatbot' | 'history' | 'open-roles' | 'settings' | 'profile' | 'notifications' | 'activity'
 
 const STEP_ICONS = ['📋', '💪', '⚠️', '✅']
 const STEP_COLORS_C = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
@@ -135,7 +136,7 @@ export default function HRDashboard() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const s = new URLSearchParams(window.location.search).get('section') as Section | null
-    const valid: Section[] = ['dashboard', 'candidates', 'bulk', 'talent-pool', 'shortlist', 'chatbot', 'history', 'open-roles', 'settings', 'profile', 'notifications']
+    const valid: Section[] = ['dashboard', 'candidates', 'bulk', 'talent-pool', 'shortlist', 'chatbot', 'history', 'open-roles', 'settings', 'profile', 'notifications', 'activity']
     if (s && valid.includes(s)) setSection(s)
   }, [])
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -573,6 +574,7 @@ export default function HRDashboard() {
     { id: 'shortlist', icon: '', label: 'Shortlist', badge: shortlistedList.length || undefined },
     { id: 'chatbot', icon: '', label: 'Policy Chatbot' },
     { id: 'history', icon: '', label: 'History', badge: history.length || undefined },
+    { id: 'activity', icon: '', label: 'Activity' },
     { id: 'settings', icon: '', label: 'Settings' },
     { id: 'profile', icon: '', label: 'Profile' },
   ] as const
@@ -1626,6 +1628,7 @@ export default function HRDashboard() {
       case 'settings': return renderSettings()
       case 'profile': return renderProfile()
       case 'notifications': return <NotificationsPage role="hr" />
+      case 'activity': return <ActivityTimeline role="hr" />
       default: return renderDashboard()
     }
   }
