@@ -108,7 +108,7 @@ export function StepHeader({
         </div>
         <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,.3)', fontWeight: 600 }}>STEP {step} OF {totalSteps}</span>
       </div>
-      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, color: '#fff', marginBottom: subtitle ? 4 : 0 }}>{title}</div>
+      <div style={{ fontFamily: "Inter, sans-serif", fontSize: 26, fontWeight: 600, color: '#fff', marginBottom: subtitle ? 4 : 0 }}>{title}</div>
       {subtitle && <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.35)' }}>{subtitle}</div>}
     </div>
   )
@@ -121,7 +121,7 @@ export function MetricCard({ label, value, icon, accent = '#e2b04a' }: { label: 
   return (
     <GlassCard style={{ padding: '16px 18px', textAlign: 'center' }}>
       {icon && <div style={{ fontSize: 18, marginBottom: 6 }}>{icon}</div>}
-      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 700, color: accent, marginBottom: 3 }}>{value}</div>
+      <div style={{ fontFamily: "Inter, sans-serif", fontSize: 24, fontWeight: 700, color: accent, marginBottom: 3 }}>{value}</div>
       <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>{label}</div>
     </GlassCard>
   )
@@ -274,7 +274,7 @@ export function ProgressRing({ value, size = 72, label, accent = '#e2b04a' }: { 
           strokeDasharray={circumference} strokeDashoffset={offset} style={{ transition: 'stroke-dashoffset .8s var(--ease)' }} />
       </svg>
       <div style={{ position: 'absolute', textAlign: 'center' }}>
-        <div style={{ fontSize: size / 3.2, fontWeight: 700, color: '#fff', fontFamily: "'Cormorant Garamond',serif" }}>{Math.round(value)}</div>
+        <div style={{ fontSize: size / 3.2, fontWeight: 700, color: '#fff', fontFamily: "Inter, sans-serif" }}>{Math.round(value)}</div>
         {label && <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,.35)', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>}
       </div>
     </div>
