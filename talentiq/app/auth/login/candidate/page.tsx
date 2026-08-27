@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import SocialAuthRow from '@/components/SocialAuthRow'
 
 /* Loads Inter — safe to keep even if already loaded globally */
 function FontImports() {
@@ -412,6 +413,7 @@ export default function CandidateLogin() {
                 {loading ? 'Signing in…' : 'Sign in'}
               </button>
               <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{to{transform:rotate(360deg)}}` }} />
+              <SocialAuthRow />
             </div>
 
             {/* Forgot Password Modal */}
