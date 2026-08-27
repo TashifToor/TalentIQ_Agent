@@ -86,16 +86,16 @@ export default function CandidateSettings() {
     borderRadius: '8px 8px 0 0',
     padding: '10px 12px',
     fontSize: 13,
-    fontFamily: 'Syne, sans-serif',
+    fontFamily: 'Inter, sans-serif',
     color: 'rgba(255,255,255,.85)',
     outline: 'none',
     width: '100%',
   } as React.CSSProperties
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.88)' }}>
+    <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.88)' }}>
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Syne:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-up { animation: fadeUp .4s ease both; }
         .settings-input:focus { border-bottom-color: #e2b04a !important; }
@@ -111,7 +111,7 @@ export default function CandidateSettings() {
           Back to Dashboard
         </Link>
 
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 600, marginBottom: 4 }}>Settings</div>
+        <div style={{ fontFamily: "Inter, sans-serif", fontSize: 28, fontWeight: 600, marginBottom: 4 }}>Settings</div>
         <div style={{ fontSize: 13, color: 'rgba(255,255,255,.3)', marginBottom: 28 }}>Manage your account preferences</div>
 
         {/* Profile Section */}
@@ -127,7 +127,7 @@ export default function CandidateSettings() {
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,.25)', marginBottom: 14, marginTop: -8 }}>Email address cannot be changed.</div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button className="save-btn" onClick={handleSaveName} disabled={savingName} style={{ background: '#e2b04a', color: '#0a0a09', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
+            <button className="save-btn" onClick={handleSaveName} disabled={savingName} style={{ background: '#e2b04a', color: '#0a0a09', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
               {savingName ? 'Saving…' : 'Save Changes'}
             </button>
             {nameMsg && <span style={{ fontSize: 12, color: nameMsg === 'Saved.' ? '#13c28e' : '#ef4444' }}>{nameMsg}</span>}
@@ -148,7 +148,7 @@ export default function CandidateSettings() {
           {pwError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12 }}>{pwError}</div>}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button className="save-btn" onClick={handleChangePassword} disabled={savingPw} style={{ background: '#e2b04a', color: '#0a0a09', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
+            <button className="save-btn" onClick={handleChangePassword} disabled={savingPw} style={{ background: '#e2b04a', color: '#0a0a09', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
               {savingPw ? 'Updating…' : 'Update Password'}
             </button>
             {pwMsg && <span style={{ fontSize: 12, color: '#13c28e' }}>{pwMsg}</span>}
@@ -161,7 +161,7 @@ export default function CandidateSettings() {
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Download My Data</div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Get a copy of everything TalentIQ stores about your account — scan history, applications, and profile info.</div>
           </div>
-          <button onClick={async () => { try { await api.exportMyData() } catch {} }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.15)', color: 'rgba(255,255,255,.8)', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Syne, sans-serif', whiteSpace: 'nowrap' }}>
+          <button onClick={async () => { try { await api.exportMyData() } catch {} }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.15)', color: 'rgba(255,255,255,.8)', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
             Download JSON
           </button>
         </div>
@@ -172,7 +172,7 @@ export default function CandidateSettings() {
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Sign Out</div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>End your current session on this device</div>
           </div>
-          <button onClick={handleLogout} style={{ background: 'none', border: '1px solid rgba(255,255,255,.15)', color: 'rgba(255,255,255,.7)', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
+          <button onClick={handleLogout} style={{ background: 'none', border: '1px solid rgba(255,255,255,.15)', color: 'rgba(255,255,255,.7)', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
             Log Out
           </button>
         </div>
@@ -183,7 +183,7 @@ export default function CandidateSettings() {
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', marginBottom: 16 }}>This permanently deletes your account, CV data, and scan history. This cannot be undone.</div>
 
           {!showDeleteConfirm ? (
-            <button className="danger-link" onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Syne, sans-serif', textDecoration: 'underline' }}>
+            <button className="danger-link" onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', textDecoration: 'underline' }}>
               Delete my account
             </button>
           ) : (
@@ -197,10 +197,10 @@ export default function CandidateSettings() {
               />
               {deleteError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 10 }}>{deleteError}</div>}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button onClick={handleDelete} disabled={deleting} style={{ background: '#ef4444', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
+                <button onClick={handleDelete} disabled={deleting} style={{ background: '#ef4444', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
                   {deleting ? 'Deleting…' : 'Yes, delete permanently'}
                 </button>
-                <button onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); setDeleteError('') }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 13, cursor: 'pointer', fontFamily: 'Syne, sans-serif' }}>
+                <button onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); setDeleteError('') }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 13, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
                   Cancel
                 </button>
               </div>
