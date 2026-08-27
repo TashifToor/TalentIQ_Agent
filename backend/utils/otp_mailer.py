@@ -3,6 +3,7 @@ import random
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from utils.email_template import render_email, TEXT_MUTED, TEXT_HEADING, GOLD, BORDER
 
 MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
 MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
@@ -29,27 +30,14 @@ def send_invite_email(to_email: str, org_name: str, inviter_name: str, invite_li
     msg["From"] = MAIL_FROM
     msg["To"] = to_email
 
-    html = f"""
-    <html>
-    <head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="margin:0;padding:0;background:#0a0a08;">
-    <div style="font-family:sans-serif;max-width:480px;width:100%;margin:0 auto;
-                padding:32px 20px;background:#0a0a08;color:#fff;border-radius:12px;
-                box-sizing:border-box;">
-      <div style="font-size:22px;font-weight:700;margin-bottom:8px;">TalentIQ</div>
-      <p style="color:rgba(255,255,255,.6);font-size:14px;">
-        <strong>{inviter_name}</strong> invited you to join <strong>{org_name}</strong>'s hiring team on TalentIQ.
-      </p>
-      <div style="text-align:center;margin:24px 0;">
-        <a href="{invite_link}" style="background:#e2b04a;color:#0a0a08;padding:12px 28px;border-radius:8px;
-           text-decoration:none;font-weight:700;font-size:14px;display:inline-block;">Accept Invite</a>
-      </div>
-      <p style="color:rgba(255,255,255,.4);font-size:12px;">This invite link expires in 7 days.</p>
-      <p style="color:rgba(255,255,255,.2);font-size:11px;margin-top:24px;">If you weren't expecting this, you can ignore this email.</p>
-    </div>
-    </body>
-    </html>
-    """
+    html = render_email(
+        heading=f"You've been invited to join {org_name}",
+        preheader=f"{inviter_name} invited you to join {org_name}'s hiring team on TalentIQ.",
+        body_html=f"<p style=\"margin:0;\"><strong>{inviter_name}</strong> invited you to join <strong>{org_name}</strong>'s hiring team on TalentIQ.</p>",
+        cta_label="Accept Invite",
+        cta_url=invite_link,
+        footer_note="This invite link expires in 7 days. If you weren't expecting this, you can ignore this email.",
+    )
     msg.attach(MIMEText(html, "html"))
 
     with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
@@ -79,34 +67,24 @@ def send_otp_email(to_email: str, otp: str, user_name: str, purpose: str = "rese
     msg["To"]      = to_email
 
     digit_cells = "".join(
-        f'''<td style="width:44px;height:52px;background:#1e1e1b;border:1px solid rgba(255,255,255,.15);
+        f'''<td style="width:44px;height:52px;background:#f4f3ef;border:1px solid {BORDER};
                 border-radius:8px;text-align:center;vertical-align:middle;
-                font-family:monospace;font-size:22px;font-weight:700;color:#e2b04a;">{d}</td>
+                font-family:monospace;font-size:22px;font-weight:700;color:{TEXT_HEADING};">{d}</td>
            <td style="width:8px;"></td>'''
         for d in otp
     )
 
-    html = f"""
-    <html>
-    <head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="margin:0;padding:0;background:#0a0a08;">
-    <div style="font-family:sans-serif;max-width:480px;width:100%;margin:0 auto;
-                padding:32px 20px;background:#0a0a08;color:#fff;border-radius:12px;
-                box-sizing:border-box;">
-      <div style="font-size:22px;font-weight:700;margin-bottom:8px;">TalentIQ</div>
-      <p style="color:rgba(255,255,255,.6);font-size:14px;">Hi {user_name},</p>
-      <p style="color:rgba(255,255,255,.6);font-size:14px;">{intro}</p>
+    digit_table = (
+        f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0;"><tr>{digit_cells}</tr></table>'
+    )
 
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px auto;">
-        <tr>{digit_cells}</tr>
-      </table>
-
-      <p style="color:rgba(255,255,255,.4);font-size:13px;text-align:center;">This code expires in {OTP_EXPIRY_MINUTES} minutes.</p>
-      <p style="color:rgba(255,255,255,.2);font-size:11px;margin-top:24px;">If you did not request this, ignore this email.</p>
-    </div>
-    </body>
-    </html>
-    """
+    html = render_email(
+        heading=subject.replace("TalentIQ — ", ""),
+        preheader=intro,
+        body_html=f"<p style=\"margin:0 0 4px;\">Hi {user_name},</p><p style=\"margin:0 0 4px;\">{intro}</p>{digit_table}"
+                  f"<p style=\"margin:0;font-size:13px;color:{TEXT_MUTED};\">This code expires in {OTP_EXPIRY_MINUTES} minutes.</p>",
+        footer_note="If you did not request this, you can safely ignore this email.",
+    )
 
     msg.attach(MIMEText(html, "html"))
 
@@ -128,39 +106,31 @@ def send_interview_completed_email(to_email: str, hr_name: str, candidate_name: 
 
     score_display = str(score) if score is not None else "—"
     verdict_display = verdict or "Pending review"
-    verdict_color = "#13c28e" if verdict in ("Strong Hire", "Proceed to Human Interview") else ("#e2b04a" if verdict == "Borderline" else "#ef4444")
+    verdict_color = "#0e8f6b" if verdict in ("Strong Hire", "Proceed to Human Interview") else ("#b8862c" if verdict == "Borderline" else "#c0392b")
 
-    html = f"""
-    <html>
-    <head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="margin:0;padding:0;background:#0a0a08;">
-    <div style="font-family:sans-serif;max-width:480px;width:100%;margin:0 auto;
-                padding:32px 20px;background:#0a0a08;color:#fff;border-radius:12px;
-                box-sizing:border-box;">
-      <div style="font-size:22px;font-weight:700;margin-bottom:8px;">TalentIQ</div>
-      <p style="color:rgba(255,255,255,.6);font-size:14px;">Hi {hr_name},</p>
-      <p style="color:rgba(255,255,255,.6);font-size:14px;">
-        <strong>{candidate_name}</strong> ({candidate_email}) just finished the AI screening interview for <strong>{role_title}</strong>.
-      </p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:20px 0;background:#161614;border-radius:10px;">
+    score_card = f"""
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:16px 0;background:#f4f3ef;border-radius:10px;border:1px solid {BORDER};">
         <tr>
           <td style="padding:16px 20px;">
-            <div style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Score</div>
-            <div style="font-size:28px;font-weight:700;color:#e2b04a;">{score_display}</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 4px;">Verdict</div>
+            <div style="font-size:11px;color:{TEXT_MUTED};text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Score</div>
+            <div style="font-size:28px;font-weight:700;color:{GOLD};">{score_display}</div>
+            <div style="font-size:11px;color:{TEXT_MUTED};text-transform:uppercase;letter-spacing:.05em;margin:12px 0 4px;">Verdict</div>
             <div style="font-size:14px;font-weight:700;color:{verdict_color};">{verdict_display}</div>
           </td>
         </tr>
-      </table>
-      <div style="text-align:center;margin:24px 0;">
-        <a href="{FRONTEND_URL}/hr/dashboard" style="background:#e2b04a;color:#0a0a08;padding:12px 28px;border-radius:8px;
-           text-decoration:none;font-weight:700;font-size:14px;display:inline-block;">View Full Report</a>
-      </div>
-      <p style="color:rgba(255,255,255,.2);font-size:11px;margin-top:24px;">Open the AI Interviewer tab in your dashboard to see the full transcript and analysis.</p>
-    </div>
-    </body>
-    </html>
-    """
+      </table>"""
+
+    html = render_email(
+        heading="New AI interview submitted",
+        subheading=role_title,
+        preheader=f"{candidate_name} just finished the AI screening interview for {role_title}.",
+        body_html=f"<p style=\"margin:0 0 4px;\">Hi {hr_name},</p>"
+                  f"<p style=\"margin:0;\"><strong>{candidate_name}</strong> ({candidate_email}) just finished the AI screening interview for <strong>{role_title}</strong>.</p>"
+                  f"{score_card}",
+        cta_label="View Full Report",
+        cta_url=f"{FRONTEND_URL}/hr/dashboard",
+        footer_note="Open the AI Interviewer tab in your dashboard to see the full transcript and analysis.",
+    )
     msg.attach(MIMEText(html, "html"))
 
     with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
@@ -183,26 +153,16 @@ def send_candidate_completion_email(to_email: str, candidate_name: str, role_tit
     msg["From"]    = MAIL_FROM
     msg["To"]      = to_email
 
-    html = f"""
-    <html>
-    <head><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="margin:0;padding:0;background:#0a0a08;">
-    <div style="font-family:sans-serif;max-width:480px;width:100%;margin:0 auto;
-                padding:32px 20px;background:#0a0a08;color:#fff;border-radius:12px;
-                box-sizing:border-box;">
-      <div style="font-size:22px;font-weight:700;margin-bottom:8px;">TalentIQ</div>
-      <p style="color:rgba(255,255,255,.6);font-size:14px;">Hi {candidate_name},</p>
-      <p style="color:rgba(255,255,255,.6);font-size:14px;">
-        Thanks for completing your {what} for <strong>{role_title}</strong>{company_line}. Your responses have been submitted to the hiring team for review.
-      </p>
-      <p style="color:rgba(255,255,255,.6);font-size:14px;">
-        They'll be in touch if there's a next step. We appreciate the time you put into this.
-      </p>
-      <p style="color:rgba(255,255,255,.2);font-size:11px;margin-top:24px;">This is an automated confirmation — no action needed from you right now.</p>
-    </div>
-    </body>
-    </html>
-    """
+    html = render_email(
+        heading=f"Thanks for completing your {what}",
+        subheading=f"{role_title}{company_line}",
+        preheader=f"Your responses for {role_title} have been submitted to the hiring team.",
+        body_html=f"<p style=\"margin:0 0 4px;\">Hi {candidate_name},</p>"
+                  f"<p style=\"margin:0 0 4px;\">Thanks for completing your {what} for <strong>{role_title}</strong>{company_line}. "
+                  f"Your responses have been submitted to the hiring team for review.</p>"
+                  f"<p style=\"margin:0;\">They'll be in touch if there's a next step. We appreciate the time you put into this.</p>",
+        footer_note="This is an automated confirmation — no action needed from you right now.",
+    )
     msg.attach(MIMEText(html, "html"))
 
     with smtplib.SMTP(MAIL_SERVER, MAIL_PORT) as server:
