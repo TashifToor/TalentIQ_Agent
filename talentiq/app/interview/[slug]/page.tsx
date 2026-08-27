@@ -476,7 +476,7 @@ export default function PublicInterviewPage() {
     return (
       <div style={{ ...base, display: 'grid', placeItems: 'center', padding: 20 }}>
         <div style={{ ...card, maxWidth: 420, textAlign: 'center' }}>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Link not available</div>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Link not available</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)' }}>This interview link is no longer active. Please check with the hiring team for an updated link.</div>
         </div>
       </div>
@@ -491,7 +491,7 @@ export default function PublicInterviewPage() {
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(239,68,68,.12)', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
             <span style={{ fontSize: 22 }}>⚠</span>
           </div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, color: '#ef4444', marginBottom: 10 }}>Session Ended</div>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: 22, fontWeight: 600, color: '#ef4444', marginBottom: 10 }}>Session Ended</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,.55)', lineHeight: 1.7 }}>{terminatedMessage || 'You left the page during the proctored assessment, so this session has ended and been flagged for the hiring team.'}</div>
         </div>
       </div>
@@ -530,7 +530,7 @@ export default function PublicInterviewPage() {
           <div style={{ width: 40, height: 40, background: '#e2b04a', borderRadius: 10, display: 'grid', placeItems: 'center', marginBottom: 18 }}>
             <svg width="18" height="18" viewBox="0 0 16 16" fill="#0a0a08"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg>
           </div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>{posting.title}</div>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>{posting.title}</div>
           {posting.company && <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)', marginBottom: 16 }}>{posting.company}</div>}
 
           {(() => {
@@ -573,7 +573,7 @@ export default function PublicInterviewPage() {
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(19,194,142,.12)', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="#13c28e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </div>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 24, fontWeight: 600, marginBottom: 8 }}>All Done</div>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: 24, fontWeight: 600, marginBottom: 8 }}>All Done</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,.45)', lineHeight: 1.7, marginBottom: 6 }}>
             Thanks, {name || 'there'} — your submission for <strong>{posting.title}</strong> has been sent to the hiring team.
           </div>
@@ -588,7 +588,7 @@ export default function PublicInterviewPage() {
     return (
       <div style={{ ...base, display: 'grid', placeItems: 'center', padding: 20 }}>
         <div style={{ ...card, maxWidth: 440, width: '100%', textAlign: 'center' }}>
-          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, marginBottom: 10 }}>One last thing</div>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: 22, fontWeight: 600, marginBottom: 10 }}>One last thing</div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,.5)', lineHeight: 1.7, marginBottom: 20 }}>Upload your CV so we can cross-check it against your answers — or skip if you don't have one handy.</div>
           <input ref={cvFileRef} type="file" accept="application/pdf" style={{ display: 'none' }}
             onChange={e => { const f = e.target.files?.[0]; if (f) uploadCv(f) }} />
