@@ -335,3 +335,11 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSy
 @media (min-width: 1024px) {
   .hr-desktop-header { display: flex !important; }
 }
+
+/* Social auth provider buttons — hover/focus states + mobile stacking */
+.social-auth-btn:hover { background: rgba(255,255,255,.05) !important; border-color: rgba(255,255,255,.18) !important; }
+.social-auth-btn:focus-visible { outline: 2px solid #d4af6d; outline-offset: 2px; }
+@media (max-width: 420px) {
+  .social-auth-btn span { display: none; }
+  .social-auth-btn { flex: 1 1 0 !important; padding: 10px !important; }
+}
