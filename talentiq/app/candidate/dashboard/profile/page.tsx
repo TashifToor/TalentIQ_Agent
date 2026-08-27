@@ -15,9 +15,9 @@ export default function CandidateProfile() {
   }, [])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.88)' }}>
+    <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.88)' }}>
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Syne:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .fade-up { animation: fadeUp .4s ease both; }
       `}</style>
@@ -28,7 +28,7 @@ export default function CandidateProfile() {
           Back to Dashboard
         </Link>
 
-        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 28, fontWeight: 600, marginBottom: 4 }}>My Profile</div>
+        <div style={{ fontFamily: "Inter, sans-serif", fontSize: 28, fontWeight: 600, marginBottom: 4 }}>My Profile</div>
         <div style={{ fontSize: 13, color: 'rgba(255,255,255,.3)', marginBottom: 28 }}>Your account information</div>
 
         <div className="fade-up" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 28 }}>
@@ -37,7 +37,7 @@ export default function CandidateProfile() {
               {(user?.name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
             </div>
             <div>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 600 }}>{loading ? 'Loading…' : user?.name || 'Unnamed User'}</div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: 20, fontWeight: 600 }}>{loading ? 'Loading…' : user?.name || 'Unnamed User'}</div>
               <div style={{ fontSize: 13, color: 'rgba(255,255,255,.35)', marginTop: 2 }}>{user?.email}</div>
             </div>
           </div>
