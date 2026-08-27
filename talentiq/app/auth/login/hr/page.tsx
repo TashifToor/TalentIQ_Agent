@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from '@/lib/api'
+import SocialAuthRow from '@/components/SocialAuthRow'
 
 function FontImports() {
   return (
@@ -382,6 +383,7 @@ function HRLoginInner() {
               </button>
 
               <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{to{transform:rotate(360deg)}}` }} />
+              <SocialAuthRow />
             </div>
 
             {/* Forgot Password Modal */}
