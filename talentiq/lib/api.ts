@@ -348,6 +348,10 @@ export const api = {
   deleteNotification: (id: string) =>
     apiFetch(`/notifications/${id}`, { method: "DELETE" }),
 
+  // --- Activity Timeline ---
+  getActivities: (start: string, end: string) =>
+    apiFetch(`/activities?start=${start}&end=${end}`),
+
   // --- AI Chatbot Interviewer — HR side (authenticated) ---
   createInterviewPosting: (payload: {
     title: string; company?: string; job_description: string; extra_questions: string[]; interviewer_name?: string;
