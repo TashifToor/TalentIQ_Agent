@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   description: 'How TalentIQ collects, uses, and protects your data.',
 }
 
-const wrap: React.CSSProperties = { maxWidth: 760, margin: '0 auto', padding: '48px 20px 80px', color: 'rgba(245,242,235,.85)', fontFamily: 'Syne, sans-serif', lineHeight: 1.7 }
-const h1: React.CSSProperties = { fontFamily: "'Cormorant Garamond', serif", fontSize: 34, fontWeight: 600, color: '#f5f2eb', marginBottom: 8 }
+const wrap: React.CSSProperties = { maxWidth: 760, margin: '0 auto', padding: '48px 20px 80px', color: 'rgba(245,242,235,.85)', fontFamily: 'Inter, sans-serif', lineHeight: 1.7 }
+const h1: React.CSSProperties = { fontFamily: "Inter, sans-serif", fontSize: 34, fontWeight: 600, color: '#f5f2eb', marginBottom: 8 }
 const h2: React.CSSProperties = { fontSize: 17, fontWeight: 700, color: '#d4af6d', marginTop: 32, marginBottom: 10 }
 const p: React.CSSProperties = { fontSize: 14, marginBottom: 12, color: 'rgba(245,242,235,.7)' }
 const li: React.CSSProperties = { fontSize: 14, marginBottom: 6, color: 'rgba(245,242,235,.7)' }
@@ -15,7 +15,7 @@ const li: React.CSSProperties = { fontSize: 14, marginBottom: 6, color: 'rgba(24
 export default function PrivacyPolicyPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a08' }}>
-      <style dangerouslySetInnerHTML={{ __html: `@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Syne:wght@400;500;600;700&display=swap');` }} />
+      <style dangerouslySetInnerHTML={{ __html: `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');` }} />
       <div style={wrap}>
         <Link href="/" style={{ fontSize: 12, color: '#d4af6d', textDecoration: 'none' }}>← TalentIQ</Link>
         <h1 style={h1}>Privacy Policy</h1>
