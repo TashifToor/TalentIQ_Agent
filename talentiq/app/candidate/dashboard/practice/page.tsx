@@ -180,7 +180,7 @@ export default function InterviewPracticePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.88)' }}>
+    <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.88)' }}>
       <div style={{ height: 56, borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 16 }}>
         <Link href="/candidate/dashboard" style={{ color: 'rgba(255,255,255,.4)', textDecoration: 'none', fontSize: 13 }}>← Dashboard</Link>
         <span style={{ color: 'rgba(255,255,255,.15)' }}>·</span>
@@ -248,7 +248,7 @@ export default function InterviewPracticePage() {
 
         {step === 'processing' && (
           <div className="scale-in" style={{ maxWidth: 420, margin: '60px auto 0', textAlign: 'center' }}>
-            <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Interview submitted</div>
+            <div style={{ fontFamily: "Inter, sans-serif", fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Interview submitted</div>
             <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.4)', marginBottom: 20 }}>
               {processingAttempts > 6 ? 'Taking longer than usual — you can check back from your history.' : 'Your report is being prepared...'}
             </div>
@@ -267,7 +267,7 @@ export default function InterviewPracticePage() {
         {step === 'report' && report && (
           <div className="scale-in" style={{ maxWidth: 640, margin: '0 auto' }}>
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, marginBottom: 6 }}>Session complete</div>
+              <div style={{ fontFamily: "Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 6 }}>Session complete</div>
               <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.4)' }}>{report.target_role} · here's your real feedback</div>
             </div>
             <AIFeedbackReport data={report} />
