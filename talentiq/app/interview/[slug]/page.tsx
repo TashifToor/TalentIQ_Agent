@@ -510,6 +510,7 @@ export default function PublicInterviewPage() {
               title={posting.title}
               company={posting.company}
               interviewerName={posting.interviewer_name}
+              candidateName={name.trim() || undefined}
               questionCount={m === 'mcq' ? posting.assessment_question_count : undefined}
               evaluationAreas={
                 m === 'mcq' ? ['Accuracy across categories', 'Speed under time pressure']
