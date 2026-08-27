@@ -85,7 +85,7 @@ export default function LandingPage() {
         backdropFilter: scrolled || mobileNavOpen ? 'blur(20px)' : 'none',
         borderBottom: scrolled || mobileNavOpen ? '1px solid var(--border)' : '1px solid transparent',
       }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', fontFamily: "'Cormorant Garamond', serif", fontSize: 22, fontWeight: 600, color: 'var(--ink)' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', fontFamily: "Inter, sans-serif", fontSize: 22, fontWeight: 600, color: 'var(--ink)' }}>
           <div style={{ width: 32, height: 32, background: 'var(--ink)', borderRadius: 9, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
             <svg width="14" height="14" viewBox="0 0 16 16" fill="#e2b04a"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg>
           </div>
@@ -137,7 +137,7 @@ export default function LandingPage() {
             AI-Powered Hiring
           </div>
 
-          <h1 className="animate-fade-up d2 landing-hero-h1" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(40px,6vw,76px)', lineHeight: 1.08, letterSpacing: '-1.5px', marginBottom: 28 }}>
+          <h1 className="animate-fade-up d2 landing-hero-h1" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(40px,6vw,76px)', lineHeight: 1.08, letterSpacing: '-1.5px', marginBottom: 28 }}>
             <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Hire better people.</span>
             <br />
             <span style={{ color: 'var(--ink2)', fontWeight: 400 }}>With AI that <em style={{ fontStyle: 'italic', color: 'var(--gold)', fontWeight: 400 }}>actually</em> interviews them.</span>
@@ -199,7 +199,7 @@ export default function LandingPage() {
       <section id="interview-modes" style={{ padding: '110px 5%' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>Three Real Interview Formats</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,4vw,52px)', color: 'var(--ink)', lineHeight: 1.1, letterSpacing: '-.5px', marginBottom: 20, maxWidth: 640 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(32px,4vw,52px)', color: 'var(--ink)', lineHeight: 1.1, letterSpacing: '-.5px', marginBottom: 20, maxWidth: 640 }}>
             One interview platform. Three ways to evaluate talent.
           </h2>
           <p className="reveal" style={{ fontSize: 15, color: 'var(--ink2)', maxWidth: 560, marginBottom: 56, lineHeight: 1.7 }}>
@@ -262,7 +262,7 @@ export default function LandingPage() {
       <section id="ai-interviewer" style={{ background: 'var(--dark)', padding: '110px 5%' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold2)', marginBottom: 14 }}>The AI Interviewer</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,46px)', color: '#fff', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(30px,4vw,46px)', color: '#fff', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48 }}>
             It doesn't just ask questions.<br /><em style={{ fontStyle: 'italic', color: 'rgba(255,255,255,.5)', fontWeight: 400 }}>It listens for what matters.</em>
           </h2>
 
@@ -298,7 +298,7 @@ export default function LandingPage() {
       <section id="voice-ai" style={{ padding: '110px 5%' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>Voice AI</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48 }}>
             Interviews that feel like conversations.
           </h2>
 
@@ -337,7 +337,7 @@ export default function LandingPage() {
       <section id="candidate-journey" style={{ background: 'var(--paper2)', padding: '110px 5%' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: 14 }}>For Candidates</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48, maxWidth: 640 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48, maxWidth: 640 }}>
             Candidates don't just apply. They prepare.
           </h2>
 
@@ -359,7 +359,7 @@ export default function LandingPage() {
       <section id="hr-intelligence" style={{ padding: '110px 5%' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>For Hiring Teams</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48, maxWidth: 640 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48, maxWidth: 640 }}>
             From interviews to decisions.
           </h2>
 
@@ -395,7 +395,7 @@ export default function LandingPage() {
       <section id="copilot" style={{ background: 'var(--dark)', padding: '110px 5%' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold2)', marginBottom: 14 }}>Hiring Copilot</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,46px)', color: '#fff', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(30px,4vw,46px)', color: '#fff', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48 }}>
             Your AI hiring copilot, alongside every decision.
           </h2>
 
@@ -418,7 +418,7 @@ export default function LandingPage() {
       <section id="for-hr" style={{ padding: '110px 5%' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>For HR Teams</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 24, maxWidth: 640 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 24, maxWidth: 640 }}>
             Everything it takes to go from job description to hire.
           </h2>
 
@@ -460,7 +460,7 @@ export default function LandingPage() {
       <section id="for-candidates" style={{ background: 'var(--paper2)', padding: '110px 5%' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: 14 }}>For Candidates</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 24, maxWidth: 640 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(30px,4vw,46px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 24, maxWidth: 640 }}>
             Prepare before the real interview.
           </h2>
 
@@ -497,7 +497,7 @@ export default function LandingPage() {
       <section style={{ padding: '110px 5%' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>Why It's Different</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,44px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(30px,4vw,44px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48 }}>
             Traditional hiring <em style={{ fontStyle: 'italic', color: 'var(--ink2)', fontWeight: 400 }}>vs.</em> AI-powered hiring.
           </h2>
           <div className="reveal landing-compare-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, background: 'var(--border)', borderRadius: 18, overflow: 'hidden', textAlign: 'left' }}>
@@ -525,7 +525,7 @@ export default function LandingPage() {
       <section id="pricing" style={{ background: 'var(--dark)', padding: '110px 5%' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold2)', marginBottom: 14 }}>Pricing</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,46px)', color: '#fff', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 16 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(30px,4vw,46px)', color: '#fff', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 16 }}>
             Simple pricing for both sides of hiring.
           </h2>
           <p className="reveal" style={{ fontSize: 14.5, color: 'rgba(255,255,255,.45)', marginBottom: 56 }}>No credit card required to try either plan.</p>
@@ -542,7 +542,7 @@ export default function LandingPage() {
                 )}
                 <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', color: plan.accent === 'gold' ? 'var(--gold2)' : 'var(--teal)', marginBottom: 18 }}>{plan.audience}</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
-                  <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 46, fontWeight: 600, color: plan.accent === 'gold' ? '#fff' : 'var(--ink)' }}>{plan.price}</span>
+                  <span style={{ fontFamily: "Inter, sans-serif", fontSize: 46, fontWeight: 600, color: plan.accent === 'gold' ? '#fff' : 'var(--ink)' }}>{plan.price}</span>
                   <span style={{ fontSize: 13, color: plan.accent === 'gold' ? 'rgba(255,255,255,.4)' : 'var(--ink3)' }}>{plan.period}</span>
                 </div>
                 <p style={{ fontSize: 13.5, color: plan.accent === 'gold' ? 'rgba(255,255,255,.5)' : 'var(--ink3)', marginBottom: 28, lineHeight: 1.6 }}>{plan.tagline}</p>
@@ -570,7 +570,7 @@ export default function LandingPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, background: 'var(--border)', borderRadius: 20, overflow: 'hidden' }} className="landing-audience-inner">
             <div style={{ background: '#fff', padding: 44 }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '6px 14px', borderRadius: 100, background: 'var(--gold-light)', color: 'var(--gold)', marginBottom: 24 }}>For Hiring Teams</div>
-              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, color: 'var(--ink)', lineHeight: 1.2, marginBottom: 14, letterSpacing: '-.4px' }}>
+              <h3 style={{ fontFamily: "Inter, sans-serif", fontSize: 30, color: 'var(--ink)', lineHeight: 1.2, marginBottom: 14, letterSpacing: '-.4px' }}>
                 Create AI-powered interviews. Evaluate candidates with evidence. Decide faster.
               </h3>
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 11, marginBottom: 32 }}>
@@ -589,7 +589,7 @@ export default function LandingPage() {
             </div>
             <div style={{ background: 'var(--dark2)', padding: 44 }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '6px 14px', borderRadius: 100, background: 'rgba(19,194,142,.12)', color: 'var(--teal2)', marginBottom: 24 }}>For Candidates</div>
-              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, color: '#fff', lineHeight: 1.2, marginBottom: 14, letterSpacing: '-.4px' }}>
+              <h3 style={{ fontFamily: "Inter, sans-serif", fontSize: 30, color: '#fff', lineHeight: 1.2, marginBottom: 14, letterSpacing: '-.4px' }}>
                 Prepare with your CV. Practice the real formats. Walk in ready.
               </h3>
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 11, marginBottom: 32 }}>
@@ -629,7 +629,7 @@ export default function LandingPage() {
       <section id="how-it-works" style={{ padding: '110px 5%' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>The Process</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(30px,4vw,44px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(30px,4vw,44px)', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-.4px', marginBottom: 48 }}>
             From job description<br /><em style={{ fontStyle: 'italic', color: 'var(--ink2)', fontWeight: 400 }}>to hiring decision.</em>
           </h2>
           <div className="reveal">
@@ -640,7 +640,7 @@ export default function LandingPage() {
               { t: 'HR reviews and decides', p: 'Read the report, compare candidates, and use the Hiring Copilot for a second pass on the JD or the shortlist.' },
             ].map((s, i) => (
               <div key={i} style={{ display: 'flex', gap: 20, padding: '20px 0', borderBottom: i < 3 ? '1px solid var(--border)' : 'none' }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: 'var(--ink3)', flexShrink: 0 }}>{i + 1}</div>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)', display: 'grid', placeItems: 'center', fontFamily: "Inter, sans-serif", fontSize: 16, color: 'var(--ink3)', flexShrink: 0 }}>{i + 1}</div>
                 <div><h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', marginBottom: 4 }}>{s.t}</h4><p style={{ fontSize: 13, color: 'var(--ink3)', lineHeight: 1.65 }}>{s.p}</p></div>
               </div>
             ))}
@@ -652,18 +652,18 @@ export default function LandingPage() {
       <section id="get-started" style={{ background: 'var(--paper2)', padding: '110px 5%' }}>
         <div style={{ maxWidth: 1000, margin: '0 auto' }}>
           <p className="reveal" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 14 }}>Get Started</p>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,4vw,48px)', color: 'var(--ink)', lineHeight: 1.1, letterSpacing: '-.5px', marginBottom: 16 }}>Pick your side.</h2>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(32px,4vw,48px)', color: 'var(--ink)', lineHeight: 1.1, letterSpacing: '-.5px', marginBottom: 16 }}>Pick your side.</h2>
           <p className="reveal" style={{ fontSize: 15, color: 'var(--ink2)', marginBottom: 56 }}>No credit card to try either one.</p>
           <div className="reveal landing-cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
             <div style={{ background: 'var(--ink)', borderRadius: 20, padding: 44 }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '6px 14px', borderRadius: 100, background: 'rgba(255,255,255,.08)', color: 'rgba(255,255,255,.5)', marginBottom: 24 }}>For Job Seekers</div>
-              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, color: '#fff', lineHeight: 1.2, marginBottom: 14 }}>Practice free, anytime.</h3>
+              <h3 style={{ fontFamily: "Inter, sans-serif", fontSize: 30, color: '#fff', lineHeight: 1.2, marginBottom: 14 }}>Practice free, anytime.</h3>
               <p style={{ fontSize: 14.5, color: 'rgba(255,255,255,.45)', lineHeight: 1.75, marginBottom: 28 }}>CV analysis, and unlimited chat/assessment/voice practice interviews with real AI feedback after each one.</p>
               <Link href="/auth/signup/candidate" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, padding: '13px 26px', borderRadius: 10, textDecoration: 'none', background: 'var(--gold2)', color: 'var(--ink)' }}>Start as Candidate →</Link>
             </div>
             <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 20, padding: 44 }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', padding: '6px 14px', borderRadius: 100, background: 'var(--paper2)', color: 'var(--ink3)', marginBottom: 24 }}>For HR Teams</div>
-              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, color: 'var(--ink)', lineHeight: 1.2, marginBottom: 14 }}>Try the full builder free.</h3>
+              <h3 style={{ fontFamily: "Inter, sans-serif", fontSize: 30, color: 'var(--ink)', lineHeight: 1.2, marginBottom: 14 }}>Try the full builder free.</h3>
               <p style={{ fontSize: 14.5, color: 'var(--ink3)', lineHeight: 1.75, marginBottom: 28 }}>Build chat, assessment, and voice interviews and get AI reports on every candidate during your trial.</p>
               <Link href="/auth/signup/hr" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, padding: '13px 26px', borderRadius: 10, textDecoration: 'none', background: 'var(--ink)', color: '#fff' }}>Start HR Trial →</Link>
             </div>
@@ -675,16 +675,16 @@ export default function LandingPage() {
       <section style={{ background: 'var(--dark)', padding: '140px 5%', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
         <div className="drift" style={{ position: 'absolute', width: 700, height: 700, borderRadius: '50%', background: 'radial-gradient(circle, rgba(226,176,74,.12) 0%, transparent 70%)', top: '-30%', left: '50%', transform: 'translateX(-50%)', filter: 'blur(90px)' }} />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto' }}>
-          <h2 className="reveal" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(34px,5vw,58px)', color: '#fff', lineHeight: 1.1, letterSpacing: '-.5px', marginBottom: 64 }}>
+          <h2 className="reveal" style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(34px,5vw,58px)', color: '#fff', lineHeight: 1.1, letterSpacing: '-.5px', marginBottom: 64 }}>
             The next great hire is already out there.
           </h2>
           <div className="reveal landing-final-cta-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, background: 'rgba(255,255,255,.08)', borderRadius: 20, overflow: 'hidden', textAlign: 'left' }}>
             <div style={{ background: 'var(--dark2)', padding: 40 }}>
-              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: '#fff', lineHeight: 1.3, marginBottom: 24 }}>Build a faster, smarter hiring workflow.</h3>
+              <h3 style={{ fontFamily: "Inter, sans-serif", fontSize: 24, color: '#fff', lineHeight: 1.3, marginBottom: 24 }}>Build a faster, smarter hiring workflow.</h3>
               <Link href="/auth/signup/hr" style={{ display: 'inline-flex', fontSize: 14, fontWeight: 600, color: 'var(--ink)', background: 'var(--gold2)', padding: '13px 26px', borderRadius: 10, textDecoration: 'none' }}>Start Hiring</Link>
             </div>
             <div style={{ background: 'var(--dark2)', padding: 40 }}>
-              <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: '#fff', lineHeight: 1.3, marginBottom: 24 }}>Build a stronger resume. Practice smarter. Walk into interviews prepared.</h3>
+              <h3 style={{ fontFamily: "Inter, sans-serif", fontSize: 24, color: '#fff', lineHeight: 1.3, marginBottom: 24 }}>Build a stronger resume. Practice smarter. Walk into interviews prepared.</h3>
               <Link href="/auth/signup/candidate" style={{ display: 'inline-flex', fontSize: 14, fontWeight: 600, color: '#fff', border: '1.5px solid rgba(255,255,255,.2)', padding: '13px 26px', borderRadius: 10, textDecoration: 'none' }}>Start Preparing</Link>
             </div>
           </div>
@@ -696,7 +696,7 @@ export default function LandingPage() {
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <div className="landing-footer-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 48, marginBottom: 64 }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,.9)', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: "Inter, sans-serif", fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,.9)', marginBottom: 12 }}>
                 <div style={{ width: 28, height: 28, background: 'var(--gold2)', borderRadius: 7, display: 'grid', placeItems: 'center' }}><svg width="13" height="13" viewBox="0 0 16 16" fill="#0a0a09"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg></div>
                 TalentIQ
               </div>
