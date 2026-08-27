@@ -62,7 +62,7 @@ export default function CVOptimizer() {
   const analysis: string = result?.deep_analysis || ''
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.88)' }}>
+    <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.88)' }}>
       {/* Topbar */}
       <div style={{ height: 56, borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 16 }}>
         <Link href="/candidate/dashboard" style={{ color: 'rgba(255,255,255,.4)', textDecoration: 'none', fontSize: 13 }}>← Dashboard</Link>
@@ -73,7 +73,7 @@ export default function CVOptimizer() {
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '40px 24px' }}>
         <div style={{ marginBottom: 40 }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: '#e2b04a', marginBottom: 12 }}>AI-Powered</p>
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(32px,4vw,48px)', fontWeight: 600, letterSpacing: '-.5px', marginBottom: 12 }}>
+          <h1 style={{ fontFamily: "Inter, sans-serif", fontSize: 'clamp(32px,4vw,48px)', fontWeight: 600, letterSpacing: '-.5px', marginBottom: 12 }}>
             CV Optimizer
           </h1>
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,.4)', lineHeight: 1.7 }}>
@@ -103,16 +103,16 @@ export default function CVOptimizer() {
               <textarea
                 value={jd} onChange={e => setJd(e.target.value)}
                 placeholder="Paste the job description here. The more detailed, the better our analysis..."
-                style={{ width: '100%', background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, padding: 14, fontSize: 13, fontFamily: 'Syne, sans-serif', color: 'rgba(255,255,255,.8)', outline: 'none', resize: 'none', lineHeight: 1.7, minHeight: 140 }}
+                style={{ width: '100%', background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, padding: 14, fontSize: 13, fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.8)', outline: 'none', resize: 'none', lineHeight: 1.7, minHeight: 140 }}
               />
             </div>
 
             {error && <div style={{ fontSize: 13, color: '#ef4444' }}>{error}</div>}
 
-            <button onClick={runOptimize} disabled={uploading} style={{ background: '#e2b04a', color: '#0a0a09', fontWeight: 700, fontSize: 15, padding: '14px', borderRadius: 10, border: 'none', cursor: uploading ? 'default' : 'pointer', opacity: uploading ? 0.6 : 1, fontFamily: 'Syne, sans-serif', letterSpacing: '.03em', transition: 'all .25s' }}
+            <button onClick={runOptimize} disabled={uploading} style={{ background: '#e2b04a', color: '#0a0a09', fontWeight: 700, fontSize: 15, padding: '14px', borderRadius: 10, border: 'none', cursor: uploading ? 'default' : 'pointer', opacity: uploading ? 0.6 : 1, fontFamily: 'Inter, sans-serif', letterSpacing: '.03em', transition: 'all .25s' }}
               onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = '#f5d87a'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)' }}
               onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = '#e2b04a'; (e.currentTarget as HTMLElement).style.transform = 'none' }}>
-              ✨ Analyze My CV
+              Analyze My CV
             </button>
           </div>
         )}
@@ -120,7 +120,7 @@ export default function CVOptimizer() {
         {step === 'analyzing' && (
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
             <div style={{ width: 60, height: 60, border: '4px solid rgba(226,176,74,.2)', borderTopColor: '#e2b04a', borderRadius: '50%', animation: 'spin .8s linear infinite', margin: '0 auto 24px' }} />
-            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 24, marginBottom: 8 }}>Analyzing your CV...</h3>
+            <h3 style={{ fontFamily: "Inter, sans-serif", fontSize: 24, marginBottom: 8 }}>Analyzing your CV...</h3>
             <p style={{ fontSize: 14, color: 'rgba(255,255,255,.35)' }}>Comparing against the job description. Finding gaps and opportunities.</p>
             <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { to { transform: rotate(360deg) } }` }} />
           </div>
@@ -131,7 +131,7 @@ export default function CVOptimizer() {
             {/* Real match score */}
             <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, padding: 24, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 24 }}>
               <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 48, fontWeight: 600, color: score >= 70 ? '#13c28e' : score >= 45 ? '#e2b04a' : '#ef4444', lineHeight: 1 }}>{score}</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontSize: 48, fontWeight: 600, color: score >= 70 ? '#13c28e' : score >= 45 ? '#e2b04a' : '#ef4444', lineHeight: 1 }}>{score}</div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', marginTop: 4 }}>Match score</div>
               </div>
               <div style={{ flex: 1, paddingLeft: 12 }}>
@@ -174,7 +174,7 @@ export default function CVOptimizer() {
               </div>
             )}
 
-            <button onClick={() => { setStep('upload'); setResult(null); setFile(null); setCvText('') }} style={{ width: '100%', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', color: 'rgba(255,255,255,.5)', fontWeight: 600, fontSize: 14, padding: '13px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Syne, sans-serif', transition: 'all .2s' }}>
+            <button onClick={() => { setStep('upload'); setResult(null); setFile(null); setCvText('') }} style={{ width: '100%', background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', color: 'rgba(255,255,255,.5)', fontWeight: 600, fontSize: 14, padding: '13px', borderRadius: 10, cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all .2s' }}>
               ← Analyze Another CV
             </button>
           </div>
