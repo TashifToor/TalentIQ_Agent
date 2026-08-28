@@ -24,7 +24,9 @@ from models.job import Job
 from models.application import Application
 from models.user import User
 from schemas.activity import ActivityItem
+from fastapi import APIRouter
 
+router = APIRouter(prefix="/activity", tags=["activity"])
 # Notification types that are genuinely calendar-worthy for each role.
 # (Deliberately excludes noisy/internal types if any exist beyond these.)
 CANDIDATE_NOTIF_TYPES = {"application_received", "interview_invitation", "interview_completed", "application_accepted", "application_rejected"}
