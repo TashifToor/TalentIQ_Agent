@@ -22,6 +22,7 @@ from routes.interview_public import router as interview_public_router
 from routes.practice import router as practice_router
 from routes.notifications import router as notifications_router
 from routes.activity import router as activity_router
+from routes.candidate_intelligence import router as candidate_intelligence_router
 from models.interview import InterviewPosting, InterviewSession
 from models.practice import PracticeSession
 from models.user import User  
@@ -90,6 +91,7 @@ app.include_router(interview_public_router)
 app.include_router(practice_router)
 app.include_router(notifications_router)
 app.include_router(activity_router)
+app.include_router(candidate_intelligence_router)
 
 @app.get("/")
 def root():
