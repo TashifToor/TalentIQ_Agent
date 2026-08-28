@@ -369,3 +369,15 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSy
 @media (max-width: 480px) {
   .notif-toast-stack { left: 12px !important; right: 12px !important; bottom: 12px !important; width: auto !important; max-width: none !important; }
 }
+
+/* Intelligence carousel (CV Optimizer / Candidate Screening) — full
+   horizontal carousel on desktop; on mobile each card takes the full
+   available width so it's genuinely one-at-a-time, not a squeezed row. */
+.carousel-nav { display: flex; }
+@media (max-width: 640px) {
+  .carousel-nav { display: none; }
+  .intelligence-track > div { width: calc(100vw - 56px); }
+  .intelligence-track > div > div { min-width: 0 !important; max-width: none !important; width: 100%; }
+}
+.intelligence-track { scrollbar-width: thin; }
+.intelligence-track:focus-within { outline: none; }
