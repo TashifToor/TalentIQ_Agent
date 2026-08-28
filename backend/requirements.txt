@@ -27,6 +27,7 @@ transformers>=4.44.0
 langchain
 langchain-community
 langchain-groq
+langchain-openai  # optional — only needed if AI_PROVIDER=openai is set (core/ai_provider.py); Groq remains the default and this import is lazy
 groq
 pypdf
 pymupdf
