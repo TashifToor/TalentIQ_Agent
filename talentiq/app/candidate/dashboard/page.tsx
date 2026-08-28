@@ -24,6 +24,7 @@ const NAV = [
   { key: 'scan', label: 'Scan CV', href: '/candidate/dashboard#scan-area' },
   { key: 'cv-builder', label: 'CV Builder', href: '/candidate/dashboard/cv-builder' },
   { key: 'optimizer', label: 'CV Optimizer', href: '/candidate/dashboard/optimizer' },
+  { key: 'screening', label: 'CV Screening', href: '/candidate/dashboard/screening' },
   { key: 'practice', label: 'Interview Practice', href: '/candidate/dashboard/practice' },
   { key: 'activity', label: 'Activity', href: '/candidate/dashboard/activity' },
   { key: 'history', label: 'History', href: '/candidate/dashboard/history' },
