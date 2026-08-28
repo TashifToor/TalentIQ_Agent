@@ -6,6 +6,8 @@ import { api, ApiError, clearAuthState } from '@/lib/api'
 import CopilotPanel from '@/components/modules/copilot/CopilotPanel'
 import { PracticeHistoryItem } from '@/components/modules/copilot/candidateHomeInsights'
 import NotificationBell from '@/components/NotificationBell'
+import NotificationToasts from '@/components/NotificationToasts'
+import { NotificationProvider } from '@/components/NotificationProvider'
 import { useBrowserNotificationPermission } from '@/lib/useBrowserNotificationPermission'
 
 const ICONS: Record<string, JSX.Element> = {
@@ -162,6 +164,7 @@ export default function CandidateDashboard() {
   const S = { sidebar: { width: 220, flexShrink: 0, background: '#111110', borderRight: '1px solid rgba(255,255,255,.07)', display: 'flex', flexDirection: 'column' as const } }
 
   return (
+    <NotificationProvider>
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0c0c0a', fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.88)' }}>
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -434,6 +437,8 @@ export default function CandidateDashboard() {
         />
         </div>
       </div>
+      <NotificationToasts />
     </div>
+    </NotificationProvider>
   )
 }
