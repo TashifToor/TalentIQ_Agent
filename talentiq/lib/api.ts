@@ -352,6 +352,19 @@ export const api = {
   getActivities: (start: string, end: string) =>
     apiFetch(`/activities?start=${start}&end=${end}`),
 
+  // --- CV Optimizer / Candidate Screening (structured analysis) ---
+  optimizeCandidateCv: (cvText: string, jobDescription: string) =>
+    apiFetch("/candidate-intelligence/optimize", {
+      method: "POST",
+      body: JSON.stringify({ cv_text: cvText, job_description: jobDescription }),
+    }),
+
+  screenCandidateCv: (cvText: string, jobDescription?: string) =>
+    apiFetch("/candidate-intelligence/screening", {
+      method: "POST",
+      body: JSON.stringify({ cv_text: cvText, job_description: jobDescription || undefined }),
+    }),
+
   // --- AI Chatbot Interviewer — HR side (authenticated) ---
   createInterviewPosting: (payload: {
     title: string; company?: string; job_description: string; extra_questions: string[]; interviewer_name?: string;
