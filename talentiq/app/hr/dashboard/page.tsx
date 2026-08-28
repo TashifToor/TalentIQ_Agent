@@ -8,7 +8,8 @@ import TalentIntelligencePanel from '@/components/modules/talent-intelligence/Ta
 import TalentPoolPanel from '@/components/modules/talent-intelligence/TalentPoolPanel'
 import AIFeedbackReport from '@/components/modules/reports/AIFeedbackReport'
 import NotificationBell from '@/components/NotificationBell'
-import NotificationsPage from '@/components/NotificationsPage'
+import NotificationToasts from '@/components/NotificationToasts'
+import { NotificationProvider } from '@/components/NotificationProvider'
 import ActivityTimeline from '@/components/ActivityTimeline'
 import { useBrowserNotificationPermission } from '@/lib/useBrowserNotificationPermission'
 
@@ -32,7 +33,7 @@ type Candidate = {
 }
 
 type HistoryEntry = Candidate & { jobTitle: string; screenedAt: string }
-type Section = 'dashboard' | 'candidates' | 'bulk' | 'talent-pool' | 'shortlist' | 'chatbot' | 'history' | 'open-roles' | 'settings' | 'profile' | 'notifications' | 'activity'
+type Section = 'dashboard' | 'candidates' | 'bulk' | 'talent-pool' | 'shortlist' | 'chatbot' | 'history' | 'open-roles' | 'settings' | 'profile' | 'activity'
 
 const STEP_ICONS = ['📋', '💪', '⚠️', '✅']
 const STEP_COLORS_C = ['#4f46e5', '#e2b04a', '#ef4444', '#13c28e']
@@ -136,7 +137,7 @@ export default function HRDashboard() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const s = new URLSearchParams(window.location.search).get('section') as Section | null
-    const valid: Section[] = ['dashboard', 'candidates', 'bulk', 'talent-pool', 'shortlist', 'chatbot', 'history', 'open-roles', 'settings', 'profile', 'notifications', 'activity']
+    const valid: Section[] = ['dashboard', 'candidates', 'bulk', 'talent-pool', 'shortlist', 'chatbot', 'history', 'open-roles', 'settings', 'profile', 'activity']
     if (s && valid.includes(s)) setSection(s)
   }, [])
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -1627,13 +1628,13 @@ export default function HRDashboard() {
       case 'open-roles': return renderInterviewer()
       case 'settings': return renderSettings()
       case 'profile': return renderProfile()
-      case 'notifications': return <NotificationsPage role="hr" />
       case 'activity': return <ActivityTimeline role="hr" />
       default: return renderDashboard()
     }
   }
 
   return (
+    <NotificationProvider>
     <div style={s(base, { display: 'flex', height: '100vh', overflow: 'hidden' })} className="app-shell">
       <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-4px)}} @keyframes pulse{0%,100%{opacity:.35}50%{opacity:.8}}` }} />
 
@@ -1701,6 +1702,8 @@ export default function HRDashboard() {
           {renderSection()}
         </div>
       </div>
+      <NotificationToasts />
     </div>
+    </NotificationProvider>
   )
 }
