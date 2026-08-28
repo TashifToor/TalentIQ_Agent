@@ -22,6 +22,7 @@ dependencies = [
     "langchain-community==0.3.23",
     "langchain-core==0.3.58",
     "langchain-groq==0.3.2",
+    "langchain-openai>=0.3.16",
     "langgraph==0.3.21",
     "litellm>=1.74.9",
     "passlib[bcrypt]>=1.7.4",
