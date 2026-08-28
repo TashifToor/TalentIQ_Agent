@@ -69,12 +69,13 @@ const btnGold: React.CSSProperties = {
 }
 
 export default function AIResumeAssistant({
-    cv, onCvChange, jobDescription, template,
+    cv, onCvChange, jobDescription, template, suggestedFocus,
 }: {
     cv: CVData
     onCvChange: (cv: CVData) => void
     jobDescription: string
     template: string
+    suggestedFocus?: string | null   // optional hand-off from CV Optimizer/Screening's "Improve My CV" — auto-opens the matching quick action once
 }) {
     const [open, setOpen] = useState(false) // drawer/sheet open state — irrelevant on desktop (always visible there)
     const [action, setAction] = useState<QuickAction | null>(null)
@@ -116,6 +117,15 @@ export default function AIResumeAssistant({
         setTarget({ kind: 'summary' })
         runRewrite({ kind: 'summary' }, 'stronger')
     }
+
+    const consumedHandoffRef = useRef(false)
+    useEffect(() => {
+        if (!suggestedFocus || consumedHandoffRef.current || !cv.summary.trim()) return
+        consumedHandoffRef.current = true
+        setOpen(true) // surfaces the drawer on tablet/mobile where it's collapsed by default
+        if (suggestedFocus === 'summary') startSummary()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [suggestedFocus, cv.summary])
 
     const startBulletPicker = (which: 'strengthen' | 'bullet') => {
         setAction(which); resetSuggestion(); setTarget(null)
