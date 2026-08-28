@@ -75,6 +75,30 @@ type CVBuilderWizardProps = {
 export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: CVBuilderWizardProps = {}) {
   const [step, setStep] = useState(0) // 0=input, 1=template gallery, 2=edit+preview, 3=JD+generate
   const [cv, setCv] = useState<CVData>(EMPTY_CV)
+  const [handoffFocus, setHandoffFocus] = useState<string | null>(null)
+
+  // Cross-page handoff from CV Optimizer / Candidate Screening's "Improve My
+  // CV" — reads the CVData they already had (from the same /cv-builder/parse
+  // upload those pages reuse) so the candidate lands here pre-loaded on the
+  // editor step instead of starting over, plus a suggested first action for
+  // AIResumeAssistant to open automatically.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('talentiq_cv_handoff')
+      if (!raw) return
+      sessionStorage.removeItem('talentiq_cv_handoff')
+      const payload = JSON.parse(raw)
+      if (payload?.cv && Date.now() - (payload.timestamp || 0) < 5 * 60 * 1000) {
+        setCv(payload.cv)
+        setStep(2)
+        if (payload.focus) setHandoffFocus(payload.focus)
+        if (payload.jd) setJd(payload.jd)
+      }
+    } catch {
+      // no handoff pending — normal fresh-start flow, nothing to do
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [parsing, setParsing] = useState(false)
   const [template, setTemplate] = useState<string>('professional') // centered name by default — matches common ATS resume convention
   const [accentColor, setAccentColor] = useState<string | null>(null)
@@ -413,7 +437,7 @@ export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: C
 
           {/* Far right: AI Resume Assistant — real 3rd column on desktop,
               collapsible drawer/bottom-sheet on tablet/mobile (see globals.css) */}
-          <AIResumeAssistant cv={cv} onCvChange={setCv} jobDescription={jd} template={template} />
+          <AIResumeAssistant cv={cv} onCvChange={setCv} jobDescription={jd} template={template} suggestedFocus={handoffFocus} />
         </div>
       )}
 
