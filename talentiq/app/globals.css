@@ -360,3 +360,12 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSy
 @media (min-width: 641px) {
   .activity-detail-backdrop { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 299; }
 }
+
+/* Toast notifications — subtle enter/exit, bottom-right on desktop,
+   bottom-center-safe full-width on mobile. Respects reduced-motion via
+   the existing global rule (animation-duration collapses to ~0). */
+@keyframes toastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.notif-toast { animation: toastIn .25s var(--ease, ease) both; }
+@media (max-width: 480px) {
+  .notif-toast-stack { left: 12px !important; right: 12px !important; bottom: 12px !important; width: auto !important; max-width: none !important; }
+}
