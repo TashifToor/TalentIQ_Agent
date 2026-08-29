@@ -2,8 +2,26 @@
 
 import { useState } from 'react'
 
-const textMuted = 'rgba(245,242,235,.32)'
-const border = 'rgba(255,255,255,.1)'
+// Two color sets: 'dark' (original, unchanged) for panels with a dark background
+// (Candidate login), 'light' for panels with a light background (HR login). Same
+// component, same behavior — only the token values differ, driven by the `theme`
+// prop each page passes based on its own actual panel background.
+const THEME = {
+    dark: {
+        textMuted: 'rgba(245,242,235,.32)',
+        border: 'rgba(255,255,255,.1)',
+        btnBg: 'rgba(255,255,255,.02)',
+        textActive: 'rgba(245,242,235,.75)',
+        textDisabled: 'rgba(245,242,235,.38)',
+    },
+    light: {
+        textMuted: 'rgba(26,24,20,.4)',
+        border: 'rgba(26,24,20,.14)',
+        btnBg: '#ffffff',
+        textActive: 'rgba(26,24,20,.8)',
+        textDisabled: 'rgba(26,24,20,.35)',
+    },
+}
 
 // Real, recognizable provider marks — simplified inline SVGs (no external
 // image requests, no emoji). Google's is the standard 4-color "G" glyph;
@@ -47,8 +65,9 @@ const PROVIDERS: Provider[] = [
     { id: 'microsoft', label: 'Microsoft', icon: <MicrosoftIcon />, configured: false },
 ]
 
-export default function SocialAuthRow() {
+export default function SocialAuthRow({ theme = 'dark' }: { theme?: 'dark' | 'light' }) {
     const [notice, setNotice] = useState<string | null>(null)
+    const t = THEME[theme]
 
     const handleClick = (p: Provider) => {
         if (!p.configured) {
@@ -61,9 +80,9 @@ export default function SocialAuthRow() {
     return (
         <div style={{ marginTop: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <div style={{ flex: 1, height: 1, background: border }} />
-                <span style={{ fontSize: 11.5, color: textMuted, letterSpacing: '.04em' }}>Continue with</span>
-                <div style={{ flex: 1, height: 1, background: border }} />
+                <div style={{ flex: 1, height: 1, background: t.border }} />
+                <span style={{ fontSize: 11.5, color: t.textMuted, letterSpacing: '.04em' }}>Continue with</span>
+                <div style={{ flex: 1, height: 1, background: t.border }} />
             </div>
 
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -78,8 +97,8 @@ export default function SocialAuthRow() {
                         className="social-auth-btn"
                         style={{
                             flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                            padding: '10px 12px', borderRadius: 8, border: `1px solid ${border}`, background: 'rgba(255,255,255,.02)',
-                            color: p.configured ? 'rgba(245,242,235,.75)' : 'rgba(245,242,235,.38)', fontSize: 12.5, fontWeight: 500,
+                            padding: '10px 12px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.btnBg,
+                            color: p.configured ? t.textActive : t.textDisabled, fontSize: 12.5, fontWeight: 500,
                             fontFamily: 'inherit', cursor: 'pointer', transition: 'background .15s, border-color .15s', opacity: p.configured ? 1 : 0.72,
                         }}
                     >
@@ -90,7 +109,7 @@ export default function SocialAuthRow() {
             </div>
 
             {notice && (
-                <p role="status" style={{ fontSize: 11.5, color: textMuted, marginTop: 10, lineHeight: 1.5 }}>{notice}</p>
+                <p role="status" style={{ fontSize: 11.5, color: t.textMuted, marginTop: 10, lineHeight: 1.5 }}>{notice}</p>
             )}
         </div>
     )
