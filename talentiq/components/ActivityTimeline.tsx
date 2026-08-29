@@ -40,6 +40,19 @@ function iconFor(type: string) {
     return TYPE_ICON[type] || <><circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h.01" /></>
 }
 
+// Restrained, existing-token category colors for calendar dots/icons — lets a date's
+// dots hint at what kind of activity happened without introducing new colors.
+const CATEGORY_COLOR: Record<string, string> = {
+    practice_session: '#a78bfa',
+    application_received: '#4f46e5', new_application: '#4f46e5', job_created: '#4f46e5',
+    ats_screening_completed: '#13c28e', ai_screening_completed: '#13c28e',
+    screening_failed: '#ef4444',
+    interview_invitation: '#e2b04a', interview_completed: '#e2b04a',
+    application_accepted: '#13c28e', candidate_accepted: '#13c28e',
+    application_rejected: '#ef4444', candidate_rejected: '#ef4444',
+}
+function colorFor(type: string) { return CATEGORY_COLOR[type] || gold }
+
 const CANDIDATE_FILTERS = [
     { key: 'all', label: 'All' },
     { key: 'applications', label: 'Applications', match: (t: string) => t === 'application_received' },
@@ -76,6 +89,10 @@ export default function ActivityTimeline({ role }: { role: 'hr' | 'candidate' })
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+    // False = show the compact date-grouped activity log across the whole visible month
+    // (the "spreadsheet/activity log" view). True = a specific date was clicked, so the
+    // panel narrows to just that date. Reset whenever the visible month changes.
+    const [dateExplicitlySelected, setDateExplicitlySelected] = useState(false)
     const [search, setSearch] = useState('')
     const [filter, setFilter] = useState('all')
     const [detail, setDetail] = useState<ActivityItem | null>(null)
@@ -123,6 +140,18 @@ export default function ActivityTimeline({ role }: { role: 'hr' | 'candidate' })
     const selectedKey = fmtDateKey(selectedDate)
     const dayActivities = (byDateKey[selectedKey] || []).sort((a, b) => a.occurred_at.localeCompare(b.occurred_at))
 
+    // Compact date/activity log for the whole visible month — most recent date first,
+    // chronological (ascending) within each date, exactly like the spreadsheet-style
+    // log spec: DATE is the primary grouping.
+    const groupedByMonth = useMemo(() => {
+        const dateKeys = Object.keys(byDateKey).sort((a, b) => b.localeCompare(a))
+        return dateKeys.map(key => ({
+            key,
+            date: new Date(key + 'T00:00:00'),
+            items: [...byDateKey[key]].sort((a, b) => a.occurred_at.localeCompare(b.occurred_at)),
+        }))
+    }, [byDateKey])
+
     // ── Calendar grid (Monday-start, 6 rows) ──
     const gridStart = new Date(startOfMonth(month))
     const leadingBlank = (gridStart.getDay() + 6) % 7 // Mon=0
@@ -135,9 +164,9 @@ export default function ActivityTimeline({ role }: { role: 'hr' | 'candidate' })
     }
     const todayKey = fmtDateKey(new Date())
 
-    const goToday = () => { const t = new Date(); setMonth(startOfMonth(t)); setSelectedDate(t) }
-    const goPrevMonth = () => setMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))
-    const goNextMonth = () => setMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))
+    const goToday = () => { const t = new Date(); setMonth(startOfMonth(t)); setSelectedDate(t); setDateExplicitlySelected(false) }
+    const goPrevMonth = () => { setMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1)); setDateExplicitlySelected(false) }
+    const goNextMonth = () => { setMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1)); setDateExplicitlySelected(false) }
 
     const handleActivityAction = (a: ActivityItem) => {
         if (a.action_url) router.push(a.action_url)
@@ -146,7 +175,7 @@ export default function ActivityTimeline({ role }: { role: 'hr' | 'candidate' })
     return (
         <div className="activity-timeline" style={{ maxWidth: 1120, margin: '0 auto', padding: '24px 24px 60px' }}>
             <div style={{ marginBottom: 18 }}>
-                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 22, fontWeight: 700, color: textMain }}>Activity</div>
+                <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 22, fontWeight: 700, color: textMain }}>Activity</div>
                 <div style={{ fontSize: 12.5, color: textDim, marginTop: 2 }}>{role === 'hr' ? 'Recruitment activity, chronologically.' : "Your career activity — no spreadsheet required."}</div>
             </div>
 
@@ -205,11 +234,12 @@ export default function ActivityTimeline({ role }: { role: 'hr' | 'candidate' })
                         {cells.map((d, i) => {
                             const key = fmtDateKey(d)
                             const inMonth = d.getMonth() === month.getMonth()
-                            const count = (byDateKey[key] || []).length
+                            const dayItems = byDateKey[key] || []
+                            const count = dayItems.length
                             const isToday = key === todayKey
-                            const isSelected = key === selectedKey
+                            const isSelected = dateExplicitlySelected && key === selectedKey
                             return (
-                                <button key={i} onClick={() => setSelectedDate(d)} disabled={!inMonth} style={{
+                                <button key={i} onClick={() => { setSelectedDate(d); setDateExplicitlySelected(true) }} disabled={!inMonth} style={{
                                     aspectRatio: '1', minHeight: 40, border: isSelected ? `1px solid ${gold}` : `1px solid transparent`,
                                     borderRadius: 8, background: isSelected ? 'rgba(226,176,74,.12)' : isToday ? 'rgba(255,255,255,.04)' : 'transparent',
                                     color: !inMonth ? 'rgba(255,255,255,.15)' : textMain, cursor: inMonth ? 'pointer' : 'default',
@@ -219,7 +249,7 @@ export default function ActivityTimeline({ role }: { role: 'hr' | 'candidate' })
                                     {inMonth && count > 0 && (
                                         count <= 3 ? (
                                             <span style={{ display: 'flex', gap: 2 }}>
-                                                {Array.from({ length: count }).map((_, j) => <span key={j} style={{ width: 4, height: 4, borderRadius: 2, background: gold }} />)}
+                                                {dayItems.slice(0, 3).map((it, j) => <span key={j} style={{ width: 4, height: 4, borderRadius: 2, background: colorFor(it.type) }} />)}
                                             </span>
                                         ) : (
                                             <span style={{ fontSize: 8.5, fontWeight: 700, color: gold }}>+{count}</span>
@@ -231,39 +261,80 @@ export default function ActivityTimeline({ role }: { role: 'hr' | 'candidate' })
                     </div>
                 </GlassCard>
 
-                {/* Day panel + chronological timeline */}
+                {/* Day panel: compact date-grouped activity log by default (spreadsheet-
+                    style, most recent date first); narrows to one date once clicked. */}
                 <GlassCard className="activity-day-panel" style={{ flex: '1 1 340px', minWidth: 300, maxHeight: 520, overflowY: 'auto' }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: textMain, marginBottom: 2 }}>
-                        {selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                    {dateExplicitlySelected ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: textMain }}>
+                                {selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                            </div>
+                            <button onClick={() => setDateExplicitlySelected(false)} style={{ fontSize: 11, fontWeight: 600, color: gold, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>Show all ✕</button>
+                        </div>
+                    ) : (
+                        <div style={{ fontSize: 14, fontWeight: 700, color: textMain, marginBottom: 2 }}>{fmtMonthYear(month)}</div>
+                    )}
+                    <div style={{ fontSize: 11.5, color: textDim, marginBottom: 14 }}>
+                        {dateExplicitlySelected
+                            ? `${dayActivities.length} ${dayActivities.length === 1 ? 'activity' : 'activities'}`
+                            : `${filtered.length} ${filtered.length === 1 ? 'activity' : 'activities'} this month`}
                     </div>
-                    <div style={{ fontSize: 11.5, color: textDim, marginBottom: 14 }}>{dayActivities.length} {dayActivities.length === 1 ? 'activity' : 'activities'}</div>
 
                     {loading && <div style={{ fontSize: 12.5, color: textDim, padding: '12px 0' }}>Loading…</div>}
                     {error && <div style={{ fontSize: 12.5, color: '#f87171', padding: '12px 0' }}>{error}</div>}
-                    {!loading && !error && dayActivities.length === 0 && (
+                    {!loading && !error && (dateExplicitlySelected ? dayActivities.length === 0 : groupedByMonth.length === 0) && (
                         <div style={{ fontSize: 12.5, color: textDim, padding: '20px 0', textAlign: 'center' }}>
                             No activity yet<br />
                             <span style={{ fontSize: 11 }}>{role === 'hr' ? 'Recruitment activity will appear here as it happens.' : 'Your TalentIQ activity will appear here as you apply, interview, practice, and make progress.'}</span>
                         </div>
                     )}
 
-                    <div style={{ position: 'relative' }}>
-                        {dayActivities.map((a, i) => (
-                            <div key={a.id} style={{ display: 'flex', gap: 12, position: 'relative', paddingBottom: i < dayActivities.length - 1 ? 18 : 0 }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-                                    <span style={{ width: 26, height: 26, borderRadius: 8, background: 'rgba(255,255,255,.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: gold, flexShrink: 0 }}>
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{iconFor(a.type)}</svg>
-                                    </span>
-                                    {i < dayActivities.length - 1 && <span style={{ width: 1, flex: 1, background: border, marginTop: 4 }} />}
+                    {dateExplicitlySelected ? (
+                        <div style={{ position: 'relative' }}>
+                            {dayActivities.map((a, i) => (
+                                <div key={a.id} style={{ display: 'flex', gap: 12, position: 'relative', paddingBottom: i < dayActivities.length - 1 ? 18 : 0 }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                                        <span style={{ width: 26, height: 26, borderRadius: 8, background: 'rgba(255,255,255,.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colorFor(a.type), flexShrink: 0 }}>
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{iconFor(a.type)}</svg>
+                                        </span>
+                                        {i < dayActivities.length - 1 && <span style={{ width: 1, flex: 1, background: border, marginTop: 4 }} />}
+                                    </div>
+                                    <button onClick={() => setDetail(a)} style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                                        <div style={{ fontSize: 11, color: textDim }}>{new Date(a.occurred_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: textMain, marginTop: 2 }}>{a.title}</div>
+                                        {a.description && <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.5)', marginTop: 2, lineHeight: 1.4 }}>{a.description}</div>}
+                                    </button>
                                 </div>
-                                <button onClick={() => setDetail(a)} style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
-                                    <div style={{ fontSize: 11, color: textDim }}>{new Date(a.occurred_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: textMain, marginTop: 2 }}>{a.title}</div>
-                                    {a.description && <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.5)', marginTop: 2, lineHeight: 1.4 }}>{a.description}</div>}
-                                </button>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div>
+                            {groupedByMonth.map(group => (
+                                <div key={group.key} style={{ marginBottom: 16 }}>
+                                    <button onClick={() => { setSelectedDate(group.date); setDateExplicitlySelected(true) }} style={{ fontSize: 11, fontWeight: 700, color: gold, background: 'none', border: 'none', padding: 0, marginBottom: 8, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                                        {group.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                                    </button>
+                                    <div style={{ borderTop: `1px solid ${border}` }} />
+                                    {group.items.map((a, i) => (
+                                        <button key={a.id} onClick={() => setDetail(a)} style={{
+                                            width: '100%', display: 'flex', alignItems: 'flex-start', gap: 10, textAlign: 'left',
+                                            background: 'none', border: 'none', borderBottom: i < group.items.length - 1 ? `1px solid ${border}` : 'none',
+                                            cursor: 'pointer', fontFamily: 'inherit', padding: '10px 0',
+                                        }}>
+                                            <span style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(255,255,255,.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colorFor(a.type), flexShrink: 0, marginTop: 1 }}>
+                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{iconFor(a.type)}</svg>
+                                            </span>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontSize: 13, fontWeight: 700, color: textMain }}>{a.title}</div>
+                                                {a.description && <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.5)', marginTop: 2, lineHeight: 1.4 }}>{a.description}</div>}
+                                            </div>
+                                            <div style={{ fontSize: 10.5, color: textDim, flexShrink: 0, whiteSpace: 'nowrap' }}>{new Date(a.occurred_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </GlassCard>
             </div>
 
