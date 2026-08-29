@@ -193,7 +193,7 @@ export default function AIResumeAssistant({
         <>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
                 <div>
-                    <div style={{ fontFamily: "Inter, sans-serif", fontSize: 18, fontWeight: 600, color: textMain }}>AI Resume Assistant</div>
+                    <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 18, fontWeight: 600, color: textMain }}>AI Resume Assistant</div>
                     <div style={{ fontSize: 11, color: textDim, marginTop: 1 }}>Improve your resume with AI</div>
                 </div>
                 <button onClick={() => setOpen(false)} className="ai-assistant-close" style={{ display: 'none', background: 'none', border: 'none', color: textDim, cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 4 }}>✕</button>
