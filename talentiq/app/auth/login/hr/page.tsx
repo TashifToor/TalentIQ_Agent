@@ -383,7 +383,7 @@ function HRLoginInner() {
               </button>
 
               <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{to{transform:rotate(360deg)}}` }} />
-              <SocialAuthRow />
+              <SocialAuthRow theme="light" />
             </div>
 
             {/* Forgot Password Modal */}
