@@ -267,7 +267,7 @@ export default function InterviewPracticePage() {
         {step === 'report' && report && (
           <div className="scale-in" style={{ maxWidth: 640, margin: '0 auto' }}>
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <div style={{ fontFamily: "Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 6 }}>Session complete</div>
+              <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 6 }}>Session complete</div>
               <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.4)' }}>{report.target_role} · here's your real feedback</div>
             </div>
             <AIFeedbackReport data={report} />
