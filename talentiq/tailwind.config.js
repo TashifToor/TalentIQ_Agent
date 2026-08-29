@@ -10,6 +10,11 @@ module.exports = {
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
         serif: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // Selective display font for hero/section headings and major titles only —
+        // available as `font-display` for Tailwind-class usage; most of the codebase
+        // sets fontFamily inline, where the literal "'Space Grotesk', Inter, sans-serif"
+        // string is used directly instead of this utility.
+        display: ['Space Grotesk', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
         gold: { DEFAULT: '#c5931f', 2: '#e2b04a', 3: '#f5d87a', light: '#fdf3db' },
