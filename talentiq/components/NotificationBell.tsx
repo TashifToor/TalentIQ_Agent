@@ -125,10 +125,14 @@ export default function NotificationBell({ role }: { role: 'hr' | 'candidate' })
 
             <div className={`notif-backdrop${open ? ' open' : ''}`} onClick={() => setOpen(false)} />
 
-            <div role="dialog" aria-label="Notifications" className={`notif-popover${open ? ' open' : ''}`} style={{
+            <div role="dialog" aria-label="Notifications" aria-hidden={!open} className={`notif-popover${open ? ' open' : ''}`} style={{
                 position: 'absolute', top: 46, right: 0, width: 360, maxHeight: 480, background: panelBg,
                 border: `1px solid ${border}`, borderRadius: 14, boxShadow: '0 20px 50px rgba(0,0,0,.5)',
-                display: 'flex', flexDirection: 'column', zIndex: 200, overflow: 'hidden',
+                flexDirection: 'column', zIndex: 200, overflow: 'hidden',
+                // display is intentionally NOT set here — it's owned entirely by the
+                // .notif-popover / .notif-popover.open CSS rules in globals.css. Setting
+                // it inline (as before) beat those rules via specificity on desktop/tablet,
+                // which is why the panel never actually closed above the mobile breakpoint.
             }}>
                 <div style={{ padding: '14px 16px', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: textMain, fontFamily: 'inherit' }}>Notifications</span>
