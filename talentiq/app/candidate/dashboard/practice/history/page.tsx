@@ -53,7 +53,7 @@ export default function PracticeHistoryPage() {
       </div>
 
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ fontFamily: "Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 20 }}>Your Practice Sessions</div>
+        <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 20 }}>Your Practice Sessions</div>
 
         {error && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 14 }}>{error}</div>}
 
