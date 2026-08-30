@@ -28,23 +28,23 @@ export default function ComparisonView({ candidates, onClose, onOpen }: {
     onOpen: (candidate: RankedCandidate) => void
 }) {
     return (
-        <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, padding: 20, marginBottom: 16 }}>
+        <div style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 14, padding: 20, marginBottom: 16, boxShadow: '0 1px 3px rgba(10,10,9,.04)' }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', flex: 1 }}>Comparing {candidates.length} candidates</div>
-                <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 12, cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Close ✕</button>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#1f1c17', flex: 1 }}>Comparing {candidates.length} candidates</div>
+                <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#7a7468', fontSize: 12, cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Close ✕</button>
             </div>
 
             <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 480 }}>
                     <thead>
                         <tr>
-                            <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,.3)', textTransform: 'uppercase', letterSpacing: '.05em' }}></th>
+                            <th style={{ textAlign: 'left', padding: '6px 10px', fontSize: 9.5, fontWeight: 700, color: '#7a7468', textTransform: 'uppercase', letterSpacing: '.05em' }}></th>
                             {candidates.map(c => (
                                 <th key={c.id} style={{ textAlign: 'center', padding: '6px 10px', minWidth: 130, cursor: 'pointer' }} onClick={() => onOpen(c)}>
                                     <div style={{ width: 32, height: 32, borderRadius: '50%', margin: '0 auto 6px', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)' }}>
                                         {initials(c.candidate_name)}
                                     </div>
-                                    <div style={{ fontSize: 11.5, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.candidate_name}</div>
+                                    <div style={{ fontSize: 11.5, fontWeight: 700, color: '#1f1c17', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.candidate_name}</div>
                                 </th>
                             ))}
                         </tr>
@@ -54,8 +54,8 @@ export default function ComparisonView({ candidates, onClose, onOpen }: {
                             const values = candidates.map(c => row.getValue(c))
                             const best = values.some(v => v != null) ? Math.max(...values.filter((v): v is number => v != null)) : null
                             return (
-                                <tr key={row.label} style={{ borderTop: '1px solid rgba(255,255,255,.05)' }}>
-                                    <td style={{ padding: '10px', fontSize: 11.5, fontWeight: 700, color: 'rgba(255,255,255,.5)' }}>{row.label}</td>
+                                <tr key={row.label} style={{ borderTop: '1px solid rgba(10,10,9,.1)' }}>
+                                    <td style={{ padding: '10px', fontSize: 11.5, fontWeight: 700, color: '#5c574c' }}>{row.label}</td>
                                     {candidates.map(c => {
                                         const v = row.getValue(c)
                                         const isBest = best != null && v === best
@@ -63,7 +63,7 @@ export default function ComparisonView({ candidates, onClose, onOpen }: {
                                             <td key={c.id} style={{ textAlign: 'center', padding: '10px' }}>
                                                 <span style={{
                                                     fontSize: 12.5, fontWeight: isBest ? 800 : 500,
-                                                    color: isBest ? '#13c28e' : v == null ? 'rgba(255,255,255,.3)' : 'rgba(255,255,255,.75)',
+                                                    color: isBest ? '#13c28e' : v == null ? '#7a7468' : '#3a352d',
                                                 }}>
                                                     {isBest && '★ '}{row.getDisplay(c)}
                                                 </span>
@@ -76,7 +76,7 @@ export default function ComparisonView({ candidates, onClose, onOpen }: {
                     </tbody>
                 </table>
             </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,.25)', marginTop: 10 }}>★ marks the strongest candidate for that category, among those with a real score. Click a name to open their full report.</div>
+            <div style={{ fontSize: 10, color: '#9c9689', marginTop: 10 }}>★ marks the strongest candidate for that category, among those with a real score. Click a name to open their full report.</div>
         </div>
     )
 }
