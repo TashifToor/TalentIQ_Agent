@@ -67,13 +67,13 @@ export default function TalentPoolPanel({ interviewPostings }: {
     }
 
     if (loading) {
-        return <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 760 }}>{[0, 1, 2].map(i => <LoadingSkeleton key={i} height={64} />)}</div>
+        return <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 760 }}>{[0, 1, 2].map(i => <LoadingSkeleton key={i} height={64} light />)}</div>
     }
     if (error) {
         return <div style={{ fontSize: 12.5, color: '#ef4444' }}>{error}</div>
     }
     if (!pool || pool.length === 0) {
-        return <EmptyState icon="🗂" title="No candidates screened yet" description="Run a bulk screening — every candidate will show up here, filterable and searchable." />
+        return <EmptyState icon="🗂" title="No candidates screened yet" description="Run a bulk screening — every candidate will show up here, filterable and searchable." light />
     }
 
     function toggleSelect(id: string) {
@@ -161,27 +161,27 @@ export default function TalentPoolPanel({ interviewPostings }: {
                 </select>
                 <input value={skillQuery} onChange={e => setSkillQuery(e.target.value)} placeholder="Skill…" style={{ ...selectSt, width: 110 }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,.4)' }}>ATS</span>
+                    <span style={{ fontSize: 10.5, color: '#7a7468' }}>ATS</span>
                     <input type="number" min={0} max={100} value={minAts} onChange={e => setMinAts(Number(e.target.value) || 0)} style={{ ...selectSt, width: 50 }} />
-                    <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,.3)' }}>–</span>
+                    <span style={{ fontSize: 10.5, color: '#7a7468' }}>–</span>
                     <input type="number" min={0} max={100} value={maxAts} onChange={e => setMaxAts(Number(e.target.value) || 100)} style={{ ...selectSt, width: 50 }} />
                 </div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'rgba(255,255,255,.5)', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#5c574c', cursor: 'pointer' }}>
                     <input type="checkbox" checked={recommendedOnly} onChange={e => setRecommendedOnly(e.target.checked)} /> Recommended only
                 </label>
                 <button onClick={() => { setCompareMode(m => !m); setSelected([]); setCompareData(null); setDecisionMode(false); setDecisionSelected([]) }} style={{
                     marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
-                    background: compareMode ? '#13c28e' : 'rgba(255,255,255,.05)', color: compareMode ? '#0a0a08' : 'rgba(255,255,255,.6)',
-                    border: compareMode ? 'none' : '1px solid rgba(255,255,255,.1)',
+                    background: compareMode ? '#13c28e' : '#f0eee6', color: compareMode ? '#0a0a08' : '#3a352d',
+                    border: compareMode ? 'none' : '1px solid #e7e4da',
                 }}>{compareMode ? `Comparing (${selected.length}/${MAX_COMPARE})` : 'Compare Candidates'}</button>
                 <button onClick={() => { setDecisionMode(m => !m); setDecisionSelected([]); setCompareMode(false); setSelected([]); setCompareData(null) }} style={{
                     fontSize: 11, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
-                    background: decisionMode ? '#7c3aed' : 'rgba(255,255,255,.05)', color: decisionMode ? '#fff' : 'rgba(255,255,255,.6)',
-                    border: decisionMode ? 'none' : '1px solid rgba(255,255,255,.1)',
+                    background: decisionMode ? '#7c3aed' : '#f0eee6', color: decisionMode ? '#fff' : '#3a352d',
+                    border: decisionMode ? 'none' : '1px solid #e7e4da',
                 }}>{decisionMode ? `Selecting (${decisionSelected.length})` : 'Bulk Decisions'}</button>
             </div>
 
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginBottom: 10 }}>{filtered.length} of {pool.length} candidates</div>
+            <div style={{ fontSize: 11, color: '#7a7468', marginBottom: 10 }}>{filtered.length} of {pool.length} candidates</div>
 
             {decisionMode && decisionSelected.length > 0 && (
                 <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
@@ -201,7 +201,7 @@ export default function TalentPoolPanel({ interviewPostings }: {
                             {compareLoading ? 'Loading…' : `Compare ${selected.length} Selected →`}
                         </button>
                     )}
-                    {selected.length < 2 && <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.35)' }}>Select 2–5 candidates below to compare.</div>}
+                    {selected.length < 2 && <div style={{ fontSize: 11.5, color: '#7a7468' }}>Select 2–5 candidates below to compare.</div>}
                     {compareData && (
                         <ComparisonView candidates={compareData} onClose={() => { setCompareData(null); setCompareMode(false); setSelected([]) }} onOpen={(c) => setOpenId(c.id)} />
                     )}
@@ -209,21 +209,21 @@ export default function TalentPoolPanel({ interviewPostings }: {
             )}
 
             {filtered.length === 0 ? (
-                <EmptyState icon="🔍" title="No matches" description="Try loosening the filters above." />
+                <EmptyState icon="🔍" title="No matches" description="Try loosening the filters above." light />
             ) : (
                 filtered.map(c => (
-                    <div key={c.id} style={{ background: '#111110', border: selected.includes(c.id) ? '1px solid rgba(19,194,142,.35)' : '1px solid rgba(255,255,255,.06)', borderRadius: 12, padding: 14, marginBottom: 8 }}>
+                    <div key={c.id} style={{ background: '#ffffff', border: selected.includes(c.id) ? '1px solid rgba(19,194,142,.4)' : '1px solid #e7e4da', borderRadius: 12, padding: 14, marginBottom: 8, boxShadow: '0 1px 2px rgba(10,10,9,.03)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             {compareMode && (
                                 <div onClick={() => toggleSelect(c.id)} style={{
                                     width: 18, height: 18, borderRadius: 5, flexShrink: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
-                                    border: selected.includes(c.id) ? 'none' : '1.5px solid rgba(255,255,255,.25)', background: selected.includes(c.id) ? '#13c28e' : 'transparent',
+                                    border: selected.includes(c.id) ? 'none' : '1.5px solid #c9c4b6', background: selected.includes(c.id) ? '#13c28e' : 'transparent',
                                 }}>{selected.includes(c.id) && <span style={{ color: '#0a0a08', fontSize: 12, fontWeight: 900 }}>✓</span>}</div>
                             )}
                             {decisionMode && (
                                 <div onClick={() => toggleDecisionSelect(c.id)} style={{
                                     width: 18, height: 18, borderRadius: 5, flexShrink: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
-                                    border: decisionSelected.includes(c.id) ? 'none' : '1.5px solid rgba(255,255,255,.25)', background: decisionSelected.includes(c.id) ? '#7c3aed' : 'transparent',
+                                    border: decisionSelected.includes(c.id) ? 'none' : '1.5px solid #c9c4b6', background: decisionSelected.includes(c.id) ? '#7c3aed' : 'transparent',
                                 }}>{decisionSelected.includes(c.id) && <span style={{ color: '#fff', fontSize: 12, fontWeight: 900 }}>✓</span>}</div>
                             )}
                             <div onClick={() => (decisionMode ? toggleDecisionSelect(c.id) : setOpenId(c.id))} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, cursor: 'pointer', rowGap: 6 }}>
@@ -232,28 +232,28 @@ export default function TalentPoolPanel({ interviewPostings }: {
                                 </div>
                                 <div style={{ flex: '1 1 140px', minWidth: 140 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{c.candidate_name || c.cv_filename || 'Unnamed candidate'}</div>
-                                        <GradientBadge label={FIT_TIER_LABEL[c.fit_tier]} tone={c.fit_tier === 'strong' || c.fit_tier === 'good' ? 'teal' : c.fit_tier === 'possible' ? 'gold' : 'neutral'} />
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#1f1c17' }}>{c.candidate_name || c.cv_filename || 'Unnamed candidate'}</div>
+                                        <GradientBadge label={FIT_TIER_LABEL[c.fit_tier]} tone={c.fit_tier === 'strong' || c.fit_tier === 'good' ? 'teal' : c.fit_tier === 'possible' ? 'gold' : 'neutral'} light />
                                         {c.is_shortlisted === 'yes' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(19,194,142,.12)', color: '#13c28e' }}>Shortlisted</span>}
                                         {c.is_shortlisted === 'no' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(239,68,68,.1)', color: '#ef4444' }}>Rejected</span>}
                                     </div>
-                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.job_title}{c.candidate_email ? ` · ${c.candidate_email}` : ''}</div>
+                                    <div style={{ fontSize: 11, color: '#7a7468', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.job_title}{c.candidate_email ? ` · ${c.candidate_email}` : ''}</div>
                                 </div>
                                 <div style={{ textAlign: 'center', flexShrink: 0 }}>
                                     <div style={{ fontSize: 16, fontWeight: 700, color: FIT_TIER_COLOR[c.fit_tier] }}>{c.ats_score ?? '—'}</div>
-                                    <div style={{ fontSize: 8, color: 'rgba(255,255,255,.25)' }}>ATS</div>
+                                    <div style={{ fontSize: 8, color: '#9c9689' }}>ATS</div>
                                 </div>
                                 <div style={{ textAlign: 'right', minWidth: 90, flexShrink: 0 }}>
-                                    <div style={{ fontSize: 10.5, fontWeight: 700, color: c.interview_status === 'completed' ? '#13c28e' : c.interview_status === 'invited' || c.interview_status === 'in_progress' ? '#e2b04a' : 'rgba(255,255,255,.3)' }}>
+                                    <div style={{ fontSize: 10.5, fontWeight: 700, color: c.interview_status === 'completed' ? '#13c28e' : c.interview_status === 'invited' || c.interview_status === 'in_progress' ? '#e2b04a' : '#7a7468' }}>
                                         {INTERVIEW_STATUS_LABEL[c.interview_status]}
                                     </div>
                                     {c.interview_posting && (
-                                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,.25)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>{c.interview_posting.title}</div>
+                                        <div style={{ fontSize: 9, color: '#9c9689', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>{c.interview_posting.title}</div>
                                     )}
                                 </div>
                             </div>
                         </div>
-                        <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,.35)', marginTop: 8, paddingLeft: (compareMode || decisionMode) ? 62 : 44 }}>
+                        <div style={{ fontSize: 10.5, color: '#7a7468', marginTop: 8, paddingLeft: (compareMode || decisionMode) ? 62 : 44 }}>
                             {c.matched_skills.length > 0 && <span style={{ color: '#13c28e' }}>✓ {c.matched_skills.slice(0, 4).join(', ')}</span>}
                             {c.missing_skills.length > 0 && <span style={{ marginLeft: 10, color: '#ef4444' }}>Missing: {c.missing_skills.slice(0, 3).join(', ')}</span>}
                         </div>
@@ -274,6 +274,6 @@ export default function TalentPoolPanel({ interviewPostings }: {
 }
 
 const selectSt: CSSProperties = {
-    background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '6px 10px',
-    fontSize: 11.5, color: 'rgba(255,255,255,.75)', fontFamily: 'Inter,sans-serif', outline: 'none',
+    background: '#faf9f5', border: '1px solid #e7e4da', borderRadius: 6, padding: '6px 10px',
+    fontSize: 11.5, color: '#1f1c17', fontFamily: 'Inter,sans-serif', outline: 'none',
 }
