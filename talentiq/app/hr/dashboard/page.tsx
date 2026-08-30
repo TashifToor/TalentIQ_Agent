@@ -564,10 +564,6 @@ export default function HRDashboard() {
   const base = { background: '#f7f5f0', fontFamily: 'Inter, sans-serif', color: '#1f1c17' }
   const card = { background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 8, padding: 16 }
   const inputSt = { background: '#faf9f5', border: '1px solid #e7e4da', borderRadius: 8, padding: '10px 12px', fontSize: 13, fontFamily: 'Inter, sans-serif', color: '#1f1c17', outline: 'none', width: '100%' }
-  // Wraps shared dark-themed sub-modules (built for the dark theme, reused by other
-  // surfaces) so they read as an intentional "premium dark module" instead of
-  // breaking on the new light HR background — their own internal colors are untouched.
-  const darkIsland = { background: '#111110', border: '1px solid rgba(255,255,255,.06)', borderRadius: 12, padding: 18 }
 
   // ── Nav ──
   const NAV = [
@@ -815,9 +811,7 @@ export default function HRDashboard() {
     <div style={{ padding: 28, overflowY: 'auto', height: '100%' }}>
       <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>Talent Pool</div>
       <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 24 }}>Every screened candidate across all your screening jobs, in one searchable, filterable place</div>
-      <div style={darkIsland}>
-        <TalentPoolPanel interviewPostings={interviewPostings.map((p: any) => ({ id: p.id, title: p.title }))} />
-      </div>
+      <TalentPoolPanel interviewPostings={interviewPostings.map((p: any) => ({ id: p.id, title: p.title }))} />
     </div>
   )
 
@@ -1339,7 +1333,7 @@ export default function HRDashboard() {
       </div>
 
       {showInterviewForm && (
-        <div style={{ marginTop: 24, marginBottom: 24, ...darkIsland }}>
+        <div style={{ marginTop: 24, marginBottom: 24 }}>
           <InterviewBuilderWizard onCreated={handleInterviewCreated} onCancel={() => setShowInterviewForm(false)} />
         </div>
       )}
@@ -1553,15 +1547,13 @@ export default function HRDashboard() {
                 </div>
                 <div style={{ marginBottom: 20 }} />
                 {showRanking ? (
-                  <div style={darkIsland}>
-                    <TalentIntelligencePanel
-                      postingId={selectedPosting.id}
-                      onOpenCandidate={(candidate) => {
-                        setSelectedRanking(candidate)
-                        api.getInterviewSessionReport(candidate.id).then(setSelectedReport)
-                      }}
-                    />
-                  </div>
+                  <TalentIntelligencePanel
+                    postingId={selectedPosting.id}
+                    onOpenCandidate={(candidate) => {
+                      setSelectedRanking(candidate)
+                      api.getInterviewSessionReport(candidate.id).then(setSelectedReport)
+                    }}
+                  />
                 ) : (
                 <>
                 {interviewCandidatesLoading && <div style={{ fontSize: 13, color: '#7a7468' }}>Loading...</div>}
