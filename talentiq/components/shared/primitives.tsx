@@ -16,10 +16,10 @@ import { useState, ReactNode, CSSProperties } from 'react'
 // card in this system builds on.
 // ─────────────────────────────────────────────────────────────────
 export function GlassCard({
-  children, style, onClick, glow, hoverable, className,
+  children, style, onClick, glow, hoverable, className, light,
 }: {
   children: ReactNode; style?: CSSProperties; onClick?: () => void
-  glow?: boolean; hoverable?: boolean; className?: string
+  glow?: boolean; hoverable?: boolean; className?: string; light?: boolean
 }) {
   const [hovered, setHovered] = useState(false)
   return (
@@ -38,6 +38,10 @@ export function GlassCard({
         boxShadow: glow && hovered
           ? '0 20px 60px -12px rgba(226,176,74,.25), 0 0 0 1px rgba(226,176,74,.15)'
           : hoverable && hovered ? '0 16px 40px -10px rgba(0,0,0,.4)' : '0 4px 16px -4px rgba(0,0,0,.2)',
+        // `light` is opt-in and overrides the default dark glass background/border —
+        // used by HR-only surfaces (Talent Pool, Ranking) that sit on the light HR
+        // dashboard theme. Every other caller is unaffected (prop defaults to false).
+        ...(light ? { background: '#ffffff', border: '1px solid #e7e4da', boxShadow: '0 1px 3px rgba(10,10,9,.04)' } : {}),
         ...style,
       }}
     >
@@ -55,12 +59,12 @@ const BADGE_GRADIENTS: Record<string, string> = {
   purple: 'linear-gradient(135deg,#7c3aed,#a78bfa)',
   neutral: 'linear-gradient(135deg,#3a3a36,#5a5a54)',
 }
-export function GradientBadge({ label, tone = 'neutral', icon }: { label: string; tone?: 'gold' | 'teal' | 'purple' | 'neutral'; icon?: string }) {
+export function GradientBadge({ label, tone = 'neutral', icon, light }: { label: string; tone?: 'gold' | 'teal' | 'purple' | 'neutral'; icon?: string; light?: boolean }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 800,
       letterSpacing: '.04em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: 100,
-      background: BADGE_GRADIENTS[tone], color: tone === 'neutral' ? 'rgba(255,255,255,.8)' : '#0a0a08',
+      background: BADGE_GRADIENTS[tone], color: tone === 'neutral' ? (light ? '#3a352d' : 'rgba(255,255,255,.8)') : '#0a0a08',
     }}>
       {icon && <span style={{ fontSize: 11 }}>{icon}</span>}{label}
     </span>
@@ -84,15 +88,15 @@ export function FeatureCard({ icon, label }: { icon: string; label: string }) {
 // StepHeader — back button + step progress dots, used by the wizard
 // ─────────────────────────────────────────────────────────────────
 export function StepHeader({
-  title, subtitle, step, totalSteps, onBack,
-}: { title: string; subtitle?: string; step: number; totalSteps: number; onBack?: () => void }) {
+  title, subtitle, step, totalSteps, onBack, light,
+}: { title: string; subtitle?: string; step: number; totalSteps: number; onBack?: () => void; light?: boolean }) {
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
         {onBack && (
           <button onClick={onBack} style={{
-            width: 30, height: 30, borderRadius: 8, border: '1px solid rgba(255,255,255,.1)',
-            background: 'rgba(255,255,255,.03)', color: 'rgba(255,255,255,.6)', cursor: 'pointer',
+            width: 30, height: 30, borderRadius: 8, border: light ? '1px solid #e7e4da' : '1px solid rgba(255,255,255,.1)',
+            background: light ? '#faf9f5' : 'rgba(255,255,255,.03)', color: light ? '#5c574c' : 'rgba(255,255,255,.6)', cursor: 'pointer',
             display: 'grid', placeItems: 'center', flexShrink: 0, transition: 'all .2s',
           }}>
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10 3L5 8l5 5" /></svg>
@@ -102,14 +106,14 @@ export function StepHeader({
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div key={i} style={{
               width: i === step - 1 ? 22 : 7, height: 7, borderRadius: 4, transition: 'all .3s var(--ease)',
-              background: i <= step - 1 ? 'linear-gradient(90deg,#c5931f,#e2b04a)' : 'rgba(255,255,255,.1)',
+              background: i <= step - 1 ? 'linear-gradient(90deg,#c5931f,#e2b04a)' : light ? '#e7e4da' : 'rgba(255,255,255,.1)',
             }} />
           ))}
         </div>
-        <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,.3)', fontWeight: 600 }}>STEP {step} OF {totalSteps}</span>
+        <span style={{ fontSize: 10.5, color: light ? '#9c9689' : 'rgba(255,255,255,.3)', fontWeight: 600 }}>STEP {step} OF {totalSteps}</span>
       </div>
-      <div style={{ fontFamily: "Inter, sans-serif", fontSize: 26, fontWeight: 600, color: '#fff', marginBottom: subtitle ? 4 : 0 }}>{title}</div>
-      {subtitle && <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.35)' }}>{subtitle}</div>}
+      <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, color: light ? '#1f1c17' : '#fff', marginBottom: subtitle ? 4 : 0 }}>{title}</div>
+      {subtitle && <div style={{ fontSize: 12.5, color: light ? '#7a7468' : 'rgba(255,255,255,.35)' }}>{subtitle}</div>}
     </div>
   )
 }
@@ -117,12 +121,12 @@ export function StepHeader({
 // ─────────────────────────────────────────────────────────────────
 // MetricCard — number + label, used in the Final Review metrics grid
 // ─────────────────────────────────────────────────────────────────
-export function MetricCard({ label, value, icon, accent = '#e2b04a' }: { label: string; value: string; icon?: string; accent?: string }) {
+export function MetricCard({ label, value, icon, accent = '#e2b04a', light }: { label: string; value: string; icon?: string; accent?: string; light?: boolean }) {
   return (
-    <GlassCard style={{ padding: '16px 18px', textAlign: 'center' }}>
+    <GlassCard light={light} style={{ padding: '16px 18px', textAlign: 'center' }}>
       {icon && <div style={{ fontSize: 18, marginBottom: 6 }}>{icon}</div>}
       <div style={{ fontFamily: "Inter, sans-serif", fontSize: 24, fontWeight: 700, color: accent, marginBottom: 3 }}>{value}</div>
-      <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>{label}</div>
+      <div style={{ fontSize: 10.5, color: light ? '#7a7468' : 'rgba(255,255,255,.4)', textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>{label}</div>
     </GlassCard>
   )
 }
@@ -218,12 +222,12 @@ export function PremiumTooltip({ label, children }: { label: string; children: R
 // EmptyState — used for the Copilot "Coming Soon" panel + AI review
 // placeholder sections that don't have real AI output yet
 // ─────────────────────────────────────────────────────────────────
-export function EmptyState({ icon, title, description }: { icon: string; title: string; description: string }) {
+export function EmptyState({ icon, title, description, light }: { icon: string; title: string; description: string; light?: boolean }) {
   return (
     <div style={{ textAlign: 'center', padding: '28px 16px' }}>
       <div style={{ fontSize: 26, marginBottom: 10, opacity: .6 }}>{icon}</div>
-      <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,.65)', marginBottom: 5 }}>{title}</div>
-      <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.35)', lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>{description}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: light ? '#3a352d' : 'rgba(255,255,255,.65)', marginBottom: 5 }}>{title}</div>
+      <div style={{ fontSize: 11.5, color: light ? '#7a7468' : 'rgba(255,255,255,.35)', lineHeight: 1.6, maxWidth: 280, margin: '0 auto' }}>{description}</div>
     </div>
   )
 }
@@ -262,20 +266,20 @@ export function Timeline({ events }: { events: TimelineEvent[] }) {
 // ─────────────────────────────────────────────────────────────────
 // ProgressRing — circular progress indicator (score, completion %)
 // ─────────────────────────────────────────────────────────────────
-export function ProgressRing({ value, size = 72, label, accent = '#e2b04a' }: { value: number; size?: number; label?: string; accent?: string }) {
+export function ProgressRing({ value, size = 72, label, accent = '#e2b04a', light }: { value: number; size?: number; label?: string; accent?: string; light?: boolean }) {
   const r = (size - 8) / 2
   const circumference = 2 * Math.PI * r
   const offset = circumference - (Math.max(0, Math.min(100, value)) / 100) * circumference
   return (
     <div style={{ position: 'relative', width: size, height: size, display: 'inline-grid', placeItems: 'center' }}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="6" />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={light ? 'rgba(10,10,9,.08)' : 'rgba(255,255,255,.08)'} strokeWidth="6" />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={accent} strokeWidth="6" strokeLinecap="round"
           strokeDasharray={circumference} strokeDashoffset={offset} style={{ transition: 'stroke-dashoffset .8s var(--ease)' }} />
       </svg>
       <div style={{ position: 'absolute', textAlign: 'center' }}>
-        <div style={{ fontSize: size / 3.2, fontWeight: 700, color: '#fff', fontFamily: "Inter, sans-serif" }}>{Math.round(value)}</div>
-        {label && <div style={{ fontSize: 8.5, color: 'rgba(255,255,255,.35)', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>}
+        <div style={{ fontSize: size / 3.2, fontWeight: 700, color: light ? '#1f1c17' : '#fff', fontFamily: "Inter, sans-serif" }}>{Math.round(value)}</div>
+        {label && <div style={{ fontSize: 8.5, color: light ? '#7a7468' : 'rgba(255,255,255,.35)', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>}
       </div>
     </div>
   )
@@ -310,11 +314,13 @@ export function ChartBar({ data, accent = '#e2b04a' }: { data: { label: string; 
     </div>
   )
 }
-export function LoadingSkeleton({ width = '100%', height = 14, circle }: { width?: number | string; height?: number; circle?: boolean }) {
+export function LoadingSkeleton({ width = '100%', height = 14, circle, light }: { width?: number | string; height?: number; circle?: boolean; light?: boolean }) {
   return (
     <div style={{
       width, height, borderRadius: circle ? '50%' : 6,
-      background: 'linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.12) 50%, rgba(255,255,255,.05) 75%)',
+      background: light
+        ? 'linear-gradient(90deg, rgba(10,10,9,.05) 25%, rgba(10,10,9,.1) 50%, rgba(10,10,9,.05) 75%)'
+        : 'linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.12) 50%, rgba(255,255,255,.05) 75%)',
       backgroundSize: '200% 100%', animation: 'shimmer 1.4s ease-in-out infinite',
     }} />
   )
