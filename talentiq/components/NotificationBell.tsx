@@ -54,7 +54,7 @@ function iconFor(type: string) {
     return TYPE_ICON[type] || <><circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h.01" /></>
 }
 
-export default function NotificationBell({ role }: { role: 'hr' | 'candidate' }) {
+export default function NotificationBell({ role, light }: { role: 'hr' | 'candidate'; light?: boolean }) {
     const router = useRouter()
     const { unreadCount, items, loadingList, refreshList, markRead, markAllRead } = useNotificationContext()
     const [open, setOpen] = useState(false)
@@ -102,9 +102,11 @@ export default function NotificationBell({ role }: { role: 'hr' | 'candidate' })
                 aria-haspopup="true"
                 aria-expanded={open}
                 style={{
-                    position: 'relative', width: 38, height: 38, borderRadius: 9, border: `1px solid ${border}`,
-                    background: open ? 'rgba(255,255,255,.06)' : 'transparent', cursor: 'pointer', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', color: textMain, transition: 'background .15s',
+                    position: 'relative', width: 38, height: 38, borderRadius: 9,
+                    border: `1px solid ${light ? 'rgba(10,10,9,.14)' : border}`,
+                    background: light ? (open ? 'rgba(10,10,9,.06)' : 'transparent') : (open ? 'rgba(255,255,255,.06)' : 'transparent'),
+                    cursor: 'pointer', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', color: light ? '#3a352d' : textMain, transition: 'background .15s',
                 }}
             >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
