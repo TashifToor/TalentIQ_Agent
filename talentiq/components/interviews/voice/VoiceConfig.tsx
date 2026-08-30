@@ -2,7 +2,7 @@
 import { GlassCard, GradientBadge } from '@/components/shared/primitives'
 import { BuilderFormData } from '@/components/modules/interview-engine/formData'
 
-const inputSt = { background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: 'rgba(255,255,255,.85)', outline: 'none', width: '100%' } as const
+const inputSt = { background: '#faf9f5', border: '1px solid #e7e4da', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: '#1f1c17', outline: 'none', width: '100%' } as const
 
 export default function VoiceConfig({ data, onChange }: { data: BuilderFormData; onChange: (patch: Partial<BuilderFormData>) => void }) {
   return (
@@ -22,10 +22,10 @@ export default function VoiceConfig({ data, onChange }: { data: BuilderFormData;
       </div>
 
       {/* Right — "configuring an agent" panel with a waveform identity */}
-      <GlassCard style={{ padding: 18, alignSelf: 'start', border: '1px solid rgba(167,139,250,.25)' }}>
+      <GlassCard light style={{ padding: 18, alignSelf: 'start', border: '1px solid rgba(167,139,250,.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#fff' }}>🎙 Agent Preview</div>
-          <GradientBadge label="Flagship" tone="purple" icon="⚡" />
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1f1c17' }}>🎙 Agent Preview</div>
+          <GradientBadge label="Flagship" tone="purple" icon="⚡" light />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, height: 48, marginBottom: 16 }}>
@@ -34,13 +34,13 @@ export default function VoiceConfig({ data, onChange }: { data: BuilderFormData;
           ))}
         </div>
 
-        <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.6)', lineHeight: 1.7, marginBottom: 14 }}>
+        <div style={{ fontSize: 11.5, color: '#3a352d', lineHeight: 1.7, marginBottom: 14 }}>
           {(data.interviewerName.trim() || 'Your AI recruiter')} will speak questions aloud and listen for spoken answers — grounded in the JD, with follow-ups based on what the candidate actually says.
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {['Push-to-talk voice turns (record → transcribe → respond)', 'Same scoring engine as Chat Interview', 'Full transcript saved for the recruiter report'].map(t => (
-            <div key={t} style={{ display: 'flex', gap: 8, fontSize: 11, color: 'rgba(255,255,255,.45)' }}>
+            <div key={t} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#5c574c' }}>
               <span style={{ color: '#a78bfa' }}>◆</span>{t}
             </div>
           ))}
