@@ -1640,11 +1640,11 @@ export default function HRDashboard() {
 
       {/* Mobile top bar — hamburger only, hidden on laptop/desktop via CSS */}
       <div className="app-mobile-topbar">
-        <button onClick={() => setMobileNavOpen(true)} aria-label="Open menu" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.12)', borderRadius: 8, padding: 8, cursor: 'pointer', display: 'flex' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        <button onClick={() => setMobileNavOpen(true)} aria-label="Open menu" style={{ background: 'transparent', border: '1px solid #e7e4da', borderRadius: 8, padding: 8, cursor: 'pointer', display: 'flex' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3a352d" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
-        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 18, fontWeight: 600, color: 'rgba(255,255,255,.9)', flex: 1 }}>Talent <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#13c28e', padding: '2px 7px', borderRadius: 100, marginLeft: 4, border: '1px solid rgba(19,194,142,.18)' }}>HR</span></span>
-        <NotificationBell role="hr" />
+        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 18, fontWeight: 600, color: '#1f1c17', flex: 1 }}>Talent <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#0b7c5e', padding: '2px 7px', borderRadius: 100, marginLeft: 4, border: '1px solid rgba(19,194,142,.25)' }}>HR</span></span>
+        <NotificationBell role="hr" light />
       </div>
 
       {/* Backdrop — mobile/tablet drawer only */}
@@ -1694,9 +1694,9 @@ export default function HRDashboard() {
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="app-main" style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto', background: '#0a0a09', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <div className="app-main" style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto', background: '#f7f5f0', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <div className="hr-desktop-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '14px 28px 0' }}>
-          <NotificationBell role="hr" />
+          <NotificationBell role="hr" light />
         </div>
         <div style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto' }}>
           {renderSection()}
