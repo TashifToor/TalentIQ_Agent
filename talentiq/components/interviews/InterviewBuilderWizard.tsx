@@ -101,7 +101,15 @@ export default function InterviewBuilderWizard({
   }
 
   if (step === 'select') {
-    return <ModeSelectionScreen onSelect={selectMode} sidePanel={<CopilotPanel context="job_creation" defaultCollapsed />} />
+    // ModeSelectionScreen is shared with the Candidate practice flow (which is fully
+    // dark) and deliberately kept dark/premium here too per design direction — it has
+    // no background of its own (white text assumes a dark parent), so it needs an
+    // explicit dark wrapper now that the rest of this wizard is light.
+    return (
+      <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.06)', borderRadius: 16, padding: 24 }}>
+        <ModeSelectionScreen onSelect={selectMode} sidePanel={<CopilotPanel context="job_creation" defaultCollapsed />} />
+      </div>
+    )
   }
 
   const mode = getModeDefinition(data.mode)
@@ -114,7 +122,7 @@ export default function InterviewBuilderWizard({
 
   return (
     <div key={step} className="wizard-step-in">
-      <StepHeader title={titles[step].title} subtitle={titles[step].subtitle} step={stepIndex + 1} totalSteps={STEP_ORDER.length} onBack={goBack} />
+      <StepHeader title={titles[step].title} subtitle={titles[step].subtitle} step={stepIndex + 1} totalSteps={STEP_ORDER.length} onBack={goBack} light />
 
       {step === 'configure' && (
         <div className="builder-with-copilot">
