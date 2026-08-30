@@ -50,14 +50,14 @@ export default function AIReviewStep({ data }: { data: BuilderFormData }) {
   return (
     <div>
       <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: `repeat(${questionCount !== null ? 3 : 2}, 1fr)`, gap: 12, marginBottom: 20 }}>
-        <MetricCard label="Estimated Duration" value={estimateDuration(data)} icon="⏱" accent={mode.accent} />
-        <MetricCard label="Mode" value={mode.title.replace('AI ', '')} icon={mode.icon} accent={mode.accent} />
-        {questionCount !== null && <MetricCard label="Questions" value={String(questionCount)} icon="#" accent={mode.accent} />}
+        <MetricCard label="Estimated Duration" value={estimateDuration(data)} icon="⏱" accent={mode.accent} light />
+        <MetricCard label="Mode" value={mode.title.replace('AI ', '')} icon={mode.icon} accent={mode.accent} light />
+        {questionCount !== null && <MetricCard label="Questions" value={String(questionCount)} icon="#" accent={mode.accent} light />}
       </div>
 
       {skills.length > 0 && (
-        <GlassCard style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 10 }}>
+        <GlassCard light style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#7a7468', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 10 }}>
             Skills detected in your JD
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -68,11 +68,12 @@ export default function AIReviewStep({ data }: { data: BuilderFormData }) {
         </GlassCard>
       )}
 
-      <GlassCard>
+      <GlassCard light>
         <EmptyState
           icon="🧠"
           title="Deeper AI suggestions — coming with the Hiring Copilot"
           description="JD rewrites, missing-skill detection, rubric generation, and interview-plan tuning will appear here automatically once the Copilot ships. For now, review your setup and continue."
+          light
         />
       </GlassCard>
     </div>
