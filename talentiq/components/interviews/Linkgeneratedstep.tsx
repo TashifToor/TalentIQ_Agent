@@ -16,7 +16,7 @@ export default function LinkGeneratedStep({ posting, onDone }: { posting: any; o
   const badgeTone = mode.id === 'voice_agent' ? 'purple' : mode.id === 'mcq' ? 'teal' : 'gold'
 
   const copyLink = () => {
-    navigator.clipboard?.writeText(posting.public_link).catch(() => { })
+    navigator.clipboard?.writeText(posting.public_link).catch(() => {})
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
