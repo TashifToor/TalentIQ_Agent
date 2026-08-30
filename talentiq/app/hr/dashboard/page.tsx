@@ -1644,7 +1644,7 @@ export default function HRDashboard() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3a352d" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
         <span style={{ fontFamily: "Inter, sans-serif", fontSize: 18, fontWeight: 600, color: '#1f1c17', flex: 1 }}>Talent <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#0b7c5e', padding: '2px 7px', borderRadius: 100, marginLeft: 4, border: '1px solid rgba(19,194,142,.25)' }}>HR</span></span>
-        <NotificationBell role="hr" light />
+        <NotificationBell role="hr"/>
       </div>
 
       {/* Backdrop — mobile/tablet drawer only */}
@@ -1696,7 +1696,7 @@ export default function HRDashboard() {
       {/* MAIN CONTENT */}
       <div className="app-main" style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto', background: '#f7f5f0', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <div className="hr-desktop-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '14px 28px 0' }}>
-          <NotificationBell role="hr" light />
+          <NotificationBell role="hr" />
         </div>
         <div style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto' }}>
           {renderSection()}
