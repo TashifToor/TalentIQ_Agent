@@ -59,7 +59,7 @@ export default function TalentIntelligencePanel({ postingId, onOpenCandidate }: 
     if (loading) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[0, 1, 2, 3].map(i => <LoadingSkeleton key={i} height={64} />)}
+                {[0, 1, 2, 3].map(i => <LoadingSkeleton key={i} height={64} light />)}
             </div>
         )
     }
@@ -67,7 +67,7 @@ export default function TalentIntelligencePanel({ postingId, onOpenCandidate }: 
         return <div style={{ padding: 20, fontSize: 12.5, color: '#ef4444' }}>{error}</div>
     }
     if (!data || data.total_candidates === 0) {
-        return <EmptyState icon="🎯" title="No candidates yet" description="Candidates who take this interview will be ranked here by real fit signals." />
+        return <EmptyState icon="🎯" title="No candidates yet" description="Candidates who take this interview will be ranked here by real fit signals." light />
     }
 
     const filtered = applyFilter(data.candidates, filter)
@@ -76,33 +76,33 @@ export default function TalentIntelligencePanel({ postingId, onOpenCandidate }: 
     return (
         <div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
-                <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, padding: '8px 14px' }}>
+                <div style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 10, padding: '8px 14px' }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#13c28e' }}>{data.strong_count}</div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,.35)' }}>STRONG MATCH</div>
+                    <div style={{ fontSize: 9, color: '#7a7468' }}>STRONG MATCH</div>
                 </div>
-                <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, padding: '8px 14px' }}>
+                <div style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 10, padding: '8px 14px' }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#5cb8e4' }}>{data.good_count}</div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,.35)' }}>GOOD MATCH</div>
+                    <div style={{ fontSize: 9, color: '#7a7468' }}>GOOD MATCH</div>
                 </div>
-                <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, padding: '8px 14px' }}>
+                <div style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 10, padding: '8px 14px' }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#e2b04a' }}>{data.possible_count}</div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,.35)' }}>POSSIBLE MATCH</div>
+                    <div style={{ fontSize: 9, color: '#7a7468' }}>POSSIBLE MATCH</div>
                 </div>
-                <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, padding: '8px 14px' }}>
+                <div style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 10, padding: '8px 14px' }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#ef4444' }}>{data.low_count}</div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,.35)' }}>LOW MATCH</div>
+                    <div style={{ fontSize: 9, color: '#7a7468' }}>LOW MATCH</div>
                 </div>
-                <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.06)', borderRadius: 10, padding: '8px 14px' }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,.4)' }}>{data.not_enough_data_count}</div>
-                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,.35)' }}>NOT ENOUGH DATA</div>
+                <div style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 10, padding: '8px 14px' }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#7a7468' }}>{data.not_enough_data_count}</div>
+                    <div style={{ fontSize: 9, color: '#7a7468' }}>NOT ENOUGH DATA</div>
                 </div>
                 <div style={{ marginLeft: 'auto' }}>
                     <button
                         onClick={() => { setCompareMode(m => !m); setSelected([]) }}
                         style={{
                             fontSize: 11.5, fontWeight: 700, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
-                            background: compareMode ? '#13c28e' : 'rgba(255,255,255,.05)', color: compareMode ? '#0a0a08' : 'rgba(255,255,255,.65)',
-                            border: compareMode ? 'none' : '1px solid rgba(255,255,255,.1)',
+                            background: compareMode ? '#13c28e' : '#f0eee6', color: compareMode ? '#0a0a08' : '#3a352d',
+                            border: compareMode ? 'none' : '1px solid rgba(10,10,9,.1)',
                         }}
                     >
                         {compareMode ? `Comparing (${selected.length}/5)` : 'Compare Candidates'}
@@ -118,8 +118,8 @@ export default function TalentIntelligencePanel({ postingId, onOpenCandidate }: 
                         style={{
                             fontSize: 11, fontWeight: 600, padding: '6px 12px', borderRadius: 100, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
                             background: filter === f.key ? 'rgba(19,194,142,.15)' : 'transparent',
-                            color: filter === f.key ? '#13c28e' : 'rgba(255,255,255,.45)',
-                            border: filter === f.key ? '1px solid rgba(19,194,142,.35)' : '1px solid rgba(255,255,255,.08)',
+                            color: filter === f.key ? '#13c28e' : '#5c574c',
+                            border: filter === f.key ? '1px solid rgba(19,194,142,.35)' : '1px solid rgba(10,10,9,.1)',
                         }}
                     >
                         {f.label}
@@ -131,11 +131,11 @@ export default function TalentIntelligencePanel({ postingId, onOpenCandidate }: 
                 <ComparisonView candidates={selectedCandidates} onClose={() => { setCompareMode(false); setSelected([]) }} onOpen={onOpenCandidate} />
             )}
             {compareMode && selected.length < 2 && (
-                <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.35)', marginBottom: 14 }}>Select 2–5 candidates below to compare them side-by-side.</div>
+                <div style={{ fontSize: 11.5, color: '#7a7468', marginBottom: 14 }}>Select 2–5 candidates below to compare them side-by-side.</div>
             )}
 
             {filtered.length === 0 ? (
-                <EmptyState icon="🔍" title="No candidates match this filter" description="Try a different filter to see more candidates." />
+                <EmptyState icon="🔍" title="No candidates match this filter" description="Try a different filter to see more candidates." light />
             ) : (
                 filtered.map((c, i) => (
                     <CandidateFitCard
