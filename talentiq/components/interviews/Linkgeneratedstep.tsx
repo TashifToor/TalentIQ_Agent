@@ -16,7 +16,7 @@ export default function LinkGeneratedStep({ posting, onDone }: { posting: any; o
   const badgeTone = mode.id === 'voice_agent' ? 'purple' : mode.id === 'mcq' ? 'teal' : 'gold'
 
   const copyLink = () => {
-    navigator.clipboard?.writeText(posting.public_link).catch(() => {})
+    navigator.clipboard?.writeText(posting.public_link).catch(() => { })
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -46,48 +46,48 @@ export default function LinkGeneratedStep({ posting, onDone }: { posting: any; o
             <path className="check-draw" d="M5 12.5l4.5 4.5L19 7" stroke="#13c28e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <div style={{ fontFamily: "Inter, sans-serif", fontSize: 24, fontWeight: 600, color: '#fff' }}>Interview link is live</div>
+        <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 24, fontWeight: 600, color: '#1f1c17' }}>Interview link is live</div>
       </div>
 
       {/* Posting overview — a real management screen, not just "your link is ready" */}
-      <GlassCard style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
+      <GlassCard light style={{ padding: 0, overflow: 'hidden', marginBottom: 16 }}>
         <div style={{ height: 4, background: mode.gradient }} />
         <div style={{ padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>{posting.title}</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>{posting.company || 'No company set'} · Created {createdDate}</div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: '#1f1c17' }}>{posting.title}</div>
+              <div style={{ fontSize: 12, color: '#7a7468', marginTop: 2 }}>{posting.company || 'No company set'} · Created {createdDate}</div>
             </div>
-            <GradientBadge label={posting.is_active ? 'Active' : 'Inactive'} tone={posting.is_active ? 'teal' : 'neutral'} />
+            <GradientBadge label={posting.is_active ? 'Active' : 'Inactive'} tone={posting.is_active ? 'teal' : 'neutral'} light />
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
-            <GradientBadge label={mode.title} tone={badgeTone} icon={mode.icon} />
-            {posting.interviewer_name && <GradientBadge label={`Interviewer: ${posting.interviewer_name}`} tone="neutral" />}
-            {posting.notify_hr_on_completion && <GradientBadge label="Email on completion" tone="neutral" icon="✉" />}
+            <GradientBadge label={mode.title} tone={badgeTone} icon={mode.icon} light />
+            {posting.interviewer_name && <GradientBadge label={`Interviewer: ${posting.interviewer_name}`} tone="neutral" light />}
+            {posting.notify_hr_on_completion && <GradientBadge label="Email on completion" tone="neutral" icon="✉" light />}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${posting.mode === 'mcq' ? 3 : 2}, 1fr)`, gap: 8, marginBottom: 16 }}>
-            <MetricCard label="Duration" value={mode.duration} accent={mode.accent} />
-            <MetricCard label="Difficulty" value={mode.difficulty} accent={mode.accent} />
-            {posting.mode === 'mcq' && <MetricCard label="Questions" value={String(posting.assessment_question_count ?? 0)} accent={mode.accent} />}
+            <MetricCard label="Duration" value={mode.duration} accent={mode.accent} light />
+            <MetricCard label="Difficulty" value={mode.difficulty} accent={mode.accent} light />
+            {posting.mode === 'mcq' && <MetricCard label="Questions" value={String(posting.assessment_question_count ?? 0)} accent={mode.accent} light />}
           </div>
 
-          <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.4)', lineHeight: 1.6, background: '#161614', borderRadius: 8, padding: '10px 12px' }}>
-            <strong style={{ color: 'rgba(255,255,255,.6)' }}>Candidate instructions: </strong>
+          <div style={{ fontSize: 11.5, color: '#5c574c', lineHeight: 1.6, background: '#f0eee6', borderRadius: 8, padding: '10px 12px' }}>
+            <strong style={{ color: '#3a352d' }}>Candidate instructions: </strong>
             {CANDIDATE_INSTRUCTIONS[posting.mode] || 'Candidates open the link and follow the on-screen steps.'}
           </div>
         </div>
       </GlassCard>
 
-      <GlassCard style={{ padding: '14px 16px', marginBottom: 16 }}>
+      <GlassCard light style={{ padding: '14px 16px', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ flex: 1, textAlign: 'left', fontSize: 12, color: 'rgba(255,255,255,.7)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ flex: 1, textAlign: 'left', fontSize: 12, color: '#3a352d', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {posting.public_link}
           </div>
           <button onClick={copyLink} style={{
             flexShrink: 0, padding: '7px 14px', borderRadius: 7, border: 'none', cursor: 'pointer',
-            background: copied ? 'rgba(19,194,142,.15)' : 'rgba(255,255,255,.06)', color: copied ? '#13c28e' : 'rgba(255,255,255,.7)',
+            background: copied ? 'rgba(19,194,142,.15)' : '#f0eee6', color: copied ? '#13c28e' : '#3a352d',
             fontSize: 11.5, fontWeight: 700, fontFamily: 'Inter,sans-serif', transition: 'all .2s',
           }}>
             {copied ? '✓ Copied' : 'Copy'}
