@@ -11,8 +11,8 @@ function initials(name: string): string {
 }
 
 const INTERVIEW_STATUS_COLOR: Record<InterviewStatus, string> = {
-    unknown: 'rgba(255,255,255,.3)',
-    not_invited: 'rgba(255,255,255,.3)',
+    unknown: '#7a7468',
+    not_invited: '#7a7468',
     invited: '#e2b04a',
     in_progress: '#e2b04a',
     completed: '#13c28e',
@@ -26,7 +26,7 @@ const AI_SCREENING_STATUS_LABEL: Record<AiScreeningStatus, string> = {
     failed: 'Failed',
 }
 const AI_SCREENING_STATUS_COLOR: Record<AiScreeningStatus, string> = {
-    not_analyzed: 'rgba(255,255,255,.3)',
+    not_analyzed: '#7a7468',
     queued: '#e2b04a',
     analyzing: '#e2b04a',
     completed: '#a78bfa',
@@ -37,7 +37,7 @@ const RECOMMENDATION_COLOR: Record<string, string> = {
     'Good Match': '#5cb8e4',
     'Possible Match': '#e2b04a',
     'Low Match': '#ef4444',
-    'Not Enough Data': 'rgba(255,255,255,.4)',
+    'Not Enough Data': '#7a7468',
 }
 
 export default function CandidateDetailPanel({
@@ -127,7 +127,7 @@ export default function CandidateDetailPanel({
     }
 
     if (loading) {
-        return <div style={{ maxWidth: 700 }}><LoadingSkeleton height={300} /></div>
+        return <div style={{ maxWidth: 700 }}><LoadingSkeleton height={300} light /></div>
     }
     if (error || !candidate) {
         return (
@@ -154,20 +154,20 @@ export default function CandidateDetailPanel({
         <div style={{ maxWidth: 760 }}>
             <button onClick={onBack} style={backBtnSt}>← Back to Talent Pool</button>
 
-            <GlassCard style={{ marginBottom: 16 }}>
+            <GlassCard light style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
                     <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)' }}>
                         {initials(c.candidate_name || c.cv_filename || '?')}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>{c.candidate_name || c.cv_filename || 'Unnamed candidate'}</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,.4)' }}>{c.candidate_email || 'No email on file'}{c.job_title ? ` · ${c.job_title}` : ''}</div>
+                        <div style={{ fontSize: 17, fontWeight: 700, color: '#1f1c17' }}>{c.candidate_name || c.cv_filename || 'Unnamed candidate'}</div>
+                        <div style={{ fontSize: 12, color: '#7a7468' }}>{c.candidate_email || 'No email on file'}{c.job_title ? ` · ${c.job_title}` : ''}</div>
                     </div>
                     {onToggleCompare && (
                         <button onClick={() => onToggleCompare(c)} style={{
                             fontSize: 11, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
-                            background: isSelectedForCompare ? '#13c28e' : 'rgba(255,255,255,.05)', color: isSelectedForCompare ? '#0a0a08' : 'rgba(255,255,255,.6)',
-                            border: isSelectedForCompare ? 'none' : '1px solid rgba(255,255,255,.1)',
+                            background: isSelectedForCompare ? '#13c28e' : 'rgba(10,10,9,.035)', color: isSelectedForCompare ? '#0a0a08' : '#3a352d',
+                            border: isSelectedForCompare ? 'none' : '1px solid rgba(10,10,9,.1)',
                         }}>{isSelectedForCompare ? '✓ Selected' : '+ Compare'}</button>
                     )}
                 </div>
@@ -175,33 +175,33 @@ export default function CandidateDetailPanel({
                 <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 14 }}>
                     <div>
                         {c.fit_score != null ? <ProgressRing value={c.fit_score} size={54} accent={FIT_TIER_COLOR[c.fit_tier]} /> : (
-                            <div style={{ width: 54, height: 54, borderRadius: '50%', border: '2px dashed rgba(255,255,255,.15)', display: 'grid', placeItems: 'center', fontSize: 9, color: 'rgba(255,255,255,.25)' }}>N/A</div>
+                            <div style={{ width: 54, height: 54, borderRadius: '50%', border: '2px dashed rgba(10,10,9,.14)', display: 'grid', placeItems: 'center', fontSize: 9, color: '#9c9689' }}>N/A</div>
                         )}
-                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,.3)', marginTop: 4, textAlign: 'center' }}>FIT SCORE</div>
+                        <div style={{ fontSize: 9, color: '#7a7468', marginTop: 4, textAlign: 'center' }}>FIT SCORE</div>
                     </div>
                     <div>
-                        <GradientBadge label={FIT_TIER_LABEL[c.fit_tier]} tone={c.fit_tier === 'strong' || c.fit_tier === 'good' ? 'teal' : c.fit_tier === 'possible' ? 'gold' : 'neutral'} />
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 6 }}>{c.recommendation || 'No verdict yet'}</div>
+                        <GradientBadge label={FIT_TIER_LABEL[c.fit_tier]} tone={c.fit_tier === 'strong' || c.fit_tier === 'good' ? 'teal' : c.fit_tier === 'possible' ? 'gold' : 'neutral'} light />
+                        <div style={{ fontSize: 11, color: '#7a7468', marginTop: 6 }}>{c.recommendation || 'No verdict yet'}</div>
                     </div>
                     <div>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: c.ats_score != null ? (c.ats_score >= 70 ? '#13c28e' : c.ats_score >= 45 ? '#e2b04a' : '#ef4444') : 'rgba(255,255,255,.25)' }}>{c.ats_score ?? '—'}</div>
-                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,.3)' }}>ATS SCORE</div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: c.ats_score != null ? (c.ats_score >= 70 ? '#13c28e' : c.ats_score >= 45 ? '#e2b04a' : '#ef4444') : '#9c9689' }}>{c.ats_score ?? '—'}</div>
+                        <div style={{ fontSize: 9, color: '#7a7468' }}>ATS SCORE</div>
                     </div>
                     {c.skill_match_pct != null && (
                         <div>
                             <div style={{ fontSize: 20, fontWeight: 700, color: c.skill_match_pct >= 70 ? '#13c28e' : c.skill_match_pct >= 45 ? '#e2b04a' : '#ef4444' }}>{c.skill_match_pct}%</div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,.3)' }}>SKILL MATCH</div>
+                            <div style={{ fontSize: 9, color: '#7a7468' }}>SKILL MATCH</div>
                         </div>
                     )}
                     <div>
                         <div style={{ fontSize: 12.5, fontWeight: 700, color: INTERVIEW_STATUS_COLOR[c.interview_status] }}>{INTERVIEW_STATUS_LABEL[c.interview_status]}</div>
-                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,.3)' }}>INTERVIEW STATUS</div>
+                        <div style={{ fontSize: 9, color: '#7a7468' }}>INTERVIEW STATUS</div>
                     </div>
                 </div>
 
                 {c.interview_posting && (
-                    <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.5)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span>Interview posting: <strong style={{ color: '#fff' }}>{c.interview_posting.title}</strong></span>
+                    <div style={{ fontSize: 11.5, color: '#5c574c', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>Interview posting: <strong style={{ color: '#1f1c17' }}>{c.interview_posting.title}</strong></span>
                         <a href={c.interview_posting.public_link} target="_blank" rel="noreferrer" style={{ color: '#a78bfa', fontSize: 10.5 }}>Open link ↗</a>
                     </div>
                 )}
@@ -209,21 +209,21 @@ export default function CandidateDetailPanel({
                 {c.matched_skills.length > 0 && <div style={{ fontSize: 12, color: '#13c28e', marginBottom: 4 }}>✓ Matched: {c.matched_skills.join(', ')}</div>}
                 {c.missing_skills.length > 0 && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 4 }}>Missing: {c.missing_skills.join(', ')}</div>}
 
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', marginTop: 6 }}>
-                    Resume scored against: <strong style={{ color: 'rgba(255,255,255,.5)' }}>{c.resume_role_title || 'Unknown'}</strong>
+                <div style={{ fontSize: 11, color: '#7a7468', marginTop: 6 }}>
+                    Resume scored against: <strong style={{ color: '#5c574c' }}>{c.resume_role_title || 'Unknown'}</strong>
                     {c.resume_matches_current_context ? ' (this posting)' : ' — may not match the job currently being viewed'}
                 </div>
 
                 {c.evidence.length > 0 && (
-                    <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,.06)' }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 }}>Why this candidate?</div>
-                        {c.evidence.map((e, i) => <div key={i} style={{ fontSize: 12, color: 'rgba(255,255,255,.55)', lineHeight: 1.7 }}>· {e}</div>)}
+                    <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(10,10,9,.1)' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#7a7468', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 6 }}>Why this candidate?</div>
+                        {c.evidence.map((e, i) => <div key={i} style={{ fontSize: 12, color: '#5c574c', lineHeight: 1.7 }}>· {e}</div>)}
                     </div>
                 )}
             </GlassCard>
 
             {/* ── Actions ── */}
-            <GlassCard style={{ marginBottom: 16 }}>
+            <GlassCard light style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     {c.is_shortlisted === 'yes' ? (
                         <button disabled={busy} onClick={() => doAction('reset')} style={actionBtnSt('neutral')}>Unshortlist</button>
@@ -239,7 +239,7 @@ export default function CandidateDetailPanel({
                         <button disabled={busy} onClick={() => setShowMove(m => !m)} style={actionBtnSt('purple')}>→ Move to Interview</button>
                     )}
                     {c.interview_status !== 'not_invited' && (
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)', display: 'flex', alignItems: 'center', padding: '0 6px' }}>
+                        <div style={{ fontSize: 11, color: '#7a7468', display: 'flex', alignItems: 'center', padding: '0 6px' }}>
                             Already {INTERVIEW_STATUS_LABEL[c.interview_status].toLowerCase()} — no duplicate invite needed.
                         </div>
                     )}
@@ -248,8 +248,8 @@ export default function CandidateDetailPanel({
                             <button onClick={() => setShowDecision(true)} style={{ ...actionBtnSt('purple'), background: '#7c3aed', color: '#fff', border: 'none' }}>Make Decision</button>
                         ) : (
                             <button onClick={() => setShowDecision(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
-                                <GradientBadge label={c.decision === 'accepted' ? 'Accepted' : 'Rejected'} tone={c.decision === 'accepted' ? 'teal' : 'neutral'} />
-                                <span style={{ fontSize: 10.5, color: c.notification_status === 'sent' ? '#13c28e' : c.notification_status === 'failed' ? '#ef4444' : 'rgba(255,255,255,.35)' }}>
+                                <GradientBadge label={c.decision === 'accepted' ? 'Accepted' : 'Rejected'} tone={c.decision === 'accepted' ? 'teal' : 'neutral'} light />
+                                <span style={{ fontSize: 10.5, color: c.notification_status === 'sent' ? '#13c28e' : c.notification_status === 'failed' ? '#ef4444' : '#7a7468' }}>
                                     {c.notification_status === 'sent' ? 'Notified' : c.notification_status === 'failed' ? 'Notification failed' : c.notification_status === 'sending' ? 'Sending…' : 'Not notified'}
                                 </span>
                             </button>
@@ -369,10 +369,10 @@ export default function CandidateDetailPanel({
             {/* ── Existing AI Feedback Report — reused as-is, never duplicated ── */}
             {report && <AIFeedbackReport data={report} />}
             {!report && c.interview_status === 'not_invited' && (
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Not interviewed yet.</div>
+                <div style={{ fontSize: 12, color: '#7a7468' }}>Not interviewed yet.</div>
             )}
             {!report && (c.interview_status === 'invited' || c.interview_status === 'in_progress') && (
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Interview {c.interview_status === 'invited' ? 'invited, not started yet' : 'in progress'} — report will appear here once completed.</div>
+                <div style={{ fontSize: 12, color: '#7a7468' }}>Interview {c.interview_status === 'invited' ? 'invited, not started yet' : 'in progress'} — report will appear here once completed.</div>
             )}
 
             {showDecision && (
@@ -399,19 +399,21 @@ function EvidenceLine({ children, color, muted }: { children: React.ReactNode; c
 }
 
 const backBtnSt: React.CSSProperties = {
-    background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 12, cursor: 'pointer',
+    background: 'none', border: 'none', color: '#7a7468', fontSize: 12, cursor: 'pointer',
     marginBottom: 14, padding: 0, fontFamily: 'Inter,sans-serif',
 }
 const selectSt: React.CSSProperties = {
-    background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 6, padding: '7px 10px',
-    fontSize: 12, color: 'rgba(255,255,255,.75)', fontFamily: 'Inter,sans-serif', outline: 'none', width: '100%',
+    background: '#faf9f5', border: '1px solid #e7e4da', borderRadius: 6, padding: '7px 10px',
+    fontSize: 12, color: '#1f1c17', fontFamily: 'Inter,sans-serif', outline: 'none', width: '100%',
 }
 function actionBtnSt(tone: 'teal' | 'red' | 'purple' | 'neutral'): React.CSSProperties {
     const map = {
         teal: { bg: 'rgba(19,194,142,.12)', fg: '#13c28e', bd: 'rgba(19,194,142,.2)' },
         red: { bg: 'rgba(239,68,68,.08)', fg: '#ef4444', bd: 'rgba(239,68,68,.15)' },
         purple: { bg: 'rgba(124,58,237,.1)', fg: '#a78bfa', bd: 'rgba(124,58,237,.2)' },
-        neutral: { bg: 'rgba(255,255,255,.05)', fg: 'rgba(255,255,255,.6)', bd: 'rgba(255,255,255,.1)' },
+        // Only ever used on the light Actions card (Unshortlist/Restore) — never inside
+        // the dark AI Screening Committee block — so this is light-themed, not dark.
+        neutral: { bg: '#f0eee6', fg: '#3a352d', bd: '#e7e4da' },
     }[tone]
     return {
         fontSize: 11.5, fontWeight: 700, fontFamily: 'Inter,sans-serif', padding: '8px 14px', borderRadius: 8,
