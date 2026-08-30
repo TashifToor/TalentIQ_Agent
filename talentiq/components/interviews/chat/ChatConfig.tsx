@@ -2,7 +2,7 @@
 import { GlassCard } from '@/components/shared/primitives'
 import { BuilderFormData } from '@/components/modules/interview-engine/formData'
 
-const inputSt = { background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: 'rgba(255,255,255,.85)', outline: 'none', width: '100%' } as const
+const inputSt = { background: '#faf9f5', border: '1px solid #e7e4da', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: '#1f1c17', outline: 'none', width: '100%' } as const
 
 export default function ChatConfig({ data, onChange }: { data: BuilderFormData; onChange: (patch: Partial<BuilderFormData>) => void }) {
   const interviewerPreview = data.interviewerName.trim() || 'Kelly'
@@ -24,17 +24,17 @@ export default function ChatConfig({ data, onChange }: { data: BuilderFormData; 
       </div>
 
       {/* Right — live conversational preview */}
-      <GlassCard style={{ padding: 16, alignSelf: 'start' }}>
-        <div style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,.35)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 12 }}>
+      <GlassCard light style={{ padding: 16, alignSelf: 'start' }}>
+        <div style={{ fontSize: 10.5, fontWeight: 700, color: '#7a7468', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 12 }}>
           How it'll open
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 10 }}>
           <div style={{ width: 26, height: 26, borderRadius: 8, background: 'linear-gradient(135deg,#c5931f,#e2b04a)', display: 'grid', placeItems: 'center', flexShrink: 0, fontSize: 12 }}>💬</div>
-          <div style={{ background: '#161614', border: '1px solid rgba(255,255,255,.06)', borderRadius: '4px 12px 12px 12px', padding: '10px 13px', fontSize: 12, lineHeight: 1.6, color: 'rgba(255,255,255,.8)' }}>
+          <div style={{ background: '#f0eee6', border: '1px solid #e7e4da', borderRadius: '4px 12px 12px 12px', padding: '10px 13px', fontSize: 12, lineHeight: 1.6, color: '#1f1c17' }}>
             Hi! I'm {interviewerPreview}, and I'll be conducting your screening interview{data.title ? ` for the ${data.title} role` : ''} today. Before we dive in — could you start by telling me a bit about yourself?
           </div>
         </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.3)', lineHeight: 1.6, marginTop: 14 }}>
+        <div style={{ fontSize: 11, color: '#9c9689', lineHeight: 1.6, marginTop: 14 }}>
           Flow: self-intro → education → skills → project deep-dives → your extra questions. Non-skippable, text-based, candidate answers by typing.
         </div>
       </GlassCard>
