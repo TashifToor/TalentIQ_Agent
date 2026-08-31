@@ -20,6 +20,9 @@ from models.application import Application
 from models.organization import Organization
 from models.scan_history import ScanHistory
 from models.interview import InterviewPosting, InterviewSession
+from models.practice import PracticeSession
+from models.notification import Notification
+from models.activity_event import ActivityEvent
 
 if __name__ == "__main__":
     print("Creating all tables on:", engine.url)
