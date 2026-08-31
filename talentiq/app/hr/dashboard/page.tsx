@@ -1628,7 +1628,7 @@ export default function HRDashboard() {
       case 'open-roles': return renderInterviewer()
       case 'settings': return renderSettings()
       case 'profile': return renderProfile()
-      case 'activity': return <ActivityTimeline role="hr" />
+      case 'activity': return <ActivityTimeline role="hr" light />
       default: return renderDashboard()
     }
   }
@@ -1651,42 +1651,43 @@ export default function HRDashboard() {
       <div className={`app-sidebar-backdrop${mobileNavOpen ? ' open' : ''}`} onClick={() => setMobileNavOpen(false)} />
 
       {/* SIDEBAR */}
-      <div className={`app-sidebar${mobileNavOpen ? ' open' : ''}`} style={{ width: 224, flexShrink: 0, background: '#0c0c0b', borderRight: '1px solid rgba(255,255,255,.05)', display: 'flex', flexDirection: 'column' }}>
-        <Link href="/" style={{ padding: '22px 20px', borderBottom: '1px solid rgba(255,255,255,.05)', display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+      <div className={`app-sidebar${mobileNavOpen ? ' open' : ''}`} style={{ width: 224, flexShrink: 0, background: '#edeae2', borderRight: '1px solid #e0ddd4', display: 'flex', flexDirection: 'column' }}>
+        <Link href="/" style={{ padding: '22px 20px', borderBottom: '1px solid #e0ddd4', display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <div style={{ width: 28, height: 28, background: '#e2b04a', borderRadius: 7, display: 'grid', placeItems: 'center' }}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="#0a0a08"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg>
           </div>
-          <span style={{ fontFamily: "Inter, sans-serif", fontSize: 20, fontWeight: 600, color: 'rgba(255,255,255,.9)' }}>Talent</span>
-          <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#13c28e', padding: '3px 8px', borderRadius: 100, marginLeft: 'auto', border: '1px solid rgba(19,194,142,.18)' }}>HR</span>
-          <button onClick={(e) => { e.preventDefault(); setMobileNavOpen(false) }} aria-label="Close menu" className="app-sidebar-close" style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,.5)', cursor: 'pointer', padding: 4 }}>
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: 20, fontWeight: 600, color: '#1f1c17' }}>Talent</span>
+          <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#0b7c5e', padding: '3px 8px', borderRadius: 100, marginLeft: 'auto', border: '1px solid rgba(19,194,142,.22)' }}>HR</span>
+          <button onClick={(e) => { e.preventDefault(); setMobileNavOpen(false) }} aria-label="Close menu" className="app-sidebar-close" style={{ background: 'transparent', border: 'none', color: '#7a7468', cursor: 'pointer', padding: 4 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </Link>
-        <div style={{ padding: '20px 16px 6px', fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.18)' }}>Workspace</div>
+        <div style={{ padding: '20px 16px 6px', fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: '#9c9689' }}>Workspace</div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {NAV.map(n => (
             <button key={n.id} onClick={() => { setSection(n.id as Section); setMobileNavOpen(false) }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderRadius: 6, fontSize: 13, fontWeight: 500, letterSpacing: '.01em',
-                color: section === n.id ? 'rgba(255,255,255,.88)' : 'rgba(255,255,255,.38)', cursor: 'pointer', transition: 'all .15s',
-                margin: '0 6px 2px', border: section === n.id ? '1px solid rgba(255,255,255,.08)' : '1px solid transparent',
-                background: section === n.id ? 'rgba(255,255,255,.04)' : 'transparent',
+                color: section === n.id ? '#1f1c17' : '#7a7468', cursor: 'pointer', transition: 'all .15s',
+                margin: '0 6px 2px', border: section === n.id ? '1px solid #e0ddd4' : '1px solid transparent',
+                borderLeft: section === n.id ? '3px solid #e2b04a' : '1px solid transparent',
+                background: section === n.id ? '#ffffff' : 'transparent',
                 fontFamily: 'Inter,sans-serif', width: 'calc(100% - 12px)', textAlign: 'left', minHeight: 40
               }}>
               {n.label}
-              {'badge' in n && n.badge ? <span style={{ marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9, background: 'rgba(19,194,142,.15)', color: '#13c28e', fontSize: 10, fontWeight: 700, display: 'grid', placeItems: 'center', padding: '0 4px' }}>{n.badge}</span> : null}
+              {'badge' in n && n.badge ? <span style={{ marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9, background: 'rgba(19,194,142,.15)', color: '#0b7c5e', fontSize: 10, fontWeight: 700, display: 'grid', placeItems: 'center', padding: '0 4px' }}>{n.badge}</span> : null}
             </button>
           ))}
         </div>
-        <div style={{ padding: 14, borderTop: '1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ padding: 14, borderTop: '1px solid #e0ddd4' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8 }}>
             <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0 }}>HR</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,.3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#1f1c17', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
+              <div style={{ fontSize: 10, color: '#9c9689', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
             </div>
           </div>
-          <button onClick={handleLogout} style={{ width: '100%', marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', borderRadius: 8, border: '1px solid rgba(239,68,68,.15)', background: 'rgba(239,68,68,.06)', color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', minHeight: 40 }}>
+          <button onClick={handleLogout} style={{ width: '100%', marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', borderRadius: 8, border: '1px solid rgba(239,68,68,.2)', background: 'rgba(239,68,68,.06)', color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', minHeight: 40 }}>
             <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" /></svg>
             Logout
           </button>
