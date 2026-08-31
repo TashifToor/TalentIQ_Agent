@@ -25,6 +25,8 @@ from routes.activity import router as activity_router
 from routes.candidate_intelligence import router as candidate_intelligence_router
 from models.interview import InterviewPosting, InterviewSession
 from models.practice import PracticeSession
+from models.notification import Notification
+from models.activity_event import ActivityEvent
 from models.user import User  
 from models.chat import Chat
 from models.job import Job
