@@ -352,6 +352,28 @@ export const api = {
   getActivities: (start: string, end: string) =>
     apiFetch(`/activities?start=${start}&end=${end}`),
 
+  createActivityEvent: (payload: {
+    activity_type: string; title: string; event_date: string; event_time?: string | null;
+    notes?: string | null; company?: string | null; role?: string | null; location_or_link?: string | null;
+    reminder_offset_minutes?: number | null; related_type?: string | null; related_id?: string | null;
+  }) => apiFetch("/activities/events", { method: "POST", body: JSON.stringify(payload) }),
+
+  updateActivityEvent: (id: string, payload: {
+    activity_type?: string; title?: string; event_date?: string; event_time?: string | null;
+    notes?: string | null; company?: string | null; role?: string | null; location_or_link?: string | null;
+    reminder_offset_minutes?: number | null; clear_reminder?: boolean;
+    related_type?: string | null; related_id?: string | null; clear_link?: boolean;
+  }) => apiFetch(`/activities/events/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+
+  getActivityLinkOptions: (relatedType: 'application' | 'job', q: string) =>
+    apiFetch(`/activities/link-options?related_type=${relatedType}&q=${encodeURIComponent(q)}`),
+
+  updateActivityEventStatus: (id: string, status: 'planned' | 'completed' | 'cancelled') =>
+    apiFetch(`/activities/events/${id}/status?status=${status}`, { method: "PATCH" }),
+
+  deleteActivityEvent: (id: string) =>
+    apiFetch(`/activities/events/${id}`, { method: "DELETE" }),
+
   // --- CV Optimizer / Candidate Screening (structured analysis) ---
   optimizeCandidateCv: (cvText: string, jobDescription: string) =>
     apiFetch("/candidate-intelligence/optimize", {
