@@ -1,9 +1,9 @@
 """
 Activity & Planner. Combines two sources into one feed:
-  - Automatic activities (core/activity_feed.py) — derived at request time
+- Automatic activities (core/activity_feed.py) — derived at request time
     from tables that already exist, never stored, read-only ("TalentIQ
     Activity" in the UI).
-  - Manual planner events (models/activity_event.py) — user-created,
+- Manual planner events (models/activity_event.py) — user-created,
     editable ("Personal Plan" in the UI). For HR, visible to the whole
     Team Workspace (like Jobs already are) but only editable by whoever
     created it.
