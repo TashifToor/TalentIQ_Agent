@@ -31,7 +31,7 @@ celery_app = Celery(
     # from the API published a message the worker had never registered, so
     # the AI Screening Committee silently never ran (NotRegistered on the
     # worker side, invisible from the API, which had already returned 200).
-    include=["tasks.screening_task", "tasks.crew_screening_task"],
+    include=["tasks.screening_task", "tasks.crew_screening_task", "tasks.reminder_task"],
 )
 
 celery_app.conf.update(
