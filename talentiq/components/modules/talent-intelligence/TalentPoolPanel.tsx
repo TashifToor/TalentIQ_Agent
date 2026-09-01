@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, CSSProperties } from 'react'
+import { useEffect, useMemo, useState, CSSProperties } from 'react'
 import { api } from '@/lib/api'
 import { LoadingSkeleton, EmptyState, GradientBadge } from '@/components/shared/primitives'
 import { PoolCandidate, FIT_TIER_LABEL, FIT_TIER_COLOR, FitTier, InterviewStatus, INTERVIEW_STATUS_LABEL } from './types'
@@ -13,9 +13,11 @@ type InterviewFilter = 'all' | InterviewStatus
 type ScreeningFilter = 'all' | 'pending' | 'yes' | 'no'
 
 const MAX_COMPARE = 5
+const RECENT_WINDOW_MS = 7 * 24 * 60 * 60 * 1000   // "Recently Added" = last 7 days, same window used nowhere else yet — simple, honest, no invented data
 
-export default function TalentPoolPanel({ interviewPostings }: {
+export default function TalentPoolPanel({ interviewPostings, onNavigate }: {
     interviewPostings: { id: string; title: string }[]
+    onNavigate?: (section: string) => void   // lets the empty-state CTAs jump to Bulk Screening / History — optional so this component still works standalone
 }) {
     const [pool, setPool] = useState<PoolCandidate[] | null>(null)
     const [loading, setLoading] = useState(true)
@@ -29,6 +31,7 @@ export default function TalentPoolPanel({ interviewPostings }: {
     const [skillQuery, setSkillQuery] = useState('')
     const [minAts, setMinAts] = useState(0)
     const [maxAts, setMaxAts] = useState(100)
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
     const [compareMode, setCompareMode] = useState(false)
     const [selected, setSelected] = useState<string[]>([])
@@ -42,6 +45,8 @@ export default function TalentPoolPanel({ interviewPostings }: {
     const [bulkDecision, setBulkDecision] = useState<'accepted' | 'rejected' | null>(null)
     const toggleDecisionSelect = (id: string) => setDecisionSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
+    const [quickShortlistBusy, setQuickShortlistBusy] = useState<string | null>(null)
+
     const load = () => {
         setLoading(true)
         setError('')
@@ -52,6 +57,19 @@ export default function TalentPoolPanel({ interviewPostings }: {
     }
 
     useEffect(() => { load() }, [])
+
+    // Quick shortlist directly from the list — reuses the exact same
+    // updateApplication('shortlist') call CandidateDetailPanel already uses,
+    // just surfaced as a one-click action on the card too.
+    const quickShortlist = async (id: string) => {
+        setQuickShortlistBusy(id)
+        try {
+            await api.updateApplication(id, 'shortlist')
+            load()
+        } finally {
+            setQuickShortlistBusy(null)
+        }
+    }
 
     if (openId) {
         return (
@@ -66,14 +84,69 @@ export default function TalentPoolPanel({ interviewPostings }: {
         )
     }
 
+    const stats = useMemo(() => {
+        const p = pool || []
+        return {
+            total: p.length,
+            topMatches: p.filter(c => c.fit_tier === 'strong' || c.fit_tier === 'good').length,
+            shortlisted: p.filter(c => c.is_shortlisted === 'yes').length,
+            recent: p.filter(c => c.created_at && (Date.now() - new Date(c.created_at).getTime()) < RECENT_WINDOW_MS).length,
+        }
+    }, [pool])
+
+    const StatsRow = () => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }} className="talent-pool-stats-row">
+            {[
+                ['Total Candidates', stats.total],
+                ['Top Matches', stats.topMatches],
+                ['Shortlisted', stats.shortlisted],
+                ['Recently Added', stats.recent],
+            ].map(([label, value]) => (
+                <div key={label as string} style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: '#1f1c17' }}>{value}</div>
+                    <div style={{ fontSize: 10.5, color: '#7a7468', marginTop: 2 }}>{label}</div>
+                </div>
+            ))}
+        </div>
+    )
+
     if (loading) {
-        return <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 760 }}>{[0, 1, 2].map(i => <LoadingSkeleton key={i} height={64} light />)}</div>
+        return (
+            <div style={{ width: '100%' }}>
+                <StatsRow />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{[0, 1, 2].map(i => <LoadingSkeleton key={i} height={64} light />)}</div>
+            </div>
+        )
     }
     if (error) {
         return <div style={{ fontSize: 12.5, color: '#ef4444' }}>{error}</div>
     }
     if (!pool || pool.length === 0) {
-        return <EmptyState icon="🗂" title="No candidates screened yet" description="Run a bulk screening — every candidate will show up here, filterable and searchable." light />
+        return (
+            <div style={{ maxWidth: 480, margin: '40px auto', textAlign: 'center' }}>
+                <div style={{ width: 56, height: 56, borderRadius: 16, background: '#f0eee6', display: 'grid', placeItems: 'center', margin: '0 auto 18px' }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#9c9689" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                    </svg>
+                </div>
+                <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 18, fontWeight: 600, color: '#1f1c17', marginBottom: 8 }}>Your Talent Pool is ready</div>
+                <div style={{ fontSize: 12.5, color: '#7a7468', lineHeight: 1.6, marginBottom: 22 }}>
+                    Candidates from your screenings will automatically appear here. Search, rank, compare and revisit your strongest candidates from one place.
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    {onNavigate && (
+                        <button onClick={() => onNavigate('bulk')} style={{ fontSize: 12.5, fontWeight: 700, background: '#e2b04a', color: '#0a0a08', border: 'none', borderRadius: 8, padding: '11px 20px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Run Bulk Screening
+                        </button>
+                    )}
+                    {onNavigate && (
+                        <button onClick={() => onNavigate('history')} style={{ fontSize: 12.5, fontWeight: 600, background: '#f0eee6', color: '#3a352d', border: '1px solid #e7e4da', borderRadius: 8, padding: '11px 20px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                            View Screening History
+                        </button>
+                    )}
+                </div>
+            </div>
+        )
     }
 
     function toggleSelect(id: string) {
@@ -134,9 +207,24 @@ export default function TalentPoolPanel({ interviewPostings }: {
     }
 
     return (
-        <div style={{ maxWidth: 780, width: '100%' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, or ID…" style={{ ...selectSt, width: 200 }} />
+        <div style={{ width: '100%' }}>
+            <StatsRow />
+
+            {/* Search — always full width, its own row */}
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, email, or ID…" style={{ ...selectSt, width: '100%', marginBottom: 10, boxSizing: 'border-box', padding: '10px 14px' }} />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <button onClick={() => setMobileFiltersOpen(o => !o)} className="talent-pool-filter-toggle-btn" style={{
+                    fontSize: 11.5, fontWeight: 600, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+                    background: '#f0eee6', color: '#3a352d', border: '1px solid #e7e4da', display: 'inline-flex', alignItems: 'center', gap: 6,
+                }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" /></svg>
+                    Filters
+                </button>
+            </div>
+
+            <div className={`talent-pool-filters-row${mobileFiltersOpen ? ' open' : ''}`} style={{ flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 10.5, fontWeight: 700, color: '#9c9689', textTransform: 'uppercase', letterSpacing: '.04em', alignSelf: 'center', marginRight: 2 }}>Filters:</span>
                 <select value={tierFilter} onChange={e => setTierFilter(e.target.value as TierFilter)} style={selectSt}>
                     <option value="all">All Fit Tiers</option>
                     <option value="strong">Strong Match</option>
@@ -173,7 +261,7 @@ export default function TalentPoolPanel({ interviewPostings }: {
                     marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
                     background: compareMode ? '#13c28e' : '#f0eee6', color: compareMode ? '#0a0a08' : '#3a352d',
                     border: compareMode ? 'none' : '1px solid #e7e4da',
-                }}>{compareMode ? `Comparing (${selected.length}/${MAX_COMPARE})` : 'Compare Candidates'}</button>
+                }}>{compareMode ? `Comparing (${selected.length}/${MAX_COMPARE})` : 'Compare'}</button>
                 <button onClick={() => { setDecisionMode(m => !m); setDecisionSelected([]); setCompareMode(false); setSelected([]); setCompareData(null) }} style={{
                     fontSize: 11, fontWeight: 700, padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
                     background: decisionMode ? '#7c3aed' : '#f0eee6', color: decisionMode ? '#fff' : '#3a352d',
@@ -211,54 +299,78 @@ export default function TalentPoolPanel({ interviewPostings }: {
             {filtered.length === 0 ? (
                 <EmptyState icon="🔍" title="No matches" description="Try loosening the filters above." light />
             ) : (
-                filtered.map(c => (
-                    <div key={c.id} style={{ background: '#ffffff', border: selected.includes(c.id) ? '1px solid rgba(19,194,142,.4)' : '1px solid #e7e4da', borderRadius: 12, padding: 14, marginBottom: 8, boxShadow: '0 1px 2px rgba(10,10,9,.03)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            {compareMode && (
-                                <div onClick={() => toggleSelect(c.id)} style={{
-                                    width: 18, height: 18, borderRadius: 5, flexShrink: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
-                                    border: selected.includes(c.id) ? 'none' : '1.5px solid #c9c4b6', background: selected.includes(c.id) ? '#13c28e' : 'transparent',
-                                }}>{selected.includes(c.id) && <span style={{ color: '#0a0a08', fontSize: 12, fontWeight: 900 }}>✓</span>}</div>
-                            )}
-                            {decisionMode && (
-                                <div onClick={() => toggleDecisionSelect(c.id)} style={{
-                                    width: 18, height: 18, borderRadius: 5, flexShrink: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
-                                    border: decisionSelected.includes(c.id) ? 'none' : '1.5px solid #c9c4b6', background: decisionSelected.includes(c.id) ? '#7c3aed' : 'transparent',
-                                }}>{decisionSelected.includes(c.id) && <span style={{ color: '#fff', fontSize: 12, fontWeight: 900 }}>✓</span>}</div>
-                            )}
-                            <div onClick={() => (decisionMode ? toggleDecisionSelect(c.id) : setOpenId(c.id))} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, cursor: 'pointer', rowGap: 6 }}>
-                                <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)' }}>
-                                    {(c.candidate_name || c.cv_filename || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')}
-                                </div>
-                                <div style={{ flex: '1 1 140px', minWidth: 140 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#1f1c17' }}>{c.candidate_name || c.cv_filename || 'Unnamed candidate'}</div>
-                                        <GradientBadge label={FIT_TIER_LABEL[c.fit_tier]} tone={c.fit_tier === 'strong' || c.fit_tier === 'good' ? 'teal' : c.fit_tier === 'possible' ? 'gold' : 'neutral'} light />
-                                        {c.is_shortlisted === 'yes' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(19,194,142,.12)', color: '#13c28e' }}>Shortlisted</span>}
-                                        {c.is_shortlisted === 'no' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(239,68,68,.1)', color: '#ef4444' }}>Rejected</span>}
+                filtered.map(c => {
+                    const insight = c.recommendation?.trim() || (c.evidence.length > 0 ? c.evidence.slice(0, 2).join(' ') : null)
+                    return (
+                        <div key={c.id} style={{ background: '#ffffff', border: selected.includes(c.id) ? '1px solid rgba(19,194,142,.4)' : '1px solid #e7e4da', borderRadius: 12, padding: 16, marginBottom: 10, boxShadow: '0 1px 2px rgba(10,10,9,.03)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                {compareMode && (
+                                    <div onClick={() => toggleSelect(c.id)} style={{
+                                        width: 18, height: 18, borderRadius: 5, flexShrink: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
+                                        border: selected.includes(c.id) ? 'none' : '1.5px solid #c9c4b6', background: selected.includes(c.id) ? '#13c28e' : 'transparent',
+                                    }}>{selected.includes(c.id) && <span style={{ color: '#0a0a08', fontSize: 12, fontWeight: 900 }}>✓</span>}</div>
+                                )}
+                                {decisionMode && (
+                                    <div onClick={() => toggleDecisionSelect(c.id)} style={{
+                                        width: 18, height: 18, borderRadius: 5, flexShrink: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
+                                        border: decisionSelected.includes(c.id) ? 'none' : '1.5px solid #c9c4b6', background: decisionSelected.includes(c.id) ? '#7c3aed' : 'transparent',
+                                    }}>{decisionSelected.includes(c.id) && <span style={{ color: '#fff', fontSize: 12, fontWeight: 900 }}>✓</span>}</div>
+                                )}
+                                <div onClick={() => (decisionMode ? toggleDecisionSelect(c.id) : setOpenId(c.id))} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, cursor: 'pointer', rowGap: 6 }}>
+                                    <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)' }}>
+                                        {(c.candidate_name || c.cv_filename || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]?.toUpperCase()).join('')}
                                     </div>
-                                    <div style={{ fontSize: 11, color: '#7a7468', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.job_title}{c.candidate_email ? ` · ${c.candidate_email}` : ''}</div>
-                                </div>
-                                <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                                    <div style={{ fontSize: 16, fontWeight: 700, color: FIT_TIER_COLOR[c.fit_tier] }}>{c.ats_score ?? '—'}</div>
-                                    <div style={{ fontSize: 8, color: '#9c9689' }}>ATS</div>
-                                </div>
-                                <div style={{ textAlign: 'right', minWidth: 90, flexShrink: 0 }}>
-                                    <div style={{ fontSize: 10.5, fontWeight: 700, color: c.interview_status === 'completed' ? '#13c28e' : c.interview_status === 'invited' || c.interview_status === 'in_progress' ? '#e2b04a' : '#7a7468' }}>
-                                        {INTERVIEW_STATUS_LABEL[c.interview_status]}
+                                    <div style={{ flex: '1 1 160px', minWidth: 140 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#1f1c17' }}>{c.candidate_name || c.cv_filename || 'Unnamed candidate'}</div>
+                                            <GradientBadge label={FIT_TIER_LABEL[c.fit_tier]} tone={c.fit_tier === 'strong' || c.fit_tier === 'good' ? 'teal' : c.fit_tier === 'possible' ? 'gold' : 'neutral'} light />
+                                            {c.is_shortlisted === 'yes' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(19,194,142,.12)', color: '#0b7c5e' }}>Shortlisted</span>}
+                                            {c.is_shortlisted === 'no' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(239,68,68,.1)', color: '#ef4444' }}>Rejected</span>}
+                                        </div>
+                                        <div style={{ fontSize: 11, color: '#7a7468', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.resume_role_title || c.job_title}{c.candidate_email ? ` · ${c.candidate_email}` : ''}</div>
                                     </div>
-                                    {c.interview_posting && (
-                                        <div style={{ fontSize: 9, color: '#9c9689', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>{c.interview_posting.title}</div>
-                                    )}
+                                    <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                                        <div style={{ fontSize: 17, fontWeight: 700, color: FIT_TIER_COLOR[c.fit_tier] }}>{c.ats_score != null ? `${c.ats_score}%` : '—'}</div>
+                                        <div style={{ fontSize: 8, color: '#9c9689' }}>JOB FIT</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right', minWidth: 90, flexShrink: 0 }}>
+                                        <div style={{ fontSize: 10.5, fontWeight: 700, color: c.interview_status === 'completed' ? '#0b7c5e' : c.interview_status === 'invited' || c.interview_status === 'in_progress' ? '#c5931f' : '#7a7468' }}>
+                                            {INTERVIEW_STATUS_LABEL[c.interview_status]}
+                                        </div>
+                                        {c.interview_posting && (
+                                            <div style={{ fontSize: 9, color: '#9c9689', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>{c.interview_posting.title}</div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
+
+                            <div style={{ fontSize: 10.5, color: '#7a7468', marginTop: 10, paddingLeft: (compareMode || decisionMode) ? 66 : 48 }}>
+                                {c.matched_skills.length > 0 && <span style={{ color: '#0b7c5e' }}>✓ {c.matched_skills.slice(0, 4).join(', ')}</span>}
+                                {c.missing_skills.length > 0 && <span style={{ marginLeft: 10, color: '#ef4444' }}>Missing: {c.missing_skills.slice(0, 3).join(', ')}</span>}
+                            </div>
+
+                            {insight && (
+                                <div style={{
+                                    marginTop: 10, marginLeft: (compareMode || decisionMode) ? 66 : 48, background: '#faf9f5', border: '1px solid #e7e4da',
+                                    borderRadius: 8, padding: '8px 12px',
+                                }}>
+                                    <div style={{ fontSize: 9.5, fontWeight: 700, color: '#c5931f', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 3 }}>Why this candidate?</div>
+                                    <div style={{ fontSize: 11, color: '#5c574c', lineHeight: 1.5 }}>{insight}</div>
+                                </div>
+                            )}
+
+                            <div style={{ display: 'flex', gap: 8, marginTop: 12, marginLeft: (compareMode || decisionMode) ? 66 : 48, flexWrap: 'wrap' }}>
+                                <button onClick={() => setOpenId(c.id)} style={{ fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 100, border: '1px solid #e7e4da', background: '#ffffff', color: '#3a352d', cursor: 'pointer', fontFamily: 'inherit' }}>View Profile</button>
+                                <button onClick={() => { setCompareMode(true); toggleSelect(c.id) }} style={{ fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 100, border: '1px solid #e7e4da', background: '#ffffff', color: '#3a352d', cursor: 'pointer', fontFamily: 'inherit' }}>Compare</button>
+                                {c.is_shortlisted !== 'yes' && (
+                                    <button disabled={quickShortlistBusy === c.id} onClick={() => quickShortlist(c.id)} style={{ fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 100, border: '1px solid rgba(19,194,142,.25)', background: 'rgba(19,194,142,.08)', color: '#0b7c5e', cursor: 'pointer', fontFamily: 'inherit', opacity: quickShortlistBusy === c.id ? .6 : 1 }}>
+                                        {quickShortlistBusy === c.id ? 'Shortlisting…' : '★ Shortlist'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                        <div style={{ fontSize: 10.5, color: '#7a7468', marginTop: 8, paddingLeft: (compareMode || decisionMode) ? 62 : 44 }}>
-                            {c.matched_skills.length > 0 && <span style={{ color: '#13c28e' }}>✓ {c.matched_skills.slice(0, 4).join(', ')}</span>}
-                            {c.missing_skills.length > 0 && <span style={{ marginLeft: 10, color: '#ef4444' }}>Missing: {c.missing_skills.slice(0, 3).join(', ')}</span>}
-                        </div>
-                    </div>
-                ))
+                    )
+                })
             )}
 
             {bulkDecision && (
