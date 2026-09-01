@@ -235,7 +235,7 @@ export default function CopilotPanel({
         background: 'rgba(22,22,20,.55)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12,
         padding: '14px 0', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
       }}>
-        <span style={{ fontSize: 16 }}></span>
+        <span style={{ fontSize: 16 }}>🧠</span>
         {readyCount > 0 && (
           <span style={{ fontSize: 9, fontWeight: 700, color: '#0a0a08', background: '#13c28e', borderRadius: 100, width: 16, height: 16, display: 'grid', placeItems: 'center' }}>{readyCount}</span>
         )}
