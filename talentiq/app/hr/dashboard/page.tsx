@@ -809,9 +809,14 @@ export default function HRDashboard() {
 
   const renderTalentPool = () => (
     <div style={{ padding: 28, overflowY: 'auto', height: '100%' }}>
-      <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>Talent Pool</div>
-      <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 24 }}>Every screened candidate across all your screening jobs, in one searchable, filterable place</div>
-      <TalentPoolPanel interviewPostings={interviewPostings.map((p: any) => ({ id: p.id, title: p.title }))} />
+      <div className="talent-pool-container" style={{ maxWidth: 1180, width: '100%', margin: '0 auto' }}>
+        <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>Talent Pool</div>
+        <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 24 }}>Every screened candidate across all your screening jobs, in one searchable, filterable place</div>
+        <TalentPoolPanel
+          interviewPostings={interviewPostings.map((p: any) => ({ id: p.id, title: p.title }))}
+          onNavigate={(s) => setSection(s as Section)}
+        />
+      </div>
     </div>
   )
 
