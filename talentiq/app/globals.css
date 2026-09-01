@@ -394,3 +394,18 @@ body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSy
 }
 .intelligence-track { scrollbar-width: thin; }
 .intelligence-track:focus-within { outline: none; }
+
+/* Talent Pool — search stays full-width always; filters collapse into a
+   toggle button below 680px instead of overflowing horizontally; stats
+   row stacks from 4 → 2 → 1 columns as the viewport narrows. */
+.talent-pool-filter-toggle-btn { display: none; }
+.talent-pool-filters-row { display: flex; }
+@media (max-width: 680px) {
+  .talent-pool-filter-toggle-btn { display: inline-flex; }
+  .talent-pool-filters-row { display: none; }
+  .talent-pool-filters-row.open { display: flex; }
+  .talent-pool-stats-row { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 420px) {
+  .talent-pool-stats-row { grid-template-columns: 1fr !important; }
+}
