@@ -525,7 +525,7 @@ function HRLoginInner() {
                   $49/month after trial · Cancel anytime
                 </p>
               )}
-              <p style={{ textAlign: 'center', fontSize: 11.5, color: '#a3a092', marginTop: 6, fontWeight: 300 }}>
+              <p style={{ textAlign: 'center', fontSize: 11.5, color: '#474640', marginTop: 6, fontWeight: 300 }}>
                 By continuing you agree to our <a href="/terms" style={{ color: '#2d5a47' }}>Terms</a> and <a href="/privacy" style={{ color: '#2d5a47' }}>Privacy Policy</a>
               </p>
             </div>
@@ -533,7 +533,7 @@ function HRLoginInner() {
         </div>
 
         <div style={{ padding: '24px 48px', borderTop: '1px solid #e4e0d4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12.5, color: '#a3a092', fontWeight: 300 }}>Looking for a job instead?</span>
+          <span style={{ fontSize: 12.5, color: '#000000', fontWeight: 300 }}>Looking for a job instead?</span>
           <Link href="/auth/login/candidate" style={{ fontSize: 12.5, color: '#3f6e58', textDecoration: 'none', fontWeight: 500 }}>Candidate portal →</Link>
         </div>
       </div>
