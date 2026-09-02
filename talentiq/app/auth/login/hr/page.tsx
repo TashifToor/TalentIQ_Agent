@@ -521,7 +521,7 @@ function HRLoginInner() {
               </button>
 
               {!inviteToken && (
-                <p style={{ textAlign: 'center', fontSize: 12, color: '#a3a092', marginTop: 18, fontWeight: 300 }}>
+                <p style={{ textAlign: 'center', fontSize: 12, color: '#4b4b15', marginTop: 18, fontWeight: 300 }}>
                   $49/month after trial · Cancel anytime
                 </p>
               )}
