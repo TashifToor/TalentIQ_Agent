@@ -81,7 +81,7 @@ export default function SocialAuthRow({ theme = 'dark' }: { theme?: 'dark' | 'li
         <div style={{ marginTop: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                 <div style={{ flex: 1, height: 1, background: t.border }} />
-                <span style={{ fontSize: 11.5, color: t.textMuted, letterSpacing: '.04em' }}>Continue with</span>
+                <span style={{ fontSize: 11.5, color: 'black', letterSpacing: '.04em' }}>Continue with</span>
                 <div style={{ flex: 1, height: 1, background: t.border }} />
             </div>
 
