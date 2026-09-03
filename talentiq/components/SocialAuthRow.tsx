@@ -19,7 +19,7 @@ const THEME = {
         border: 'rgba(26,24,20,.14)',
         btnBg: '#ffffff',
         textActive: 'rgba(26,24,20,.8)',
-        textDisabled: 'rgba(26,24,20,.35)',
+        textDisabled: 'rgba(0, 0, 0, 0.7)',
     },
 }
 
