@@ -12,6 +12,7 @@ import NotificationToasts from '@/components/NotificationToasts'
 import { NotificationProvider } from '@/components/NotificationProvider'
 import ActivityTimeline from '@/components/ActivityTimeline'
 import { useBrowserNotificationPermission } from '@/lib/useBrowserNotificationPermission'
+import ThemeToggle, { ThemeSettingsControl } from '@/components/ThemeToggle'
 
 type Candidate = {
   filename: string
@@ -45,22 +46,22 @@ function AnalysisCarousel({ text }: { text: string }) {
     const m = block.match(/^\*\*(.+?)\*\*/)
     return { heading: m ? m[1].replace(/^Step \d+:\s*/, '') : 'Analysis', body: block.replace(/^\*\*(.+?)\*\*/, '').replace(/^\n+/, '').trim() }
   })
-  if (!steps.length) return <div style={{ fontSize: 12, color: '#7a7468' }}>No analysis available.</div>
+  if (!steps.length) return <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>No analysis available.</div>
   return (
     <div>
       <div style={{ display: 'flex', gap: 5, marginBottom: 10, flexWrap: 'wrap' }}>
         {steps.map((s, i) => (
-          <button key={i} onClick={(e) => { e.stopPropagation(); setActive(i) }} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', border: `1px solid ${active === i ? STEP_COLORS_C[i % 4] : '#9c9689'}`, background: active === i ? `${STEP_COLORS_C[i % 4]}18` : 'transparent', color: active === i ? STEP_COLORS_C[i % 4] : '#7a7468', transition: 'all .2s' }}>
+          <button key={i} onClick={(e) => { e.stopPropagation(); setActive(i) }} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', border: `1px solid ${active === i ? STEP_COLORS_C[i % 4] : 'var(--dash-text-faint)'}`, background: active === i ? `${STEP_COLORS_C[i % 4]}18` : 'transparent', color: active === i ? STEP_COLORS_C[i % 4] : 'var(--dash-text-muted)', transition: 'all .2s' }}>
             <span>{STEP_ICONS[i % 4]}</span> {s.heading}
           </button>
         ))}
       </div>
-      <div style={{ padding: '14px 16px', background: 'rgba(10,10,9,.035)', borderRadius: 10, borderLeft: `3px solid ${STEP_COLORS_C[active % 4]}` }}>
-        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: '#1f1c17' }}>{steps[active]?.heading}</div>
-        <p style={{ fontSize: 12, color: '#5c574c', lineHeight: 1.8, margin: 0, whiteSpace: 'pre-wrap' }}>{steps[active]?.body}</p>
+      <div style={{ padding: '14px 16px', background: 'var(--dash-overlay-035)', borderRadius: 10, borderLeft: `3px solid ${STEP_COLORS_C[active % 4]}` }}>
+        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, color: 'var(--dash-text)' }}>{steps[active]?.heading}</div>
+        <p style={{ fontSize: 12, color: 'var(--dash-text-muted)', lineHeight: 1.8, margin: 0, whiteSpace: 'pre-wrap' }}>{steps[active]?.body}</p>
       </div>
       <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 10 }}>
-        {steps.map((_, i) => <div key={i} onClick={(e) => { e.stopPropagation(); setActive(i) }} style={{ width: active === i ? 18 : 5, height: 5, borderRadius: 3, background: active === i ? STEP_COLORS_C[i % 4] : '#9c9689', cursor: 'pointer', transition: 'all .3s' }} />)}
+        {steps.map((_, i) => <div key={i} onClick={(e) => { e.stopPropagation(); setActive(i) }} style={{ width: active === i ? 18 : 5, height: 5, borderRadius: 3, background: active === i ? STEP_COLORS_C[i % 4] : 'var(--dash-text-faint)', cursor: 'pointer', transition: 'all .3s' }} />)}
       </div>
     </div>
   )
@@ -108,9 +109,9 @@ function SkillTags({ matched, missing }: { matched: string[], missing: string[] 
       {all.map(sk => (
         <span key={sk} style={{
           fontSize: 10, padding: '3px 8px', borderRadius: 100,
-          background: mset.has(sk) ? 'rgba(19,194,142,.1)' : '#f0eee6',
-          color: mset.has(sk) ? '#13c28e' : '#7a7468',
-          border: `1px solid ${mset.has(sk) ? 'rgba(19,194,142,.2)' : '#9c9689'}`
+          background: mset.has(sk) ? 'rgba(19,194,142,.1)' : 'var(--dash-surface-2)',
+          color: mset.has(sk) ? '#13c28e' : 'var(--dash-text-muted)',
+          border: `1px solid ${mset.has(sk) ? 'rgba(19,194,142,.2)' : 'var(--dash-text-faint)'}`
         }}>
           {sk}
         </span>
@@ -560,10 +561,10 @@ export default function HRDashboard() {
   const rejectedList = candidates.filter(c => c.status === 'rejected')
   const avgScore = candidates.length ? Math.round(candidates.reduce((s, c) => s + (c.ai_score || 0), 0) / candidates.length) : 0
 
-  // ── Styles ──
-  const base = { background: '#f7f5f0', fontFamily: 'Inter, sans-serif', color: '#1f1c17' }
-  const card = { background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 8, padding: 16 }
-  const inputSt = { background: '#faf9f5', border: '1px solid #e7e4da', borderRadius: 8, padding: '10px 12px', fontSize: 13, fontFamily: 'Inter, sans-serif', color: '#1f1c17', outline: 'none', width: '100%' }
+  // ── Styles (theme-aware via CSS variables — see globals.css [data-theme]) ──
+  const base = { background: 'var(--dash-bg)', fontFamily: 'Inter, sans-serif', color: 'var(--dash-text)' }
+  const card = { background: 'var(--dash-surface)', border: '1px solid var(--dash-border)', borderRadius: 8, padding: 16 }
+  const inputSt = { background: 'var(--dash-surface-2)', border: '1px solid var(--dash-border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, fontFamily: 'Inter, sans-serif', color: 'var(--dash-text)', outline: 'none', width: '100%' }
 
   // ── Nav ──
   const NAV = [
@@ -590,15 +591,15 @@ export default function HRDashboard() {
       <div onClick={() => setSelectedKey(selectedKey === c.filename ? null : c.filename)}
         style={s(card, {
           cursor: 'pointer', transition: 'all .2s', marginBottom: 8,
-          border: `1px solid ${selectedKey === c.filename ? 'rgba(19,194,142,.25)' : '#9c9689'}`,
-          background: selectedKey === c.filename ? 'rgba(19,194,142,.06)' : '#ffffff', position: 'relative'
+          border: `1px solid ${selectedKey === c.filename ? 'rgba(19,194,142,.25)' : 'var(--dash-text-faint)'}`,
+          background: selectedKey === c.filename ? 'rgba(19,194,142,.06)' : 'var(--dash-surface)', position: 'relative'
         })}>
-        {idx < 3 && <div style={{ position: 'absolute', top: 10, left: -1, width: 22, height: 22, borderRadius: '0 6px 6px 0', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 700, background: idx === 0 ? '#c5931f' : 'rgba(10,10,9,.09)', color: idx === 0 ? '#0a0a08' : '#7a7468' }}>#{idx + 1}</div>}
+        {idx < 3 && <div style={{ position: 'absolute', top: 10, left: -1, width: 22, height: 22, borderRadius: '0 6px 6px 0', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 700, background: idx === 0 ? '#c5931f' : 'var(--dash-overlay-09)', color: idx === 0 ? '#0a0a08' : 'var(--dash-text-muted)' }}>#{idx + 1}</div>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingLeft: idx < 3 ? 16 : 0, marginBottom: 6 }}>
           <div style={{ width: 32, height: 32, borderRadius: '50%', background: `linear-gradient(135deg,${color})`, display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{av}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.candidate_name || c.filename}</div>
-            <div style={{ fontSize: 11, color: '#7a7468' }}>{c.final_verdict || '—'}</div>
+            <div style={{ fontSize: 11, color: 'var(--dash-text-muted)' }}>{c.final_verdict || '—'}</div>
           </div>
           <ScoreChip score={c.ai_score} />
         </div>
@@ -612,7 +613,7 @@ export default function HRDashboard() {
         ) : showActions ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: c.status === 'shortlisted' ? '#13c28e' : '#ef4444' }}>{c.status === 'shortlisted' ? '✓ Shortlisted' : '✗ Rejected'}</span>
-            <button onClick={e => { e.stopPropagation(); undoMark(idx) }} style={{ fontSize: 10, color: '#7a7468', background: 'transparent', border: '1px solid rgba(10,10,9,.1)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Undo</button>
+            <button onClick={e => { e.stopPropagation(); undoMark(idx) }} style={{ fontSize: 10, color: 'var(--dash-text-muted)', background: 'transparent', border: '1px solid var(--dash-border-soft)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Undo</button>
           </div>
         ) : null}
         {showActions && c.status === 'shortlisted' && c.application_id && !c.trigger_interview && (
@@ -626,13 +627,13 @@ export default function HRDashboard() {
         )}
         {moveToInterviewFor === idx && (
           <div onClick={e => e.stopPropagation()} style={{ marginTop: 10, padding: 12, background: 'rgba(124,58,237,.05)', borderRadius: 8, border: '1px solid rgba(124,58,237,.15)' }}>
-            <div style={{ fontSize: 10.5, fontWeight: 700, color: '#5c574c', marginBottom: 6 }}>Move to which interview posting?</div>
-            <select value={movePostingId} onChange={e => setMovePostingId(e.target.value)} style={{ width: '100%', background: '#faf9f5', border: '1px solid rgba(10,10,9,.1)', borderRadius: 6, padding: '7px 8px', fontSize: 11.5, color: '#1f1c17', marginBottom: 8, fontFamily: 'Inter,sans-serif' }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--dash-text-muted)', marginBottom: 6 }}>Move to which interview posting?</div>
+            <select value={movePostingId} onChange={e => setMovePostingId(e.target.value)} style={{ width: '100%', background: 'var(--dash-surface-2)', border: '1px solid var(--dash-border-soft)', borderRadius: 6, padding: '7px 8px', fontSize: 11.5, color: 'var(--dash-text)', marginBottom: 8, fontFamily: 'Inter,sans-serif' }}>
               <option value="">Select a posting…</option>
               {interviewPostings.map((p: any) => <option key={p.id} value={p.id}>{p.title}</option>)}
             </select>
             {!c.candidate_email && (
-              <input value={moveEmailInput} onChange={e => setMoveEmailInput(e.target.value)} placeholder="Candidate email (required — not on file)" style={{ width: '100%', background: '#faf9f5', border: '1px solid rgba(10,10,9,.1)', borderRadius: 6, padding: '7px 8px', fontSize: 11.5, color: '#1f1c17', marginBottom: 8, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
+              <input value={moveEmailInput} onChange={e => setMoveEmailInput(e.target.value)} placeholder="Candidate email (required — not on file)" style={{ width: '100%', background: 'var(--dash-surface-2)', border: '1px solid var(--dash-border-soft)', borderRadius: 6, padding: '7px 8px', fontSize: 11.5, color: 'var(--dash-text)', marginBottom: 8, fontFamily: 'Inter,sans-serif', boxSizing: 'border-box' }} />
             )}
             {moveError && <div style={{ fontSize: 10.5, color: '#ef4444', marginBottom: 6 }}>{moveError}</div>}
             <button disabled={!movePostingId || (!c.candidate_email && !moveEmailInput) || moveLoading}
@@ -648,7 +649,7 @@ export default function HRDashboard() {
           </div>
         )}
         {selectedKey === c.filename && c.deep_analysis && (
-          <div style={{ marginTop: 10, padding: 12, background: 'rgba(10,10,9,.035)', borderRadius: 8, border: '1px solid rgba(10,10,9,.1)' }}>
+          <div style={{ marginTop: 10, padding: 12, background: 'var(--dash-overlay-035)', borderRadius: 8, border: '1px solid var(--dash-border-soft)' }}>
             <AnalysisCarousel text={c.deep_analysis} />
           </div>
         )}
@@ -662,7 +663,7 @@ export default function HRDashboard() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>HR Dashboard</div>
-          <div style={{ fontSize: 12, color: '#7a7468' }}>Overview of your latest screening session</div>
+          <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>Overview of your latest screening session</div>
         </div>
         {candidates.length > 0 && (
           <button onClick={exportCSV} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(19,194,142,.2)', background: 'rgba(19,194,142,.08)', color: '#13c28e', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
@@ -679,7 +680,7 @@ export default function HRDashboard() {
         ].map(st => (
           <div key={st.l} style={card}>
             <div style={{ fontFamily: "Inter, sans-serif", fontSize: 32, fontWeight: 600, marginBottom: 2 }}>{st.v}</div>
-            <div style={{ fontSize: 11, color: '#7a7468' }}>{st.l}</div>
+            <div style={{ fontSize: 11, color: 'var(--dash-text-muted)' }}>{st.l}</div>
             {st.sub && <div style={{ fontSize: 11, color: '#22c55e', marginTop: 3 }}>{st.sub}</div>}
           </div>
         ))}
@@ -691,15 +692,15 @@ export default function HRDashboard() {
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80, padding: '8px 4px 0' }}>
               {candidates.map((c, i) => (
                 <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer' }} onClick={() => setSection('candidates')}>
-                  <span style={{ fontSize: 9, color: '#7a7468', fontWeight: 600 }}>{c.ai_score}</span>
+                  <span style={{ fontSize: 9, color: 'var(--dash-text-muted)', fontWeight: 600 }}>{c.ai_score}</span>
                   <div title={c.filename} style={{ width: '100%', borderRadius: '3px 3px 0 0', height: `${Math.max(c.ai_score, 4)}%`, background: c.ai_score >= 80 ? '#13c28e' : c.ai_score >= 60 ? '#e2b04a' : 'rgba(239,68,68,.5)', transition: 'all .3s', minHeight: 4 }} />
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-              <span style={{ fontSize: 10, color: '#9c9689' }}>Lowest: {Math.min(...candidates.map(c => c.ai_score))}</span>
-              <span style={{ fontSize: 10, color: '#9c9689' }}>Avg: {Math.round(candidates.reduce((s, c) => s + c.ai_score, 0) / candidates.length)}</span>
-              <span style={{ fontSize: 10, color: '#9c9689' }}>Highest: {Math.max(...candidates.map(c => c.ai_score))}</span>
+              <span style={{ fontSize: 10, color: 'var(--dash-text-faint)' }}>Lowest: {Math.min(...candidates.map(c => c.ai_score))}</span>
+              <span style={{ fontSize: 10, color: 'var(--dash-text-faint)' }}>Avg: {Math.round(candidates.reduce((s, c) => s + c.ai_score, 0) / candidates.length)}</span>
+              <span style={{ fontSize: 10, color: 'var(--dash-text-faint)' }}>Highest: {Math.max(...candidates.map(c => c.ai_score))}</span>
             </div>
           </div>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Top Candidates</div>
@@ -711,7 +712,7 @@ export default function HRDashboard() {
         <div style={s(card, { textAlign: 'center', padding: 40 })}>
 
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>No screenings yet</div>
-          <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 16 }}>Upload a ZIP of CVs to get started</div>
+          <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginBottom: 16 }}>Upload a ZIP of CVs to get started</div>
           <button onClick={() => setSection('bulk')} style={{ fontSize: 13, fontWeight: 700, background: '#13c28e', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Run Bulk Screening</button>
         </div>
       )}
@@ -732,18 +733,18 @@ export default function HRDashboard() {
   const renderBulk = () => (
     <div style={{ padding: 28, overflowY: 'auto', height: '100%', maxWidth: 640 }}>
       <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>Bulk Screening</div>
-      <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 24 }}>Upload CVs and a job description — AI ranks them all</div>
+      <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginBottom: 24 }}>Upload CVs and a job description — AI ranks them all</div>
       <input ref={fileRef} type="file" accept=".zip,.pdf" style={{ display: 'none' }} onChange={e => setZipFile(e.target.files?.[0] || null)} />
-      <div onClick={() => fileRef.current?.click()} style={s(card, { border: '2px dashed rgba(10,10,9,.14)', textAlign: 'center', padding: 28, cursor: 'pointer', marginBottom: 14 })}>
+      <div onClick={() => fileRef.current?.click()} style={s(card, { border: '2px dashed var(--dash-overlay-14)', textAlign: 'center', padding: 28, cursor: 'pointer', marginBottom: 14 })}>
         <div style={{ fontSize: 28, marginBottom: 8 }}></div>
         <div style={{ fontSize: 13, fontWeight: 600 }}>{zipFile ? zipFile.name : 'Select ZIP of CVs or single PDF'}</div>
-        {!zipFile && <div style={{ fontSize: 11, color: '#7a7468', marginTop: 4 }}>Max 25 CVs per ZIP</div>}
+        {!zipFile && <div style={{ fontSize: 11, color: 'var(--dash-text-muted)', marginTop: 4 }}>Max 25 CVs per ZIP</div>}
       </div>
       <input value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="Job title (e.g. Senior Frontend Engineer)" style={s(inputSt, { marginBottom: 10 })} />
       <textarea value={jobDescription} onChange={e => setJobDescription(e.target.value)} placeholder="Paste job description or requirements…" style={s(inputSt, { resize: 'none', height: 100, lineHeight: 1.6, marginBottom: 10 } as any)} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <span style={{ fontSize: 12, color: '#7a7468' }}>Top candidates needed:</span>
-        <input type="number" min={1} max={25} value={topN} onChange={e => setTopN(Number(e.target.value) || 1)} style={{ width: 60, background: '#faf9f5', border: '1px solid rgba(10,10,9,.1)', borderRadius: 6, padding: '7px 10px', fontSize: 13, color: '#1f1c17', outline: 'none', fontFamily: 'Inter,sans-serif' }} />
+        <span style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>Top candidates needed:</span>
+        <input type="number" min={1} max={25} value={topN} onChange={e => setTopN(Number(e.target.value) || 1)} style={{ width: 60, background: 'var(--dash-surface-2)', border: '1px solid var(--dash-border-soft)', borderRadius: 6, padding: '7px 10px', fontSize: 13, color: 'var(--dash-text)', outline: 'none', fontFamily: 'Inter,sans-serif' }} />
       </div>
       {bulkError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 10 }}>{bulkError}</div>}
 
@@ -753,42 +754,42 @@ export default function HRDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
             <div style={{ position: 'relative', width: 40, height: 40, flexShrink: 0 }}>
               <svg viewBox="0 0 40 40" style={{ width: 40, height: 40, animation: 'spin 1.2s linear infinite' }}>
-                <circle cx="20" cy="20" r="16" fill="none" stroke="#9c9689" strokeWidth="3" />
+                <circle cx="20" cy="20" r="16" fill="none" stroke="var(--dash-text-faint)" strokeWidth="3" />
                 <circle cx="20" cy="20" r="16" fill="none" stroke="#13c28e" strokeWidth="3" strokeDasharray="60 40" strokeLinecap="round" />
               </svg>
             </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{bulkStatus}</div>
-              {pollProgress.currentName && <div style={{ fontSize: 11, color: '#7a7468' }}>Analyzing: {pollProgress.currentName}</div>}
+              {pollProgress.currentName && <div style={{ fontSize: 11, color: 'var(--dash-text-muted)' }}>Analyzing: {pollProgress.currentName}</div>}
             </div>
           </div>
           {pollProgress.total === 0 && (
             <div style={{ marginTop: 4 }}>
               {BULK_ANIM_STEPS.map((step, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: i <= bulkAnimStep ? 1 : 0.2, transition: 'opacity 0.4s ease', fontSize: 11, color: i === bulkAnimStep ? '#e2b04a' : i < bulkAnimStep ? '#13c28e' : '#7a7468', marginBottom: 4 }}>
-                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: i === bulkAnimStep ? '#e2b04a' : i < bulkAnimStep ? '#13c28e' : '#9c9689', flexShrink: 0, transition: 'background 0.4s' }} />
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: i <= bulkAnimStep ? 1 : 0.2, transition: 'opacity 0.4s ease', fontSize: 11, color: i === bulkAnimStep ? '#e2b04a' : i < bulkAnimStep ? '#13c28e' : 'var(--dash-text-muted)', marginBottom: 4 }}>
+                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: i === bulkAnimStep ? '#e2b04a' : i < bulkAnimStep ? '#13c28e' : 'var(--dash-text-faint)', flexShrink: 0, transition: 'background 0.4s' }} />
                   {step}
                   {i < bulkAnimStep && <span style={{ marginLeft: 'auto', color: '#13c28e', fontSize: 10 }}>done</span>}
                   {i === bulkAnimStep && <span style={{ marginLeft: 'auto', fontSize: 10, animation: 'pulse 1s infinite' }}>...</span>}
                 </div>
               ))}
-              <div style={{ height: 2, background: 'rgba(10,10,9,.05)', borderRadius: 1, marginTop: 10, overflow: 'hidden' }}>
+              <div style={{ height: 2, background: 'var(--dash-overlay-05)', borderRadius: 1, marginTop: 10, overflow: 'hidden' }}>
                 <div style={{ height: '100%', background: 'linear-gradient(90deg,#b8860b,#e2b04a)', borderRadius: 1, width: `${Math.round(((bulkAnimStep + 1) / BULK_ANIM_STEPS.length) * 100)}%`, transition: 'width 0.6s ease' }} />
               </div>
             </div>
           )}
           {pollProgress.total > 0 && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#7a7468', marginBottom: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--dash-text-muted)', marginBottom: 6 }}>
                 <span>Progress</span>
                 <span>{pollProgress.current}/{pollProgress.total} CVs</span>
               </div>
-              <div style={{ height: 6, background: 'rgba(10,10,9,.05)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ height: 6, background: 'var(--dash-overlay-05)', borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{ height: '100%', background: 'linear-gradient(90deg,#0b7c5e,#13c28e)', borderRadius: 3, width: `${Math.round((pollProgress.current / pollProgress.total) * 100)}%`, transition: 'width .5s ease' }} />
               </div>
               <div style={{ display: 'flex', gap: 4, marginTop: 10 }}>
                 {Array.from({ length: pollProgress.total }, (_, i) => (
-                  <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i < pollProgress.current ? '#13c28e' : i === pollProgress.current ? '#e2b04a' : '#9c9689', transition: 'all .4s' }} />
+                  <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i < pollProgress.current ? '#13c28e' : i === pollProgress.current ? '#e2b04a' : 'var(--dash-text-faint)', transition: 'all .4s' }} />
                 ))}
               </div>
             </>
@@ -811,7 +812,7 @@ export default function HRDashboard() {
     <div style={{ padding: 28, overflowY: 'auto', height: '100%' }}>
       <div className="talent-pool-container" style={{ maxWidth: 1180, width: '100%', margin: '0 auto' }}>
         <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>Talent Pool</div>
-        <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 24 }}>Every screened candidate across all your screening jobs, in one searchable, filterable place</div>
+        <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginBottom: 24 }}>Every screened candidate across all your screening jobs, in one searchable, filterable place</div>
         <TalentPoolPanel
           interviewPostings={interviewPostings.map((p: any) => ({ id: p.id, title: p.title }))}
           onNavigate={(s) => setSection(s as Section)}
@@ -823,9 +824,9 @@ export default function HRDashboard() {
   const renderCandidates = (list: Candidate[], title: string, emptyMsg: string) => (
     <div style={{ padding: 28, overflowY: 'auto', height: '100%' }}>
       <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>{title}</div>
-      <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 20 }}>{list.length} candidates · sorted by score</div>
+      <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginBottom: 20 }}>{list.length} candidates · sorted by score</div>
       {list.length === 0 ? (
-        <div style={s(card, { textAlign: 'center', padding: 40, color: '#7a7468' })}>{emptyMsg}</div>
+        <div style={s(card, { textAlign: 'center', padding: 40, color: 'var(--dash-text-muted)' })}>{emptyMsg}</div>
       ) : (
         <div style={{ maxWidth: 700 }}>{list.map((c, i) => <CandidateCard key={c.filename + i} c={c} idx={candidates.indexOf(c)} />)}</div>
       )}
@@ -895,22 +896,22 @@ export default function HRDashboard() {
           }
         `}</style>
 
-        <div className="hr-history-list" style={{ borderRight: '1px solid rgba(10,10,9,.1)', overflowY: 'auto', padding: 20 }}>
+        <div className="hr-history-list" style={{ borderRight: '1px solid var(--dash-border-soft)', overflowY: 'auto', padding: 20 }}>
           <div style={{ fontFamily: "Inter, sans-serif", fontSize: 22, fontWeight: 600, marginBottom: 12 }}>History</div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 14, flexWrap: 'wrap' }}>
             {([['screenings', 'Screenings'], ['interviews', 'AI Interviews'], ['actions', 'My Actions']] as const).map(([id, label]) => (
               <button key={id} onClick={() => { setHistoryTab(id); setHistorySearch(''); setHistoryVerdictFilter(null) }}
                 style={{
                   fontSize: 11, fontWeight: 600, padding: '6px 10px', borderRadius: 100, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
-                  border: historyTab === id ? '1px solid rgba(19,194,142,.3)' : '1px solid rgba(10,10,9,.12)',
+                  border: historyTab === id ? '1px solid rgba(19,194,142,.3)' : '1px solid var(--dash-overlay-12)',
                   background: historyTab === id ? 'rgba(19,194,142,.1)' : 'transparent',
-                  color: historyTab === id ? '#13c28e' : '#5c574c'
+                  color: historyTab === id ? '#13c28e' : 'var(--dash-text-muted)'
                 }}>{label}</button>
             ))}
           </div>
 
           <div style={{ position: 'relative', marginBottom: 10 }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7a7468" strokeWidth="2"
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--dash-text-muted)" strokeWidth="2"
               style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}>
               <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" />
             </svg>
@@ -919,8 +920,8 @@ export default function HRDashboard() {
               onChange={e => setHistorySearch(e.target.value)}
               placeholder={historyTab === 'interviews' ? 'Search name or role…' : historyTab === 'actions' ? 'Search filename or role…' : 'Search by role…'}
               style={{
-                width: '100%', background: '#faf9f5', border: '1px solid rgba(10,10,9,.1)', borderRadius: 8,
-                padding: '8px 12px 8px 30px', fontSize: 12, color: '#1f1c17', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+                width: '100%', background: 'var(--dash-surface-2)', border: '1px solid var(--dash-border-soft)', borderRadius: 8,
+                padding: '8px 12px 8px 30px', fontSize: 12, color: 'var(--dash-text)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
               }}
             />
           </div>
@@ -929,16 +930,16 @@ export default function HRDashboard() {
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 14 }}>
               <button onClick={() => setHistoryVerdictFilter(null)} style={{
                 fontSize: 10, fontWeight: 600, padding: '4px 9px', borderRadius: 100, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
-                border: !historyVerdictFilter ? '1px solid #7a7468' : '1px solid rgba(10,10,9,.12)',
-                background: !historyVerdictFilter ? 'rgba(10,10,9,.08)' : 'transparent',
-                color: !historyVerdictFilter ? '#1f1c17' : '#7a7468',
+                border: !historyVerdictFilter ? '1px solid var(--dash-text-muted)' : '1px solid var(--dash-overlay-12)',
+                background: !historyVerdictFilter ? 'var(--dash-overlay-08)' : 'transparent',
+                color: !historyVerdictFilter ? 'var(--dash-text)' : 'var(--dash-text-muted)',
               }}>All</button>
               {verdictOptions.map(v => (
                 <button key={v} onClick={() => setHistoryVerdictFilter(v)} style={{
                   fontSize: 10, fontWeight: 600, padding: '4px 9px', borderRadius: 100, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
-                  border: historyVerdictFilter === v ? '1px solid rgba(19,194,142,.35)' : '1px solid rgba(10,10,9,.12)',
+                  border: historyVerdictFilter === v ? '1px solid rgba(19,194,142,.35)' : '1px solid var(--dash-overlay-12)',
                   background: historyVerdictFilter === v ? 'rgba(19,194,142,.1)' : 'transparent',
-                  color: historyVerdictFilter === v ? '#13c28e' : '#7a7468',
+                  color: historyVerdictFilter === v ? '#13c28e' : 'var(--dash-text-muted)',
                 }}>{v}</button>
               ))}
             </div>
@@ -946,24 +947,24 @@ export default function HRDashboard() {
 
           {historyTab === 'screenings' && (
             <>
-              {scanHistoryLoading && <div style={{ fontSize: 12, color: '#7a7468' }}>Loading...</div>}
+              {scanHistoryLoading && <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>Loading...</div>}
               {!scanHistoryLoading && scanHistory.length === 0 && (
-                <div style={{ fontSize: 12, color: '#7a7468', textAlign: 'center', padding: '40px 0' }}>No screenings yet. Every CV you screen is saved here automatically.</div>
+                <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', textAlign: 'center', padding: '40px 0' }}>No screenings yet. Every CV you screen is saved here automatically.</div>
               )}
               {!scanHistoryLoading && scanHistory.length > 0 && filteredScan.length === 0 && (
-                <div style={{ fontSize: 12, color: '#7a7468', textAlign: 'center', padding: '40px 0' }}>No matching screenings.<br />Try a different role name.</div>
+                <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', textAlign: 'center', padding: '40px 0' }}>No matching screenings.<br />Try a different role name.</div>
               )}
               {scanGroups.map(({ group, items }) => (
                 <div key={group} style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#9c9689', marginBottom: 8 }}>{group}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--dash-text-faint)', marginBottom: 8 }}>{group}</div>
                   {items.map((h: any) => (
-                    <div key={h.id} className="hr-history-card hr-fade-up" onClick={() => selectScan(h)} style={s(card, { marginBottom: 8, border: `1px solid ${scanHistorySelected?.id === h.id ? 'rgba(19,194,142,.25)' : '#9c9689'}` })}>
+                    <div key={h.id} className="hr-history-card hr-fade-up" onClick={() => selectScan(h)} style={s(card, { marginBottom: 8, border: `1px solid ${scanHistorySelected?.id === h.id ? 'rgba(19,194,142,.25)' : 'var(--dash-text-faint)'}` })}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: h.is_shortlisted === 'True' ? '#13c28e' : '#7a7468' }}>{h.is_shortlisted === 'True' ? '✓ Shortlisted' : (h.final_verdict || 'Match Result')}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: h.is_shortlisted === 'True' ? '#13c28e' : 'var(--dash-text-muted)' }}>{h.is_shortlisted === 'True' ? '✓ Shortlisted' : (h.final_verdict || 'Match Result')}</span>
                         <span style={{ marginLeft: 'auto', fontFamily: "Inter, sans-serif", fontSize: 18, fontWeight: 600, color: h.candidate_score >= 80 ? '#13c28e' : h.candidate_score >= 60 ? '#e2b04a' : '#ef4444' }}>{h.candidate_score}</span>
                       </div>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{h.role_title || 'Untitled Role'}</div>
-                      <div style={{ fontSize: 10, color: '#9c9689', marginTop: 3 }}>{h.created_at ? new Date(h.created_at).toLocaleString() : ''}</div>
+                      <div style={{ fontSize: 10, color: 'var(--dash-text-faint)', marginTop: 3 }}>{h.created_at ? new Date(h.created_at).toLocaleString() : ''}</div>
                     </div>
                   ))}
                 </div>
@@ -973,25 +974,25 @@ export default function HRDashboard() {
 
           {historyTab === 'interviews' && (
             <>
-              {interviewHistoryLoading && <div style={{ fontSize: 12, color: '#7a7468' }}>Loading...</div>}
+              {interviewHistoryLoading && <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>Loading...</div>}
               {!interviewHistoryLoading && interviewHistory.length === 0 && (
-                <div style={{ fontSize: 12, color: '#7a7468', textAlign: 'center', padding: '40px 0' }}>No completed AI interviews yet.</div>
+                <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', textAlign: 'center', padding: '40px 0' }}>No completed AI interviews yet.</div>
               )}
               {!interviewHistoryLoading && interviewHistory.length > 0 && filteredInterviews.length === 0 && (
-                <div style={{ fontSize: 12, color: '#7a7468', textAlign: 'center', padding: '40px 0' }}>No matching interviews.<br />Try a different candidate name or job title.</div>
+                <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', textAlign: 'center', padding: '40px 0' }}>No matching interviews.<br />Try a different candidate name or job title.</div>
               )}
               {interviewGroups.map(({ group, items }) => (
                 <div key={group} style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#9c9689', marginBottom: 8 }}>{group}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--dash-text-faint)', marginBottom: 8 }}>{group}</div>
                   {items.map((h: any) => (
-                    <div key={h.id} className="hr-history-card hr-fade-up" onClick={() => selectInterview(h)} style={s(card, { marginBottom: 8, border: `1px solid ${interviewHistorySelected?.id === h.id ? 'rgba(19,194,142,.25)' : '#9c9689'}` })}>
+                    <div key={h.id} className="hr-history-card hr-fade-up" onClick={() => selectInterview(h)} style={s(card, { marginBottom: 8, border: `1px solid ${interviewHistorySelected?.id === h.id ? 'rgba(19,194,142,.25)' : 'var(--dash-text-faint)'}` })}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: '#5c574c' }}>{h.final_verdict || 'AI Interview'}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--dash-text-muted)' }}>{h.final_verdict || 'AI Interview'}</span>
                         {h.ai_score != null && <span style={{ marginLeft: 'auto', fontFamily: "Inter, sans-serif", fontSize: 18, fontWeight: 600, color: h.ai_score >= 80 ? '#13c28e' : h.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{h.ai_score}</span>}
                       </div>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{h.candidate_name}</div>
-                      <div style={{ fontSize: 11, color: '#7a7468', marginTop: 2 }}>{h.posting_title}</div>
-                      <div style={{ fontSize: 10, color: '#9c9689', marginTop: 3 }}>{h.completed_at ? new Date(h.completed_at).toLocaleString() : ''}</div>
+                      <div style={{ fontSize: 11, color: 'var(--dash-text-muted)', marginTop: 2 }}>{h.posting_title}</div>
+                      <div style={{ fontSize: 10, color: 'var(--dash-text-faint)', marginTop: 3 }}>{h.completed_at ? new Date(h.completed_at).toLocaleString() : ''}</div>
                     </div>
                   ))}
                 </div>
@@ -1001,24 +1002,24 @@ export default function HRDashboard() {
 
           {historyTab === 'actions' && (
             <>
-              <div style={{ fontSize: 11, color: '#7a7468', marginBottom: 12 }}>{history.length} candidates you shortlisted/rejected (saved on this device only)</div>
+              <div style={{ fontSize: 11, color: 'var(--dash-text-muted)', marginBottom: 12 }}>{history.length} candidates you shortlisted/rejected (saved on this device only)</div>
               {history.length === 0 ? (
-                <div style={{ fontSize: 12, color: '#7a7468', textAlign: 'center', padding: '40px 0' }}>No history yet. Shortlist or reject candidates to save them here.</div>
+                <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', textAlign: 'center', padding: '40px 0' }}>No history yet. Shortlist or reject candidates to save them here.</div>
               ) : filteredActions.length === 0 ? (
-                <div style={{ fontSize: 12, color: '#7a7468', textAlign: 'center', padding: '40px 0' }}>No matching candidates.<br />Try a different filename or role.</div>
+                <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', textAlign: 'center', padding: '40px 0' }}>No matching candidates.<br />Try a different filename or role.</div>
               ) : (
                 actionGroups.map(({ group, items }) => (
                   <div key={group} style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#9c9689', marginBottom: 8 }}>{group}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--dash-text-faint)', marginBottom: 8 }}>{group}</div>
                     {items.map((h: any, i: number) => (
-                      <div key={i} className="hr-history-card hr-fade-up" onClick={() => selectAction(h)} style={s(card, { marginBottom: 8, border: `1px solid ${historySelected === h ? 'rgba(19,194,142,.25)' : '#9c9689'}` })}>
+                      <div key={i} className="hr-history-card hr-fade-up" onClick={() => selectAction(h)} style={s(card, { marginBottom: 8, border: `1px solid ${historySelected === h ? 'rgba(19,194,142,.25)' : 'var(--dash-text-faint)'}` })}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                           <span style={{ fontSize: 11, fontWeight: 600, color: h.status === 'shortlisted' ? '#13c28e' : '#ef4444' }}>{h.status === 'shortlisted' ? '✓ Shortlisted' : '✗ Rejected'}</span>
                           <span style={{ marginLeft: 'auto', fontFamily: "Inter, sans-serif", fontSize: 18, fontWeight: 600, color: h.ai_score >= 80 ? '#13c28e' : h.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{h.ai_score}</span>
                         </div>
                         <div style={{ fontSize: 13, fontWeight: 600 }}>{h.filename}</div>
-                        <div style={{ fontSize: 11, color: '#7a7468', marginTop: 2 }}>{h.jobTitle}</div>
-                        <div style={{ fontSize: 10, color: '#9c9689', marginTop: 3 }}>{h.screenedAt}</div>
+                        <div style={{ fontSize: 11, color: 'var(--dash-text-muted)', marginTop: 2 }}>{h.jobTitle}</div>
+                        <div style={{ fontSize: 10, color: 'var(--dash-text-faint)', marginTop: 3 }}>{h.screenedAt}</div>
                       </div>
                     ))}
                   </div>
@@ -1032,20 +1033,20 @@ export default function HRDashboard() {
         </div>
 
         <div className={`hr-history-detail${historyDrawerOpen ? ' open' : ''}`} style={{ overflowY: 'auto', padding: 28 }}>
-          <button className="hr-history-back" onClick={closeDrawer} style={{ alignItems: 'center', gap: 6, background: 'rgba(10,10,9,.035)', border: '1px solid rgba(10,10,9,.1)', borderRadius: 8, padding: '7px 12px', color: '#3a352d', cursor: 'pointer', fontSize: 12, fontFamily: 'Inter,sans-serif', marginBottom: 18 }}>
+          <button className="hr-history-back" onClick={closeDrawer} style={{ alignItems: 'center', gap: 6, background: 'var(--dash-overlay-035)', border: '1px solid var(--dash-border-soft)', borderRadius: 8, padding: '7px 12px', color: 'var(--dash-text)', cursor: 'pointer', fontSize: 12, fontFamily: 'Inter,sans-serif', marginBottom: 18 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
             Back to list
           </button>
 
           {historyTab === 'screenings' && (
             !scanHistorySelected ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9c9689', fontSize: 13 }}>Select a screening from history to view details</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--dash-text-faint)', fontSize: 13 }}>Select a screening from history to view details</div>
             ) : (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
                   <div>
                     <div style={{ fontSize: 18, fontWeight: 600 }}>{scanHistorySelected.role_title}</div>
-                    <div style={{ fontSize: 12, color: '#7a7468' }}>{scanHistorySelected.created_at ? new Date(scanHistorySelected.created_at).toLocaleString() : ''}</div>
+                    <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>{scanHistorySelected.created_at ? new Date(scanHistorySelected.created_at).toLocaleString() : ''}</div>
                   </div>
                   <span style={{ marginLeft: 'auto', fontFamily: "Inter, sans-serif", fontSize: 36, fontWeight: 600, color: scanHistorySelected.candidate_score >= 80 ? '#13c28e' : scanHistorySelected.candidate_score >= 60 ? '#e2b04a' : '#ef4444' }}>{scanHistorySelected.candidate_score}</span>
                 </div>
@@ -1071,19 +1072,19 @@ export default function HRDashboard() {
 
           {historyTab === 'interviews' && (
             !interviewHistorySelected ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9c9689', fontSize: 13 }}>Select a candidate to view their interview report</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--dash-text-faint)', fontSize: 13 }}>Select a candidate to view their interview report</div>
             ) : (
               <>
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 18, fontWeight: 600 }}>{interviewHistorySelected.candidate_name}</div>
-                  <div style={{ fontSize: 12, color: '#7a7468' }}>{interviewHistorySelected.candidate_email} · {interviewHistorySelected.posting_title}</div>
+                  <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>{interviewHistorySelected.candidate_email} · {interviewHistorySelected.posting_title}</div>
                 </div>
                 {interviewReportLoading ? (
-                  <div style={{ fontSize: 12, color: '#7a7468' }}>Loading report...</div>
+                  <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>Loading report...</div>
                 ) : interviewReport ? (
                   <AIFeedbackReport data={interviewReport} />
                 ) : (
-                  <div style={{ fontSize: 12, color: '#7a7468' }}>Could not load the full report for this session.</div>
+                  <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>Could not load the full report for this session.</div>
                 )}
               </>
             )
@@ -1091,14 +1092,14 @@ export default function HRDashboard() {
 
           {historyTab === 'actions' && (
             !historySelected ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9c9689', fontSize: 13 }}>Select a candidate from history to view details</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--dash-text-faint)', fontSize: 13 }}>Select a candidate from history to view details</div>
             ) : (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
                   <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)', display: 'grid', placeItems: 'center', fontSize: 15, fontWeight: 700, color: '#fff' }}>{initials(historySelected.filename)}</div>
                   <div>
                     <div style={{ fontSize: 18, fontWeight: 600 }}>{historySelected.filename}</div>
-                    <div style={{ fontSize: 12, color: '#7a7468' }}>{historySelected.jobTitle} · {historySelected.screenedAt}</div>
+                    <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>{historySelected.jobTitle} · {historySelected.screenedAt}</div>
                   </div>
                   <span style={{ marginLeft: 'auto', fontFamily: "Inter, sans-serif", fontSize: 36, fontWeight: 600, color: historySelected.ai_score >= 80 ? '#13c28e' : historySelected.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{historySelected.ai_score}</span>
                 </div>
@@ -1130,7 +1131,7 @@ export default function HRDashboard() {
   const renderChatbot = () => (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 28, maxWidth: 700 }}>
       <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>Policy Chatbot</div>
-      <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 16 }}>Ask anything about your company HR policies</div>
+      <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginBottom: 16 }}>Ask anything about your company HR policies</div>
 
       {/* Policy document upload */}
       <input ref={policyFileRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && uploadPolicyDoc(e.target.files[0])} />
@@ -1142,11 +1143,11 @@ export default function HRDashboard() {
           </button>
         </div>
         {policyDocs.length === 0 ? (
-          <div style={{ fontSize: 11, color: '#9c9689', textAlign: 'center', padding: '8px 0' }}>No documents yet — upload a PDF to power the chatbot</div>
+          <div style={{ fontSize: 11, color: 'var(--dash-text-faint)', textAlign: 'center', padding: '8px 0' }}>No documents yet — upload a PDF to power the chatbot</div>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
             {policyDocs.map(d => (
-              <div key={d.filename} style={{ fontSize: 10, padding: '3px 10px', borderRadius: 100, background: 'rgba(10,10,9,.035)', color: '#7a7468', border: '1px solid rgba(10,10,9,.1)' }}>
+              <div key={d.filename} style={{ fontSize: 10, padding: '3px 10px', borderRadius: 100, background: 'var(--dash-overlay-035)', color: 'var(--dash-text-muted)', border: '1px solid var(--dash-border-soft)' }}>
                 📄 {d.filename.replace(/^\d{8}_\d{6}_/, '')} ({d.size_kb}KB)
               </div>
             ))}
@@ -1159,20 +1160,20 @@ export default function HRDashboard() {
             {m.role === 'bot' && <div style={{ width: 26, height: 26, background: '#e2b04a', borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 700, color: '#0a0a08', flexShrink: 0 }}></div>}
             <div style={{
               maxWidth: '85%', padding: '10px 14px', borderRadius: 12, fontSize: 13, lineHeight: 1.6,
-              background: m.role === 'bot' ? 'rgba(10,10,9,.05)' : 'rgba(19,194,142,.12)',
-              color: m.role === 'bot' ? '#3a352d' : '#13c28e',
-              border: `1px solid ${m.role === 'bot' ? 'rgba(10,10,9,.12)' : 'rgba(19,194,142,.18)'}`,
+              background: m.role === 'bot' ? 'var(--dash-overlay-05)' : 'rgba(19,194,142,.12)',
+              color: m.role === 'bot' ? 'var(--dash-text)' : '#13c28e',
+              border: `1px solid ${m.role === 'bot' ? 'var(--dash-overlay-12)' : 'rgba(19,194,142,.18)'}`,
               borderBottomLeftRadius: m.role === 'bot' ? 4 : 12, borderBottomRightRadius: m.role === 'user' ? 4 : 12
             }}
-              dangerouslySetInnerHTML={{ __html: m.text.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#1f1c17">$1</strong>') }}
+              dangerouslySetInnerHTML={{ __html: m.text.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--dash-text)">$1</strong>') }}
             />
           </div>
         ))}
         {typing && (
           <div style={{ display: 'flex', gap: 8 }}>
             <div style={{ width: 26, height: 26, background: '#e2b04a', borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 700, color: '#0a0a08' }}></div>
-            <div style={{ padding: '12px 16px', background: 'rgba(10,10,9,.035)', border: '1px solid rgba(10,10,9,.1)', borderRadius: 12, display: 'flex', gap: 4, alignItems: 'center' }}>
-              {[0, 1, 2].map(j => <div key={j} style={{ width: 5, height: 5, background: 'rgba(10,10,9,.16)', borderRadius: '50%', animation: `bounce ${0.6 + j * 0.15}s infinite alternate` }} />)}
+            <div style={{ padding: '12px 16px', background: 'var(--dash-overlay-035)', border: '1px solid var(--dash-border-soft)', borderRadius: 12, display: 'flex', gap: 4, alignItems: 'center' }}>
+              {[0, 1, 2].map(j => <div key={j} style={{ width: 5, height: 5, background: 'var(--dash-overlay-16)', borderRadius: '50%', animation: `bounce ${0.6 + j * 0.15}s infinite alternate` }} />)}
             </div>
           </div>
         )}
@@ -1180,7 +1181,7 @@ export default function HRDashboard() {
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
         {["What's our leave policy?", "Remote work rules?", "Onboarding checklist", "Health benefits?"].map(q => (
-          <button key={q} onClick={() => sendMessage(q)} style={{ fontSize: 11, color: '#7a7468', background: '#f0eee6', border: '1px solid rgba(10,10,9,.1)', borderRadius: 100, padding: '4px 10px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>{q}</button>
+          <button key={q} onClick={() => sendMessage(q)} style={{ fontSize: 11, color: 'var(--dash-text-muted)', background: 'var(--dash-surface-2)', border: '1px solid var(--dash-border-soft)', borderRadius: 100, padding: '4px 10px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>{q}</button>
         ))}
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
@@ -1195,20 +1196,25 @@ export default function HRDashboard() {
   const renderSettings = () => (
     <div style={{ padding: 28, maxWidth: 560 }}>
       <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>Settings</div>
-      <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 24 }}>Manage your HR account preferences</div>
+      <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginBottom: 24 }}>Manage your HR account preferences</div>
       <div style={s(card, { marginBottom: 12 })}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Account</div>
-        <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 4 }}>Name</div>
+        <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginBottom: 4 }}>Name</div>
         <input defaultValue={userName} style={s(inputSt, { marginBottom: 10 })} />
-        <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 4 }}>Email</div>
+        <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginBottom: 4 }}>Email</div>
         <input defaultValue={userEmail} disabled style={s(inputSt, { opacity: .5, cursor: 'not-allowed', marginBottom: 10 })} />
         <button style={{ fontSize: 12, fontWeight: 600, background: '#13c28e', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Save Changes</button>
       </div>
       <div style={s(card, { marginBottom: 12 })}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Appearance</div>
+        <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginBottom: 14 }}>Choose how the HR workspace looks.</div>
+        <ThemeSettingsControl />
+      </div>
+      <div style={s(card, { marginBottom: 12 })}>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Team Workspace</div>
-        <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 14 }}>Invite up to 5 teammates to share jobs and screening results.</div>
+        <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginBottom: 14 }}>Invite up to 5 teammates to share jobs and screening results.</div>
         {orgLoading ? (
-          <div style={{ fontSize: 13, color: '#7a7468' }}>Loading...</div>
+          <div style={{ fontSize: 13, color: 'var(--dash-text-muted)' }}>Loading...</div>
         ) : !org ? (
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <input value={newOrgName} onChange={e => setNewOrgName(e.target.value)} placeholder="Workspace name (e.g. your company)"
@@ -1227,23 +1233,23 @@ export default function HRDashboard() {
                 <button onClick={handleRenameOrg} disabled={renamingOrg}
                   style={{ fontSize: 11.5, fontWeight: 700, color: '#13c28e', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Save</button>
                 <button onClick={() => setEditingOrgName(false)}
-                  style={{ fontSize: 11.5, color: '#7a7468', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Cancel</button>
+                  style={{ fontSize: 11.5, color: 'var(--dash-text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Cancel</button>
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>{org.name}</div>
                 {org.is_owner && (
                   <button onClick={() => { setRenameOrgValue(org.name); setEditingOrgName(true) }}
-                    style={{ fontSize: 11, color: '#7a7468', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Rename</button>
+                    style={{ fontSize: 11, color: 'var(--dash-text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Rename</button>
                 )}
               </div>
             )}
-            <div style={{ fontSize: 11.5, color: '#7a7468', marginBottom: 14 }}>{org.seats_used} / {org.max_seats} seats used</div>
+            <div style={{ fontSize: 11.5, color: 'var(--dash-text-muted)', marginBottom: 14 }}>{org.seats_used} / {org.max_seats} seats used</div>
             {orgMembers.map((m: any) => (
-              <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: '1px solid rgba(10,10,9,.1)' }}>
+              <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: '1px solid var(--dash-border-soft)' }}>
                 <div>
                   <span style={{ fontSize: 13 }}>{m.name}</span>
-                  <span style={{ fontSize: 11.5, color: '#7a7468', marginLeft: 8 }}>{m.email}</span>
+                  <span style={{ fontSize: 11.5, color: 'var(--dash-text-muted)', marginLeft: 8 }}>{m.email}</span>
                   {m.is_owner && <span style={{ fontSize: 10, color: '#e2b04a', marginLeft: 8, fontWeight: 700 }}>OWNER</span>}
                 </div>
                 {org.is_owner && !m.is_owner && (
@@ -1256,7 +1262,7 @@ export default function HRDashboard() {
                 <input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="teammate@company.com"
                   style={s(inputSt, { flex: '1 1 220px', marginBottom: 0 })} />
                 <button onClick={handleInvite} disabled={inviting}
-                  style={{ background: 'transparent', border: '1px solid rgba(10,10,9,.14)', color: '#1f1c17', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter,sans-serif', whiteSpace: 'nowrap' }}>
+                  style={{ background: 'transparent', border: '1px solid var(--dash-overlay-14)', color: 'var(--dash-text)', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter,sans-serif', whiteSpace: 'nowrap' }}>
                   {inviting ? 'Sending...' : 'Send Invite'}
                 </button>
               </div>
@@ -1278,7 +1284,7 @@ export default function HRDashboard() {
 
         {showDeleteAccount && (
           <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid rgba(239,68,68,.15)' }}>
-            <div style={{ fontSize: 12, color: '#5c574c', marginBottom: 10 }}>This permanently deletes your account, all screening history, job postings, and AI interview data. Enter your password to confirm.</div>
+            <div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginBottom: 10 }}>This permanently deletes your account, all screening history, job postings, and AI interview data. Enter your password to confirm.</div>
             <input type="password" placeholder="Password" value={deleteAccountPassword} onChange={e => setDeleteAccountPassword(e.target.value)} style={s(inputSt, { marginBottom: 10 })} />
             {deleteAccountError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 10 }}>{deleteAccountError}</div>}
             <div style={{ display: 'flex', gap: 8 }}>
@@ -1287,7 +1293,7 @@ export default function HRDashboard() {
                 {deletingAccount ? 'Deleting...' : 'Permanently Delete My Account'}
               </button>
               <button onClick={() => { setShowDeleteAccount(false); setDeleteAccountPassword(''); setDeleteAccountError('') }}
-                style={{ fontSize: 12, color: '#7a7468', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Cancel</button>
+                style={{ fontSize: 12, color: 'var(--dash-text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>Cancel</button>
             </div>
           </div>
         )}
@@ -1302,19 +1308,19 @@ export default function HRDashboard() {
         <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)', display: 'grid', placeItems: 'center', fontSize: 20, fontWeight: 700, color: '#fff', flexShrink: 0 }}>HR</div>
         <div>
           <div style={{ fontSize: 18, fontWeight: 600 }}>{userName}</div>
-          <div style={{ fontSize: 13, color: '#7a7468' }}>{userEmail}</div>
+          <div style={{ fontSize: 13, color: 'var(--dash-text-muted)' }}>{userEmail}</div>
           <span style={{ fontSize: 10, fontWeight: 600, background: 'rgba(59,130,246,.12)', color: '#3b82f6', padding: '3px 8px', borderRadius: 100, border: '1px solid rgba(59,130,246,.2)', display: 'inline-block', marginTop: 6 }}>Trial Plan</span>
         </div>
       </div>
       <div style={card}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#7a7468', marginBottom: 12 }}>Activity</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dash-text-muted)', marginBottom: 12 }}>Activity</div>
         {[
           { l: 'Total Screenings', v: String(totalProcessed) },
           { l: 'Candidates Shortlisted', v: String(history.filter(h => h.status === 'shortlisted').length) },
           { l: 'Candidates Rejected', v: String(history.filter(h => h.status === 'rejected').length) },
         ].map(r => (
-          <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(10,10,9,.1)' }}>
-            <span style={{ fontSize: 13, color: '#5c574c' }}>{r.l}</span>
+          <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--dash-border-soft)' }}>
+            <span style={{ fontSize: 13, color: 'var(--dash-text-muted)' }}>{r.l}</span>
             <span style={{ fontSize: 13, fontWeight: 600 }}>{r.v}</span>
           </div>
         ))}
@@ -1327,7 +1333,7 @@ export default function HRDashboard() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
         <div>
           <div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 26, fontWeight: 600, marginBottom: 4 }}>AI Interviewer</div>
-          <div style={{ fontSize: 12, color: '#7a7468' }}>Paste a JD, get a shareable link, let candidates interview themselves</div>
+          <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>Paste a JD, get a shareable link, let candidates interview themselves</div>
         </div>
         {!showInterviewForm && (
           <button onClick={() => setShowInterviewForm(true)}
@@ -1343,9 +1349,9 @@ export default function HRDashboard() {
         </div>
       )}
 
-      {interviewPostingsLoading && <div style={{ fontSize: 13, color: '#7a7468', marginTop: 20 }}>Loading...</div>}
+      {interviewPostingsLoading && <div style={{ fontSize: 13, color: 'var(--dash-text-muted)', marginTop: 20 }}>Loading...</div>}
       {!interviewPostingsLoading && interviewPostings.length === 0 && !showInterviewForm && (
-        <div style={s(card, { textAlign: 'center', padding: 40, color: '#7a7468', marginTop: 20 })}>
+        <div style={s(card, { textAlign: 'center', padding: 40, color: 'var(--dash-text-muted)', marginTop: 20 })}>
           No interview links yet. Create one to start screening candidates conversationally.
         </div>
       )}
@@ -1358,19 +1364,19 @@ export default function HRDashboard() {
               <div key={p.id} onClick={() => openPosting(p)}
                 style={s(card, {
                   marginBottom: 8, cursor: 'pointer',
-                  border: `1px solid ${selectedPosting?.id === p.id ? 'rgba(226,176,74,.4)' : 'rgba(10,10,9,.1)'}`,
-                  background: selectedPosting?.id === p.id ? 'rgba(226,176,74,.12)' : '#ffffff'
+                  border: `1px solid ${selectedPosting?.id === p.id ? 'rgba(226,176,74,.4)' : 'var(--dash-border-soft)'}`,
+                  background: selectedPosting?.id === p.id ? 'rgba(226,176,74,.12)' : 'var(--dash-surface)'
                 })}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{p.title}</div>
                   <span style={{
                     fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 100,
-                    background: p.is_active ? 'rgba(19,194,142,.12)' : '#9c9689',
-                    color: p.is_active ? '#13c28e' : '#7a7468'
+                    background: p.is_active ? 'rgba(19,194,142,.12)' : 'var(--dash-text-faint)',
+                    color: p.is_active ? '#13c28e' : 'var(--dash-text-muted)'
                   }}>{p.is_active ? 'ACTIVE' : 'PAUSED'}</span>
                 </div>
-                {p.company && <div style={{ fontSize: 11, color: '#7a7468', marginBottom: 2 }}>{p.company}</div>}
-                <div style={{ fontSize: 11, color: '#7a7468', marginBottom: 6 }}>Interviewer: {p.interviewer_name} · {p.candidate_count} candidate{p.candidate_count === 1 ? '' : 's'} interviewed</div>
+                {p.company && <div style={{ fontSize: 11, color: 'var(--dash-text-muted)', marginBottom: 2 }}>{p.company}</div>}
+                <div style={{ fontSize: 11, color: 'var(--dash-text-muted)', marginBottom: 6 }}>Interviewer: {p.interviewer_name} · {p.candidate_count} candidate{p.candidate_count === 1 ? '' : 's'} interviewed</div>
                 <div style={{ display: 'flex', gap: 5, marginBottom: 8 }}>
                   {p.mode === 'chatbot' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 100, background: 'rgba(226,176,74,.1)', color: '#e2b04a' }}>💬 CHATBOT</span>}
                   {p.mode === 'mcq' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 100, background: 'rgba(19,194,142,.1)', color: '#13c28e' }}>📝 MCQ ×{p.assessment_question_count}</span>}
@@ -1378,7 +1384,7 @@ export default function HRDashboard() {
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button onClick={(e) => { e.stopPropagation(); copyInterviewLink(p.public_link, p.public_slug) }}
-                    style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(10,10,9,.1)', background: 'transparent', color: '#3a352d', fontSize: 11, cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
+                    style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--dash-border-soft)', background: 'transparent', color: 'var(--dash-text)', fontSize: 11, cursor: 'pointer', fontFamily: 'Inter,sans-serif' }}>
                     {copiedSlug === p.public_slug ? '✓ Copied' : 'Copy Public Link'}
                   </button>
                   <button onClick={(e) => { e.stopPropagation(); deleteInterviewPosting(p.id) }}
@@ -1392,18 +1398,18 @@ export default function HRDashboard() {
 
           {/* Candidates / report */}
           <div className="interview-detail" style={{ flex: 1, overflowY: 'auto' }}>
-            <button onClick={() => setSelectedPosting(null)} className="interview-mobile-back" style={{ display: 'none', background: 'none', border: 'none', color: '#7a7468', fontSize: 12, cursor: 'pointer', marginBottom: 14, padding: 0, fontFamily: 'Inter,sans-serif' }}>← All interview links</button>
+            <button onClick={() => setSelectedPosting(null)} className="interview-mobile-back" style={{ display: 'none', background: 'none', border: 'none', color: 'var(--dash-text-muted)', fontSize: 12, cursor: 'pointer', marginBottom: 14, padding: 0, fontFamily: 'Inter,sans-serif' }}>← All interview links</button>
             {!selectedPosting ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9c9689', fontSize: 13 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--dash-text-faint)', fontSize: 13 }}>
                 Select an interview link to see candidates
               </div>
             ) : selectedReport ? (
               <div>
-                <button onClick={() => { setSelectedReport(null); setSelectedRanking(null) }} style={{ background: 'none', border: 'none', color: '#7a7468', fontSize: 12, cursor: 'pointer', marginBottom: 14, padding: 0, fontFamily: 'Inter,sans-serif' }}>← Back to candidates</button>
+                <button onClick={() => { setSelectedReport(null); setSelectedRanking(null) }} style={{ background: 'none', border: 'none', color: 'var(--dash-text-muted)', fontSize: 12, cursor: 'pointer', marginBottom: 14, padding: 0, fontFamily: 'Inter,sans-serif' }}>← Back to candidates</button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
                   <div>
                     <div style={{ fontSize: 18, fontWeight: 600 }}>{selectedReport.candidate_name}</div>
-                    <div style={{ fontSize: 12, color: '#7a7468' }}>{selectedReport.candidate_email}</div>
+                    <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>{selectedReport.candidate_email}</div>
                   </div>
                   {selectedReport.ai_score != null && (
                     <div style={{
@@ -1421,14 +1427,14 @@ export default function HRDashboard() {
                 {selectedReport.final_verdict && (
                   <div style={{
                     display: 'inline-block', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 100, marginBottom: 16,
-                    background: 'rgba(10,10,9,.05)', color: '#3a352d'
+                    background: 'var(--dash-overlay-05)', color: 'var(--dash-text)'
                   }}>{selectedReport.final_verdict}</div>
                 )}
                 {selectedRanking && (
                   <div style={s(card, { marginBottom: 14 })}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 13 }}>📄</span>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#3a352d' }}>Resume Intelligence</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--dash-text)' }}>Resume Intelligence</div>
                     </div>
                     {selectedRanking.resume_available ? (
                       <>
@@ -1436,19 +1442,19 @@ export default function HRDashboard() {
                           {selectedRanking.ats_score != null && (
                             <div>
                               <div style={{ fontSize: 20, fontWeight: 700, color: selectedRanking.ats_score >= 70 ? '#13c28e' : selectedRanking.ats_score >= 45 ? '#e2b04a' : '#ef4444' }}>{selectedRanking.ats_score}</div>
-                              <div style={{ fontSize: 9, color: '#7a7468' }}>ATS SCORE</div>
+                              <div style={{ fontSize: 9, color: 'var(--dash-text-muted)' }}>ATS SCORE</div>
                             </div>
                           )}
                           {selectedRanking.skill_match_pct != null && (
                             <div>
                               <div style={{ fontSize: 20, fontWeight: 700, color: selectedRanking.skill_match_pct >= 70 ? '#13c28e' : selectedRanking.skill_match_pct >= 45 ? '#e2b04a' : '#ef4444' }}>{selectedRanking.skill_match_pct}%</div>
-                              <div style={{ fontSize: 9, color: '#7a7468' }}>SKILL MATCH</div>
+                              <div style={{ fontSize: 9, color: 'var(--dash-text-muted)' }}>SKILL MATCH</div>
                             </div>
                           )}
                           {selectedRanking.fit_score != null && (
                             <div>
                               <div style={{ fontSize: 20, fontWeight: 700, color: '#a78bfa' }}>{selectedRanking.fit_score}</div>
-                              <div style={{ fontSize: 9, color: '#7a7468' }}>OVERALL FIT</div>
+                              <div style={{ fontSize: 9, color: 'var(--dash-text-muted)' }}>OVERALL FIT</div>
                             </div>
                           )}
                         </div>
@@ -1459,11 +1465,11 @@ export default function HRDashboard() {
                           <div style={{ fontSize: 11, color: '#ef4444', marginBottom: 4 }}>Missing: {selectedRanking.missing_skills.join(', ')}</div>
                         )}
                         {selectedRanking.resume_role_title && (
-                          <div style={{ fontSize: 10, color: '#7a7468', marginTop: 6 }}>From candidate&apos;s most recent CV scan (against &ldquo;{selectedRanking.resume_role_title}&rdquo;) — may not be scanned against this exact posting.</div>
+                          <div style={{ fontSize: 10, color: 'var(--dash-text-muted)', marginTop: 6 }}>From candidate&apos;s most recent CV scan (against &ldquo;{selectedRanking.resume_role_title}&rdquo;) — may not be scanned against this exact posting.</div>
                         )}
                       </>
                     ) : (
-                      <div style={{ fontSize: 11.5, color: '#7a7468' }}>No linked candidate account or CV scan found for this candidate.</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--dash-text-muted)' }}>No linked candidate account or CV scan found for this candidate.</div>
                     )}
                   </div>
                 )}
@@ -1473,13 +1479,13 @@ export default function HRDashboard() {
                 {selectedReport.assessment_score != null && (
                   <div style={s(card, { marginBottom: 14 })}>
                     <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#7a7468' }}>MCQ Assessment</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dash-text-muted)' }}>MCQ Assessment</div>
                       <div style={{ marginLeft: 'auto', fontSize: 16, fontWeight: 700, color: selectedReport.assessment_score >= 80 ? '#13c28e' : selectedReport.assessment_score >= 60 ? '#e2b04a' : '#ef4444' }}>{selectedReport.assessment_score}%</div>
                     </div>
                     {selectedReport.assessment_breakdown && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: (selectedReport.assessment_flags || []).length ? 12 : 0 }}>
                         {Object.entries(selectedReport.assessment_breakdown).map(([topic, stat]: any) => (
-                          <div key={topic} style={{ fontSize: 10.5, padding: '4px 9px', borderRadius: 100, background: 'rgba(10,10,9,.035)', color: '#5c574c' }}>
+                          <div key={topic} style={{ fontSize: 10.5, padding: '4px 9px', borderRadius: 100, background: 'var(--dash-overlay-035)', color: 'var(--dash-text-muted)' }}>
                             {topic}: {stat.correct}/{stat.total}
                           </div>
                         ))}
@@ -1489,7 +1495,7 @@ export default function HRDashboard() {
                       <div>
                         <div style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', marginBottom: 6 }}>⚠ Proctoring Flags ({selectedReport.assessment_flags.length})</div>
                         {selectedReport.assessment_flags.map((f: any, i: number) => (
-                          <div key={i} style={{ fontSize: 11, color: '#5c574c', marginBottom: 3 }}>
+                          <div key={i} style={{ fontSize: 11, color: 'var(--dash-text-muted)', marginBottom: 3 }}>
                             {f.type.replace(/_/g, ' ')} — {f.at ? new Date(f.at).toLocaleTimeString() : ''}
                           </div>
                         ))}
@@ -1497,11 +1503,11 @@ export default function HRDashboard() {
                     )}
                     {(selectedReport.assessment_photos || []).length > 0 && (
                       <div style={{ marginTop: 12 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: '#7a7468', marginBottom: 8 }}>Proctoring Snapshots ({selectedReport.assessment_photos.length})</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--dash-text-muted)', marginBottom: 8 }}>Proctoring Snapshots ({selectedReport.assessment_photos.length})</div>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           {selectedReport.assessment_photos.map((p: string, i: number) => (
                             <img key={i} src={api.getProctoringPhotoUrl(selectedReport.id, p)} alt={`Snapshot ${i + 1}`}
-                              style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid rgba(10,10,9,.1)' }} />
+                              style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--dash-border-soft)' }} />
                           ))}
                         </div>
                       </div>
@@ -1510,24 +1516,24 @@ export default function HRDashboard() {
                 )}
                 {selectedReport.experience_assessment && (
                   <div style={s(card, { marginBottom: 14 })}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#7a7468', marginBottom: 6 }}>Experience Assessment</div>
-                    <div style={{ fontSize: 13, color: '#3a352d', lineHeight: 1.7 }}>{selectedReport.experience_assessment}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dash-text-muted)', marginBottom: 6 }}>Experience Assessment</div>
+                    <div style={{ fontSize: 13, color: 'var(--dash-text)', lineHeight: 1.7 }}>{selectedReport.experience_assessment}</div>
                   </div>
                 )}
                 {selectedReport.deep_analysis && (
                   <div style={s(card, { marginBottom: 14 })}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#7a7468', marginBottom: 6 }}>Deep Analysis</div>
-                    <div style={{ fontSize: 13, color: '#3a352d', lineHeight: 1.7 }}>{selectedReport.deep_analysis}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dash-text-muted)', marginBottom: 6 }}>Deep Analysis</div>
+                    <div style={{ fontSize: 13, color: 'var(--dash-text)', lineHeight: 1.7 }}>{selectedReport.deep_analysis}</div>
                   </div>
                 )}
                 <div style={s(card, {})}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#7a7468', marginBottom: 10 }}>Full Transcript</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dash-text-muted)', marginBottom: 10 }}>Full Transcript</div>
                   {(selectedReport.transcript || []).map((t: any, i: number) => (
                     <div key={i} style={{ marginBottom: 10 }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: t.role === 'assistant' ? '#e2b04a' : '#13c28e', marginBottom: 2 }}>
                         {t.role === 'assistant' ? 'AI Interviewer' : selectedReport.candidate_name}
                       </div>
-                      <div style={{ fontSize: 12, color: '#3a352d', lineHeight: 1.6 }}>{t.content}</div>
+                      <div style={{ fontSize: 12, color: 'var(--dash-text)', lineHeight: 1.6 }}>{t.content}</div>
                     </div>
                   ))}
                 </div>
@@ -1537,14 +1543,14 @@ export default function HRDashboard() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
                   <div>
                     <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{selectedPosting.title}</div>
-                    <div style={{ fontSize: 12, color: '#7a7468' }}>{selectedPosting.public_link}</div>
+                    <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>{selectedPosting.public_link}</div>
                   </div>
                   {!interviewCandidatesLoading && interviewCandidates.length > 0 && (
                     <button onClick={() => setShowRanking(v => !v)} style={{
                       flexShrink: 0, fontSize: 12, fontWeight: 700, padding: '9px 16px', borderRadius: 9, cursor: 'pointer',
                       fontFamily: 'Inter,sans-serif', border: 'none',
-                      background: showRanking ? '#9c9689' : 'linear-gradient(135deg,#7c3aed,#a78bfa)',
-                      color: showRanking ? '#3a352d' : '#fff',
+                      background: showRanking ? 'var(--dash-text-faint)' : 'linear-gradient(135deg,#7c3aed,#a78bfa)',
+                      color: showRanking ? 'var(--dash-text)' : '#fff',
                     }}>
                       {showRanking ? '← Candidate List' : 'Talent Intelligence Ranking'}
                     </button>
@@ -1561,9 +1567,9 @@ export default function HRDashboard() {
                   />
                 ) : (
                 <>
-                {interviewCandidatesLoading && <div style={{ fontSize: 13, color: '#7a7468' }}>Loading...</div>}
+                {interviewCandidatesLoading && <div style={{ fontSize: 13, color: 'var(--dash-text-muted)' }}>Loading...</div>}
                 {!interviewCandidatesLoading && interviewCandidates.length === 0 && (
-                  <div style={s(card, { textAlign: 'center', padding: 30, color: '#7a7468' })}>
+                  <div style={s(card, { textAlign: 'center', padding: 30, color: 'var(--dash-text-muted)' })}>
                     No candidates yet. Share the public link to start getting interviews.
                   </div>
                 )}
@@ -1581,7 +1587,7 @@ export default function HRDashboard() {
                             <span title={`${c.proctoring_flag_count} proctoring flag(s)`} style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 100, background: 'rgba(239,68,68,.12)', color: '#ef4444' }}>⚠ {c.proctoring_flag_count}</span>
                           )}
                         </div>
-                        <div style={{ fontSize: 11, color: '#7a7468' }}>
+                        <div style={{ fontSize: 11, color: 'var(--dash-text-muted)' }}>
                           {c.status === 'completed' ? (c.final_verdict || 'Completed') : 'In progress...'}
                         </div>
                       </div>
@@ -1589,13 +1595,13 @@ export default function HRDashboard() {
                         {c.ai_score != null && (
                           <div style={{ textAlign: 'center' }}>
                             <div style={{ fontFamily: "Inter, sans-serif", fontSize: 20, fontWeight: 600, color: c.ai_score >= 80 ? '#13c28e' : c.ai_score >= 60 ? '#e2b04a' : '#ef4444' }}>{c.ai_score}</div>
-                            <div style={{ fontSize: 8.5, color: '#9c9689' }}>INTERVIEW</div>
+                            <div style={{ fontSize: 8.5, color: 'var(--dash-text-faint)' }}>INTERVIEW</div>
                           </div>
                         )}
                         {c.assessment_score != null && (
                           <div style={{ textAlign: 'center' }}>
                             <div style={{ fontFamily: "Inter, sans-serif", fontSize: 20, fontWeight: 600, color: c.assessment_score >= 80 ? '#13c28e' : c.assessment_score >= 60 ? '#e2b04a' : '#ef4444' }}>{c.assessment_score}%</div>
-                            <div style={{ fontSize: 8.5, color: '#9c9689' }}>MCQ</div>
+                            <div style={{ fontSize: 8.5, color: 'var(--dash-text-faint)' }}>MCQ</div>
                           </div>
                         )}
                       </div>
@@ -1644,11 +1650,12 @@ export default function HRDashboard() {
       <style dangerouslySetInnerHTML={{ __html: `@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}} @keyframes bounce{from{transform:translateY(0)}to{transform:translateY(-4px)}} @keyframes pulse{0%,100%{opacity:.35}50%{opacity:.8}}` }} />
 
       {/* Mobile top bar — hamburger only, hidden on laptop/desktop via CSS */}
-      <div className="app-mobile-topbar">
-        <button onClick={() => setMobileNavOpen(true)} aria-label="Open menu" style={{ background: 'transparent', border: '1px solid #e7e4da', borderRadius: 8, padding: 8, cursor: 'pointer', display: 'flex' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3a352d" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+      <div className="app-mobile-topbar" style={{ background: 'var(--dash-surface)', borderBottom: '1px solid var(--dash-border)' }}>
+        <button onClick={() => setMobileNavOpen(true)} aria-label="Open menu" style={{ background: 'transparent', border: '1px solid var(--dash-border)', borderRadius: 8, padding: 8, cursor: 'pointer', display: 'flex' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--dash-text-muted)" strokeWidth="2" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
-        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 18, fontWeight: 600, color: '#1f1c17', flex: 1 }}>Talent <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#0b7c5e', padding: '2px 7px', borderRadius: 100, marginLeft: 4, border: '1px solid rgba(19,194,142,.25)' }}>HR</span></span>
+        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 18, fontWeight: 600, color: 'var(--dash-text)', flex: 1 }}>Talent <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#0b7c5e', padding: '2px 7px', borderRadius: 100, marginLeft: 4, border: '1px solid rgba(19,194,142,.25)' }}>HR</span></span>
+        <ThemeToggle size={30} />
         <NotificationBell role="hr" light />
       </div>
 
@@ -1656,27 +1663,27 @@ export default function HRDashboard() {
       <div className={`app-sidebar-backdrop${mobileNavOpen ? ' open' : ''}`} onClick={() => setMobileNavOpen(false)} />
 
       {/* SIDEBAR */}
-      <div className={`app-sidebar${mobileNavOpen ? ' open' : ''}`} style={{ width: 224, flexShrink: 0, background: '#edeae2', borderRight: '1px solid #e0ddd4', display: 'flex', flexDirection: 'column' }}>
-        <Link href="/" style={{ padding: '22px 20px', borderBottom: '1px solid #e0ddd4', display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+      <div className={`app-sidebar${mobileNavOpen ? ' open' : ''}`} style={{ width: 224, flexShrink: 0, background: 'var(--dash-sidebar)', borderRight: '1px solid var(--dash-sidebar-border)', display: 'flex', flexDirection: 'column' }}>
+        <Link href="/" style={{ padding: '22px 20px', borderBottom: '1px solid var(--dash-sidebar-border)', display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <div style={{ width: 28, height: 28, background: '#e2b04a', borderRadius: 7, display: 'grid', placeItems: 'center' }}>
             <svg width="12" height="12" viewBox="0 0 16 16" fill="#0a0a08"><path d="M8 2C4.68 2 2 4.68 2 8c0 1.76.72 3.35 1.88 4.5L8 8.5l4.12 4A5.97 5.97 0 0014 8c0-3.32-2.68-6-6-6z" /></svg>
           </div>
-          <span style={{ fontFamily: "Inter, sans-serif", fontSize: 20, fontWeight: 600, color: '#1f1c17' }}>Talent</span>
+          <span style={{ fontFamily: "Inter, sans-serif", fontSize: 20, fontWeight: 600, color: 'var(--dash-text)' }}>Talent</span>
           <span style={{ fontSize: 10, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#0b7c5e', padding: '3px 8px', borderRadius: 100, marginLeft: 'auto', border: '1px solid rgba(19,194,142,.22)' }}>HR</span>
-          <button onClick={(e) => { e.preventDefault(); setMobileNavOpen(false) }} aria-label="Close menu" className="app-sidebar-close" style={{ background: 'transparent', border: 'none', color: '#7a7468', cursor: 'pointer', padding: 4 }}>
+          <button onClick={(e) => { e.preventDefault(); setMobileNavOpen(false) }} aria-label="Close menu" className="app-sidebar-close" style={{ background: 'transparent', border: 'none', color: 'var(--dash-text-muted)', cursor: 'pointer', padding: 4 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
           </button>
         </Link>
-        <div style={{ padding: '20px 16px 6px', fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: '#9c9689' }}>Workspace</div>
+        <div style={{ padding: '20px 16px 6px', fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--dash-text-faint)' }}>Workspace</div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {NAV.map(n => (
             <button key={n.id} onClick={() => { setSection(n.id as Section); setMobileNavOpen(false) }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderRadius: 6, fontSize: 13, fontWeight: 500, letterSpacing: '.01em',
-                color: section === n.id ? '#1f1c17' : '#7a7468', cursor: 'pointer', transition: 'all .15s',
-                margin: '0 6px 2px', border: section === n.id ? '1px solid #e0ddd4' : '1px solid transparent',
-                borderLeft: section === n.id ? '3px solid #e2b04a' : '1px solid transparent',
-                background: section === n.id ? '#ffffff' : 'transparent',
+                color: section === n.id ? 'var(--dash-nav-selected-text)' : 'var(--dash-text-muted)', cursor: 'pointer', transition: 'all .15s',
+                margin: '0 6px 2px', border: section === n.id ? '1px solid var(--dash-sidebar-border)' : '1px solid transparent',
+                borderLeft: section === n.id ? '3px solid var(--dash-accent)' : '1px solid transparent',
+                background: section === n.id ? 'var(--dash-nav-selected-bg)' : 'transparent',
                 fontFamily: 'Inter,sans-serif', width: 'calc(100% - 12px)', textAlign: 'left', minHeight: 40
               }}>
               {n.label}
@@ -1684,12 +1691,12 @@ export default function HRDashboard() {
             </button>
           ))}
         </div>
-        <div style={{ padding: 14, borderTop: '1px solid #e0ddd4' }}>
+        <div style={{ padding: 14, borderTop: '1px solid var(--dash-sidebar-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8 }}>
             <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#0b7c5e,#13c28e)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0 }}>HR</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#1f1c17', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
-              <div style={{ fontSize: 10, color: '#9c9689', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--dash-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
+              <div style={{ fontSize: 10, color: 'var(--dash-text-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail}</div>
             </div>
           </div>
           <button onClick={handleLogout} style={{ width: '100%', marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', borderRadius: 8, border: '1px solid rgba(239,68,68,.2)', background: 'rgba(239,68,68,.06)', color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', minHeight: 40 }}>
@@ -1700,8 +1707,9 @@ export default function HRDashboard() {
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="app-main" style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto', background: '#f7f5f0', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <div className="hr-desktop-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '14px 28px 0' }}>
+      <div className="app-main" style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto', background: 'var(--dash-bg)', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div className="hr-desktop-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, padding: '14px 28px 0' }}>
+          <ThemeToggle />
           <NotificationBell role="hr" light />
         </div>
         <div style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto' }}>
