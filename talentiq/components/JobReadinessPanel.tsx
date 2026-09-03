@@ -34,15 +34,15 @@ const CATEGORY_LABELS: Record<string, string> = {
     contact_completeness: 'Contact Information',
 }
 
-// --- Palette — matches CVBuilderWizard on this same page ---
-const gold = '#d4af6d'
-const panel = '#141412'
-const border = 'rgba(255,255,255,.1)'
-const textDim = 'rgba(245,242,235,.4)'
-const textMain = '#f5f2eb'
-const green = '#34d399'
-const red = '#f87171'
-const yellow = '#e2b04a'
+// --- Palette — matches CVBuilderWizard's light theme on this same page ---
+const gold = '#e2b04a'
+const panel = '#ffffff'
+const border = '#e7e4da'
+const textDim = '#7a7468'
+const textMain = '#1f1c17'
+const green = '#0b7c5e'
+const red = '#ef4444'
+const yellow = '#c5931f'
 
 const card: React.CSSProperties = { background: panel, border: `1px solid ${border}`, borderRadius: 14, padding: 22 }
 const sectionHeading: React.CSSProperties = { fontFamily: "Inter, sans-serif", fontSize: 22, fontWeight: 600, color: textMain, marginBottom: 4 }
@@ -86,7 +86,7 @@ function ScoreRing({ score, size = 92 }: { score: number; size?: number }) {
     return (
         <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
             <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={size / 2} cy={size / 2} r={radius} stroke="rgba(255,255,255,.08)" strokeWidth={7} fill="none" />
+                <circle cx={size / 2} cy={size / 2} r={radius} stroke="#9c9689" strokeWidth={7} fill="none" />
                 <circle cx={size / 2} cy={size / 2} r={radius} stroke={color} strokeWidth={7} fill="none"
                     strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: 'stroke-dashoffset .6s ease' }} />
             </svg>
@@ -105,7 +105,7 @@ function MiniBar({ label, score }: { label: string; score: number }) {
                 <span style={{ color: textMain, fontWeight: 600 }}>{label}</span>
                 <span style={{ color }}>{score}</span>
             </div>
-            <div style={{ height: 6, borderRadius: 4, background: 'rgba(255,255,255,.07)', overflow: 'hidden' }}>
+            <div style={{ height: 6, borderRadius: 4, background: 'rgba(10,10,9,.05)', overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${score}%`, background: color, borderRadius: 4, transition: 'width .5s ease' }} />
             </div>
         </div>
@@ -395,10 +395,10 @@ export default function JobReadinessPanel({
                         </div>
 
                         {ats.top_issues.length > 0 && (
-                            <div style={{ background: '#1a1a17', border: `1px solid ${border}`, borderRadius: 10, padding: 14 }}>
+                            <div style={{ background: '#faf9f5', border: `1px solid ${border}`, borderRadius: 10, padding: 14 }}>
                                 <div style={{ fontSize: 11.5, fontWeight: 700, color: textDim, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>Recommendations</div>
                                 {ats.recommendations.map((r, i) => (
-                                    <div key={i} style={{ fontSize: 12.5, color: 'rgba(245,242,235,.75)', marginBottom: 6, lineHeight: 1.5 }}>• {r}</div>
+                                    <div key={i} style={{ fontSize: 12.5, color: '#3a352d', marginBottom: 6, lineHeight: 1.5 }}>• {r}</div>
                                 ))}
                             </div>
                         )}
@@ -412,7 +412,7 @@ export default function JobReadinessPanel({
                 <p style={sectionSub}>Paste a real job description — see exactly what matches, what's missing, and optimize honestly.</p>
 
                 <textarea value={jd} onChange={e => setJd(e.target.value)} placeholder="Paste the target job description here…"
-                    style={{ width: '100%', minHeight: 100, background: '#1e1e1b', border: `1px solid ${border}`, borderRadius: 10, padding: 12, fontSize: 13, color: textMain, outline: 'none', resize: 'vertical', fontFamily: 'inherit', marginBottom: 12, boxSizing: 'border-box' }} />
+                    style={{ width: '100%', minHeight: 100, background: '#faf9f5', border: `1px solid ${border}`, borderRadius: 10, padding: 12, fontSize: 13, color: textMain, outline: 'none', resize: 'vertical', fontFamily: 'inherit', marginBottom: 12, boxSizing: 'border-box' }} />
 
                 <div style={{ display: 'flex', gap: 10 }}>
                     <button style={btn} onClick={runJobMatch} disabled={jobMatchLoading}>{jobMatchLoading ? 'Analyzing…' : 'Analyze Against This Job'}</button>
@@ -423,7 +423,7 @@ export default function JobReadinessPanel({
                 {jobMatch && (
                     <div style={{ marginTop: 20 }}>
                         {beforeAfter && (
-                            <div style={{ display: 'flex', gap: 24, alignItems: 'center', background: '#1a1a17', border: `1px solid ${border}`, borderRadius: 10, padding: 16, marginBottom: 16 }}>
+                            <div style={{ display: 'flex', gap: 24, alignItems: 'center', background: '#faf9f5', border: `1px solid ${border}`, borderRadius: 10, padding: 16, marginBottom: 16 }}>
                                 <div style={{ textAlign: 'center' }}>
                                     <div style={{ fontSize: 11, color: textDim, textTransform: 'uppercase' }}>Before</div>
                                     <div style={{ fontSize: 26, fontWeight: 700 }}>{beforeAfter.before}</div>
@@ -501,7 +501,7 @@ export default function JobReadinessPanel({
                     <p style={sectionSub}>Actions tied directly to the gaps found above.</p>
                     <ol style={{ margin: 0, paddingLeft: 20 }}>
                         {planItems.map((item, i) => (
-                            <li key={i} style={{ fontSize: 13, color: 'rgba(245,242,235,.8)', marginBottom: 8, lineHeight: 1.6 }}>{item}</li>
+                            <li key={i} style={{ fontSize: 13, color: '#3a352d', marginBottom: 8, lineHeight: 1.6 }}>{item}</li>
                         ))}
                     </ol>
                 </div>
@@ -524,7 +524,7 @@ export default function JobReadinessPanel({
                                 <span style={{ color: textMain, fontWeight: 600 }}>{p.label}</span>
                                 <span style={{ color: p.value === null ? textDim : (p.value >= 80 ? green : p.value >= 55 ? yellow : red) }}>{p.value === null ? 'Not enough data' : p.value}</span>
                             </div>
-                            <div style={{ height: 6, borderRadius: 4, background: 'rgba(255,255,255,.07)', overflow: 'hidden' }}>
+                            <div style={{ height: 6, borderRadius: 4, background: 'rgba(10,10,9,.05)', overflow: 'hidden' }}>
                                 <div style={{ height: '100%', width: `${p.value ?? 0}%`, background: p.value === null ? 'transparent' : (p.value >= 80 ? green : p.value >= 55 ? yellow : red), borderRadius: 4, transition: 'width .5s ease' }} />
                             </div>
                         </div>
@@ -547,9 +547,9 @@ export default function JobReadinessPanel({
                 {assistantLog.length > 0 && (
                     <div style={{ marginBottom: 20 }}>
                         {assistantLog.map((entry, i) => (
-                            <div key={i} style={{ marginBottom: 12, background: '#1a1a17', border: `1px solid ${border}`, borderRadius: 10, padding: 12 }}>
+                            <div key={i} style={{ marginBottom: 12, background: '#faf9f5', border: `1px solid ${border}`, borderRadius: 10, padding: 12 }}>
                                 <div style={{ fontSize: 12, fontWeight: 700, color: gold, marginBottom: 4 }}>{entry.question}</div>
-                                <div style={{ fontSize: 12.5, color: 'rgba(245,242,235,.8)', lineHeight: 1.6 }}>{entry.answer}</div>
+                                <div style={{ fontSize: 12.5, color: '#3a352d', lineHeight: 1.6 }}>{entry.answer}</div>
                             </div>
                         ))}
                     </div>
@@ -566,7 +566,7 @@ export default function JobReadinessPanel({
                                 setRewriteBulletIdx({ exp, bullet })
                                 setRewriteResult(null)
                             }}
-                            style={{ width: '100%', background: '#1e1e1b', border: `1px solid ${border}`, borderRadius: 8, padding: '9px 12px', fontSize: 12.5, color: textMain, marginBottom: 10 }}
+                            style={{ width: '100%', background: '#faf9f5', border: `1px solid ${border}`, borderRadius: 8, padding: '9px 12px', fontSize: 12.5, color: textMain, marginBottom: 10 }}
                         >
                             <option value="">Select a bullet…</option>
                             {activeCv.experience.map((exp, ei) => exp.bullets.map((b, bi) => b.trim() ? (
@@ -583,9 +583,9 @@ export default function JobReadinessPanel({
                         )}
                         {rewriteBusy && <div style={{ fontSize: 12.5, color: textDim }}>Rewriting…</div>}
                         {rewriteResult && (
-                            <div style={{ background: '#1a1a17', border: `1px solid ${border}`, borderRadius: 10, padding: 12 }}>
+                            <div style={{ background: '#faf9f5', border: `1px solid ${border}`, borderRadius: 10, padding: 12 }}>
                                 <div style={{ fontSize: 11, color: textDim, marginBottom: 6 }}>Original</div>
-                                <div style={{ fontSize: 12.5, color: 'rgba(245,242,235,.55)', marginBottom: 10, lineHeight: 1.5 }}>{rewriteResult.original}</div>
+                                <div style={{ fontSize: 12.5, color: '#5c574c', marginBottom: 10, lineHeight: 1.5 }}>{rewriteResult.original}</div>
                                 <div style={{ fontSize: 11, color: green, marginBottom: 6 }}>Suggested</div>
                                 <div style={{ fontSize: 12.5, color: textMain, marginBottom: 12, lineHeight: 1.5 }}>{rewriteResult.rewritten}</div>
                                 <button style={btn} onClick={applyRewrite}>Apply to my resume</button>
