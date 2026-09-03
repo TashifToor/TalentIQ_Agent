@@ -11,11 +11,11 @@ uploads
 # Backend patterns
 **/__pycache__/
 backend/.data/
-data/
+data/pdf
 node_modules
 .env
 .env.docker
-
+data
 GOOGLE_CLIENT_SECRET
 GOOGLE_CLIENT_ID
 NEXTAUTH_SECRET
