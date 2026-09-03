@@ -35,9 +35,9 @@ function AnalyzingState() {
   useState(() => { const t = setInterval(() => setStep(s => Math.min(CHECKLIST.length - 1, s + 1)), 900); return () => clearInterval(t) })
   return (
     <div style={{ padding: '50px 0', maxWidth: 360, margin: '0 auto' }}>
-      <h3 style={{ fontFamily: 'Inter, sans-serif', fontSize: 20, marginBottom: 22, textAlign: 'center', color: '#fff' }}>Analyzing your CV…</h3>
+      <h3 style={{ fontFamily: 'Inter, sans-serif', fontSize: 20, marginBottom: 22, textAlign: 'center', color: '#1f1c17' }}>Analyzing your CV…</h3>
       {CHECKLIST.map((label, i) => (
-        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, fontSize: 13, color: i < step ? '#34d399' : i === step ? '#e2b04a' : 'rgba(255,255,255,.3)' }}>
+        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, fontSize: 13, color: i < step ? '#34d399' : i === step ? '#e2b04a' : '#7a7468' }}>
           <span style={{ width: 16, textAlign: 'center' }}>{i < step ? '✓' : i === step ? '●' : '○'}</span>
           {label}
         </div>
@@ -104,11 +104,11 @@ export default function CVOptimizer() {
   const handlePractice = () => router.push('/candidate/dashboard/practice')
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.88)' }}>
-      <div style={{ height: 56, borderBottom: '1px solid rgba(255,255,255,.07)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 16 }}>
-        <Link href="/candidate/dashboard" style={{ color: 'rgba(255,255,255,.4)', textDecoration: 'none', fontSize: 13 }}>← Dashboard</Link>
-        <span style={{ color: 'rgba(255,255,255,.15)' }}>·</span>
-        <span style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', fontWeight: 600 }}>CV Optimizer</span>
+    <div style={{ minHeight: '100vh', background: '#f7f5f0', fontFamily: 'Inter, sans-serif', color: '#1f1c17' }}>
+      <div style={{ height: 56, borderBottom: '1px solid rgba(10,10,9,.1)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 16 }}>
+        <Link href="/candidate/dashboard" style={{ color: '#7a7468', textDecoration: 'none', fontSize: 13 }}>← Dashboard</Link>
+        <span style={{ color: '#9c9689' }}>·</span>
+        <span style={{ fontSize: 13, color: '#3a352d', fontWeight: 600 }}>CV Optimizer</span>
       </div>
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px 60px' }}>
@@ -116,7 +116,7 @@ export default function CVOptimizer() {
           <div style={{ marginBottom: 32 }}>
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: '#e2b04a', marginBottom: 12 }}>Improve your CV for this job</p>
             <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: 'clamp(28px,4vw,42px)', fontWeight: 600, letterSpacing: '-.5px', marginBottom: 10 }}>CV Optimizer</h1>
-            <p style={{ fontSize: 14, color: 'rgba(255,255,255,.4)', lineHeight: 1.7, maxWidth: 560 }}>
+            <p style={{ fontSize: 14, color: '#7a7468', lineHeight: 1.7, maxWidth: 560 }}>
               Upload your CV and a job description — see your real fit, close the gaps, and re-check your progress as you improve.
             </p>
           </div>
@@ -124,22 +124,22 @@ export default function CVOptimizer() {
 
         {step === 'upload' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 640 }}>
-            <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, padding: 24 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 12 }}>Your CV</div>
+            <div style={{ background: '#ffffff', border: '1px solid rgba(10,10,9,.1)', borderRadius: 14, padding: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: '#7a7468', marginBottom: 12 }}>Your CV</div>
               <input ref={fileRef} type="file" accept=".pdf,.docx,.doc" onChange={handleFileChange} style={{ display: 'none' }} />
               <div onClick={handlePickFile}
-                style={{ border: `2px dashed ${cvData ? 'rgba(19,194,142,.4)' : 'rgba(255,255,255,.12)'}`, borderRadius: 10, padding: 32, textAlign: 'center', cursor: 'pointer', background: '#161614' }}>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: '#fff' }}>
+                style={{ border: `2px dashed ${cvData ? 'rgba(19,194,142,.4)' : 'rgba(10,10,9,.14)'}`, borderRadius: 10, padding: 32, textAlign: 'center', cursor: 'pointer', background: '#faf9f5' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: '#1f1c17' }}>
                   {uploading ? 'Uploading…' : file ? file.name : 'Click to upload your CV'}
                 </div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>PDF or DOCX · Max 10MB</div>
+                <div style={{ fontSize: 12, color: '#7a7468' }}>PDF or DOCX · Max 10MB</div>
               </div>
             </div>
 
-            <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, padding: 24 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: 12 }}>Target Job Description</div>
+            <div style={{ background: '#ffffff', border: '1px solid rgba(10,10,9,.1)', borderRadius: 14, padding: 24 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: '#7a7468', marginBottom: 12 }}>Target Job Description</div>
               <textarea value={jd} onChange={e => setJd(e.target.value)} placeholder="Paste the job description here…"
-                style={{ width: '100%', background: '#161614', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, padding: 14, fontSize: 13, fontFamily: 'inherit', color: 'rgba(255,255,255,.8)', outline: 'none', resize: 'none', lineHeight: 1.7, minHeight: 140, boxSizing: 'border-box' }} />
+                style={{ width: '100%', background: '#faf9f5', border: '1px solid rgba(10,10,9,.1)', borderRadius: 10, padding: 14, fontSize: 13, fontFamily: 'inherit', color: '#1f1c17', outline: 'none', resize: 'none', lineHeight: 1.7, minHeight: 140, boxSizing: 'border-box' }} />
             </div>
 
             {error && <div style={{ fontSize: 13, color: '#ef4444' }}>{error}</div>}
@@ -154,12 +154,12 @@ export default function CVOptimizer() {
 
         {step === 'result' && result && (
           <div>
-            <IntelligenceCarousel mode="optimizer" result={result} scoreHistory={scoreHistory} onImproveCv={handleImproveCv} onPracticeTopics={handlePractice} />
+            <IntelligenceCarousel mode="optimizer" result={result} scoreHistory={scoreHistory} onImproveCv={handleImproveCv} onPracticeTopics={handlePractice} light />
 
-            <div style={{ marginTop: 28, padding: 20, background: '#111110', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 10 }}>Want to tailor this CV specifically for another job?</div>
+            <div style={{ marginTop: 28, padding: 20, background: '#ffffff', border: '1px solid rgba(10,10,9,.1)', borderRadius: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1f1c17', marginBottom: 10 }}>Want to tailor this CV specifically for another job?</div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <button onClick={() => { setStep('upload'); setResult(null) }} style={{ background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)', color: 'rgba(255,255,255,.7)', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={() => { setStep('upload'); setResult(null) }} style={{ background: 'rgba(10,10,9,.035)', border: '1px solid rgba(10,10,9,.1)', color: '#3a352d', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
                   Analyze Again
                 </button>
                 <button onClick={handleImproveCv} style={{ background: '#e2b04a', color: '#0a0a09', fontWeight: 700, fontSize: 13, padding: '10px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
