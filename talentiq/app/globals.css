@@ -19,7 +19,61 @@
   --t: rgba(255,255,255,.88); --t2: rgba(255,255,255,.5); --t3: rgba(255,255,255,.24);
   --teal: #0b7c5e; --teal2: #13c28e;
   --ease: cubic-bezier(0.25,0.46,0.45,0.94);
+
+  /* Shared dashboard theme tokens (HR + Candidate). Default = LIGHT. */
+  --dash-bg: #f7f5f0;
+  --dash-sidebar: #edeae2;
+  --dash-sidebar-border: #e0ddd4;
+  --dash-surface: #ffffff;
+  --dash-surface-2: #faf9f5;
+  --dash-text: #1f1c17;
+  --dash-text-muted: #7a7468;
+  --dash-text-faint: #9c9689;
+  --dash-border: #e7e4da;
+  --dash-border-soft: rgba(10,10,9,.1);
+  --dash-accent: #e2b04a;
+  --dash-accent-strong: #c5931f;
+  --dash-nav-selected-bg: #ffffff;
+  --dash-nav-selected-text: #1f1c17;
+  --dash-shadow: 0 1px 2px rgba(10,10,9,.04);
+  /* Reversible neutral-ink overlay tints — used for BOTH subtle backgrounds and
+     borders throughout the dashboards (same opacity scale as the light-mode ink). */
+  --dash-overlay-035: rgba(10,10,9,.035);
+  --dash-overlay-05: rgba(10,10,9,.05);
+  --dash-overlay-08: rgba(10,10,9,.08);
+  --dash-overlay-09: rgba(10,10,9,.09);
+  --dash-overlay-12: rgba(10,10,9,.12);
+  --dash-overlay-14: rgba(10,10,9,.14);
+  --dash-overlay-16: rgba(10,10,9,.16);
 }
+
+[data-theme='dark'] {
+  --dash-bg: #0a0a09;
+  --dash-sidebar: #0c0c0b;
+  --dash-sidebar-border: rgba(255,255,255,.05);
+  --dash-surface: #161614;
+  --dash-surface-2: #1e1e1b;
+  --dash-text: rgba(255,255,255,.88);
+  --dash-text-muted: rgba(255,255,255,.5);
+  --dash-text-faint: rgba(255,255,255,.3);
+  --dash-border: rgba(255,255,255,.08);
+  --dash-border-soft: rgba(255,255,255,.08);
+  --dash-accent: #e2b04a;
+  --dash-accent-strong: #f5d87a;
+  --dash-nav-selected-bg: rgba(255,255,255,.06);
+  --dash-nav-selected-text: #ffffff;
+  --dash-shadow: 0 1px 2px rgba(0,0,0,.3);
+  --dash-overlay-035: rgba(255,255,255,.035);
+  --dash-overlay-05: rgba(255,255,255,.06);
+  --dash-overlay-08: rgba(255,255,255,.08);
+  --dash-overlay-09: rgba(255,255,255,.1);
+  --dash-overlay-12: rgba(255,255,255,.12);
+  --dash-overlay-14: rgba(255,255,255,.16);
+  --dash-overlay-16: rgba(255,255,255,.18);
+}
+
+/* Prevent white flash: applied by inline script in layout.tsx before paint */
+[data-theme='dark'] .app-shell, [data-theme='dark'] .app-main { background: var(--dash-bg); }
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; overflow-x: hidden; }
