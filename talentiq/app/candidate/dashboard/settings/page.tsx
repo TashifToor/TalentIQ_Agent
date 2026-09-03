@@ -80,20 +80,20 @@ export default function CandidateSettings() {
   }
 
   const inputStyle = {
-    background: '#161614',
-    border: '1px solid rgba(255,255,255,.08)',
-    borderBottom: '1px solid rgba(255,255,255,.2)',
+    background: '#faf9f5',
+    border: '1px solid rgba(10,10,9,.1)',
+    borderBottom: '1px solid rgba(10,10,9,.14)',
     borderRadius: '8px 8px 0 0',
     padding: '10px 12px',
     fontSize: 13,
     fontFamily: 'Inter, sans-serif',
-    color: 'rgba(255,255,255,.85)',
+    color: '#1f1c17',
     outline: 'none',
     width: '100%',
   } as React.CSSProperties
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0c0c0a', fontFamily: 'Inter, sans-serif', color: 'rgba(255,255,255,.88)' }}>
+    <div style={{ minHeight: '100vh', background: '#f7f5f0', fontFamily: 'Inter, sans-serif', color: '#1f1c17' }}>
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -106,25 +106,25 @@ export default function CandidateSettings() {
       `}</style>
 
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 24px 80px' }}>
-        <Link href="/candidate/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'rgba(255,255,255,.4)', textDecoration: 'none', marginBottom: 28 }}>
+        <Link href="/candidate/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#7a7468', textDecoration: 'none', marginBottom: 28 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
           Back to Dashboard
         </Link>
 
         <div style={{ fontFamily: "Inter, sans-serif", fontSize: 28, fontWeight: 600, marginBottom: 4 }}>Settings</div>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,.3)', marginBottom: 28 }}>Manage your account preferences</div>
+        <div style={{ fontSize: 13, color: '#7a7468', marginBottom: 28 }}>Manage your account preferences</div>
 
         {/* Profile Section */}
-        <div className="fade-up" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
+        <div className="fade-up" style={{ background: '#ffffff', border: '1px solid rgba(10,10,9,.1)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Profile</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginBottom: 18 }}>Update your display name</div>
+          <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 18 }}>Update your display name</div>
 
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.3)', letterSpacing: '.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Full Name</label>
+          <label style={{ fontSize: 11, fontWeight: 600, color: '#7a7468', letterSpacing: '.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Full Name</label>
           <input className="settings-input" style={{ ...inputStyle, marginBottom: 10 }} value={name} onChange={e => setName(e.target.value)} />
 
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.3)', letterSpacing: '.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Email</label>
+          <label style={{ fontSize: 11, fontWeight: 600, color: '#7a7468', letterSpacing: '.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Email</label>
           <input style={{ ...inputStyle, opacity: .5, cursor: 'not-allowed', marginBottom: 14 }} value={email} disabled />
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,.25)', marginBottom: 14, marginTop: -8 }}>Email address cannot be changed.</div>
+          <div style={{ fontSize: 11, color: '#9c9689', marginBottom: 14, marginTop: -8 }}>Email address cannot be changed.</div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button className="save-btn" onClick={handleSaveName} disabled={savingName} style={{ background: '#e2b04a', color: '#0a0a09', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
@@ -135,14 +135,14 @@ export default function CandidateSettings() {
         </div>
 
         {/* Password Section */}
-        <div className="fade-up" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
+        <div className="fade-up" style={{ background: '#ffffff', border: '1px solid rgba(10,10,9,.1)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Password</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginBottom: 18 }}>Change your account password</div>
+          <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 18 }}>Change your account password</div>
 
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.3)', letterSpacing: '.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Current Password</label>
+          <label style={{ fontSize: 11, fontWeight: 600, color: '#7a7468', letterSpacing: '.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Current Password</label>
           <input className="settings-input" type="password" style={{ ...inputStyle, marginBottom: 14 }} value={currentPw} onChange={e => setCurrentPw(e.target.value)} />
 
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.3)', letterSpacing: '.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>New Password</label>
+          <label style={{ fontSize: 11, fontWeight: 600, color: '#7a7468', letterSpacing: '.06em', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>New Password</label>
           <input className="settings-input" type="password" style={{ ...inputStyle, marginBottom: 14 }} value={newPw} onChange={e => setNewPw(e.target.value)} />
 
           {pwError && <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 12 }}>{pwError}</div>}
@@ -156,23 +156,23 @@ export default function CandidateSettings() {
         </div>
 
         {/* Data Export Section */}
-        <div className="fade-up" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div className="fade-up" style={{ background: '#ffffff', border: '1px solid rgba(10,10,9,.1)', borderRadius: 12, padding: 24, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Download My Data</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>Get a copy of everything TalentIQ stores about your account — scan history, applications, and profile info.</div>
+            <div style={{ fontSize: 12, color: '#7a7468' }}>Get a copy of everything TalentIQ stores about your account — scan history, applications, and profile info.</div>
           </div>
-          <button onClick={async () => { try { await api.exportMyData() } catch {} }} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,.15)', color: 'rgba(255,255,255,.8)', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
+          <button onClick={async () => { try { await api.exportMyData() } catch {} }} style={{ background: 'transparent', border: '1px solid rgba(10,10,9,.14)', color: '#1f1c17', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
             Download JSON
           </button>
         </div>
 
         {/* Session Section */}
-        <div className="fade-up" style={{ background: '#111110', border: '1px solid rgba(255,255,255,.07)', borderRadius: 12, padding: 24, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="fade-up" style={{ background: '#ffffff', border: '1px solid rgba(10,10,9,.1)', borderRadius: 12, padding: 24, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>Sign Out</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)' }}>End your current session on this device</div>
+            <div style={{ fontSize: 12, color: '#7a7468' }}>End your current session on this device</div>
           </div>
-          <button onClick={handleLogout} style={{ background: 'none', border: '1px solid rgba(255,255,255,.15)', color: 'rgba(255,255,255,.7)', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
+          <button onClick={handleLogout} style={{ background: 'none', border: '1px solid rgba(10,10,9,.14)', color: '#3a352d', fontSize: 13, fontWeight: 600, padding: '9px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
             Log Out
           </button>
         </div>
@@ -180,10 +180,10 @@ export default function CandidateSettings() {
         {/* Danger Zone */}
         <div className="fade-up" style={{ background: 'rgba(239,68,68,.04)', border: '1px solid rgba(239,68,68,.15)', borderRadius: 12, padding: 24 }}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: '#ef4444' }}>Delete Account</div>
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.35)', marginBottom: 16 }}>This permanently deletes your account, CV data, and scan history. This cannot be undone.</div>
+          <div style={{ fontSize: 12, color: '#7a7468', marginBottom: 16 }}>This permanently deletes your account, CV data, and scan history. This cannot be undone.</div>
 
           {!showDeleteConfirm ? (
-            <button className="danger-link" onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', textDecoration: 'underline' }}>
+            <button className="danger-link" onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', color: '#7a7468', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', textDecoration: 'underline' }}>
               Delete my account
             </button>
           ) : (
@@ -200,7 +200,7 @@ export default function CandidateSettings() {
                 <button onClick={handleDelete} disabled={deleting} style={{ background: '#ef4444', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
                   {deleting ? 'Deleting…' : 'Yes, delete permanently'}
                 </button>
-                <button onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); setDeleteError('') }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 13, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
+                <button onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); setDeleteError('') }} style={{ background: 'none', border: 'none', color: '#7a7468', fontSize: 13, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
                   Cancel
                 </button>
               </div>
