@@ -18,69 +18,81 @@ type AnalysisResult = {
     next_actions: string[]
 }
 
-const gold = '#e2b04a'
-const green = '#34d399'
-const red = '#f87171'
-const yellow = '#e2b04a'
-const border = 'rgba(255,255,255,.09)'
-const textDim = 'rgba(255,255,255,.4)'
-const textMain = 'rgba(255,255,255,.92)'
-const panelBg = '#111110'
+// Runtime theme (the `light` prop) — used by the Candidate CV Optimizer/
+// Screening pages, which are now light; kept opt-in (default dark) in case
+// anything else ever renders this on a dark surface.
+function getTheme(light?: boolean) {
+    const gold = '#e2b04a'
+    const green = light ? '#0b7c5e' : '#34d399'
+    const red = '#ef4444'
+    const yellow = light ? '#c5931f' : '#e2b04a'
+    const border = light ? '#e7e4da' : 'rgba(255,255,255,.09)'
+    const textDim = light ? '#7a7468' : 'rgba(255,255,255,.4)'
+    const textMain = light ? '#1f1c17' : 'rgba(255,255,255,.92)'
+    const panelBg = light ? '#ffffff' : '#111110'
+    const bodyText = light ? '#3a352d' : 'rgba(255,255,255,.6)'
+    const bodyText2 = light ? '#5c574c' : 'rgba(255,255,255,.65)'
+    const trackColor = light ? 'rgba(10,10,9,.08)' : 'rgba(255,255,255,.08)'
+    return { gold, green, red, yellow, border, textDim, textMain, panelBg, bodyText, bodyText2, trackColor }
+}
 
-function fitColor(level: string) {
+function fitColor(level: string, t: ReturnType<typeof getTheme>) {
     const l = level.toLowerCase()
-    if (l.includes('strong')) return green
-    if (l.includes('weak') || l.includes('needs')) return red
-    return yellow
+    if (l.includes('strong')) return t.green
+    if (l.includes('weak') || l.includes('needs')) return t.red
+    return t.yellow
 }
-function readinessColor(r: string) {
+function readinessColor(r: string, t: ReturnType<typeof getTheme>) {
     const l = r.toLowerCase()
-    if (l === 'ready') return green
-    if (l.includes('almost')) return yellow
-    return red
+    if (l === 'ready') return t.green
+    if (l.includes('almost')) return t.yellow
+    return t.red
 }
-function statusColor(s: string) {
+function statusColor(s: string, t: ReturnType<typeof getTheme>) {
     const l = s.toLowerCase()
-    if (l === 'strong') return green
-    if (l === 'weak') return red
-    return yellow
+    if (l === 'strong') return t.green
+    if (l === 'weak') return t.red
+    return t.yellow
 }
 
-const cardBase: React.CSSProperties = {
-    background: panelBg, border: `1px solid ${border}`, borderRadius: 14, padding: 20,
-    minWidth: 300, maxWidth: 340, flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 10,
-}
-const cardLabel: React.CSSProperties = { fontSize: 10.5, fontWeight: 700, color: textDim, textTransform: 'uppercase', letterSpacing: '.06em' }
-const chip = (color: string): React.CSSProperties => ({ fontSize: 11.5, fontWeight: 600, padding: '5px 11px', borderRadius: 100, background: `${color}18`, color, border: `1px solid ${color}35` })
-
-function ScoreRing({ score, size = 84 }: { score: number; size?: number }) {
+function ScoreRing({ score, size = 84, t }: { score: number; size?: number; t: ReturnType<typeof getTheme> }) {
     const radius = (size - 8) / 2
     const c = 2 * Math.PI * radius
     const offset = c * (1 - score / 100)
-    const color = score >= 70 ? green : score >= 45 ? yellow : red
+    const color = score >= 70 ? t.green : score >= 45 ? t.yellow : t.red
     return (
         <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
             <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={size / 2} cy={size / 2} r={radius} stroke="rgba(255,255,255,.08)" strokeWidth={6} fill="none" />
+                <circle cx={size / 2} cy={size / 2} r={radius} stroke={t.trackColor} strokeWidth={6} fill="none" />
                 <circle cx={size / 2} cy={size / 2} r={radius} stroke={color} strokeWidth={6} fill="none"
                     strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: 'stroke-dashoffset .6s ease' }} />
             </svg>
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: size * 0.26, fontWeight: 700, color: textMain }}>{score}%</span>
+                <span style={{ fontSize: size * 0.26, fontWeight: 700, color: t.textMain }}>{score}%</span>
             </div>
         </div>
     )
 }
 
 export default function IntelligenceCarousel({
-    mode, result, scoreHistory, onImproveCv, onPracticeTopics,
+    mode, result, scoreHistory, onImproveCv, onPracticeTopics, light,
 }: {
     mode: 'optimizer' | 'screening'
     result: AnalysisResult
     scoreHistory?: number[]
     onImproveCv: (focus?: string) => void
     onPracticeTopics: () => void
+    light?: boolean
 }) {
+    const t = getTheme(light)
+    const { gold, green, red, yellow, border, textDim, textMain, panelBg, bodyText, bodyText2 } = t
+    const cardBase: React.CSSProperties = {
+        background: panelBg, border: `1px solid ${border}`, borderRadius: 14, padding: 20,
+        minWidth: 300, maxWidth: 340, flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 10,
+    }
+    const cardLabel: React.CSSProperties = { fontSize: 10.5, fontWeight: 700, color: textDim, textTransform: 'uppercase', letterSpacing: '.06em' }
+    const chip = (color: string): React.CSSProperties => ({ fontSize: 11.5, fontWeight: 600, padding: '5px 11px', borderRadius: 100, background: `${color}18`, color, border: `1px solid ${color}35` })
+
     const trackRef = useRef<HTMLDivElement>(null)
     const [showAllStrengths, setShowAllStrengths] = useState(false)
 
@@ -92,9 +104,9 @@ export default function IntelligenceCarousel({
         <div key="score" style={cardBase} role="group" aria-label="Match score">
             <div style={cardLabel}>{mode === 'optimizer' ? 'Match Score' : 'Screening Overview'}</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <ScoreRing score={result.overall_score} />
+                <ScoreRing score={result.overall_score} t={t} />
                 <div>
-                    <div style={{ ...chip(fitColor(result.fit_level)), display: 'inline-block' }}>{result.fit_level}</div>
+                    <div style={{ ...chip(fitColor(result.fit_level, t)), display: 'inline-block' }}>{result.fit_level}</div>
                     {scoreHistory && scoreHistory.length > 1 && (
                         <div style={{ fontSize: 11, color: textDim, marginTop: 8 }}>
                             {scoreHistory.join(' → ')}
@@ -103,7 +115,7 @@ export default function IntelligenceCarousel({
                     )}
                 </div>
             </div>
-            <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', lineHeight: 1.6, margin: 0 }}>{result.score_explanation}</p>
+            <p style={{ fontSize: 12.5, color: bodyText, lineHeight: 1.6, margin: 0 }}>{result.score_explanation}</p>
         </div>
     )
 
@@ -161,7 +173,7 @@ export default function IntelligenceCarousel({
         <div key="exp-gaps" style={cardBase} role="group" aria-label="Experience gaps">
             <div style={cardLabel}>Experience Gaps</div>
             {result.experience_gaps.map((g, i) => (
-                <p key={i} style={{ fontSize: 12.5, color: 'rgba(255,255,255,.65)', lineHeight: 1.6, margin: 0 }}>{g}</p>
+                <p key={i} style={{ fontSize: 12.5, color: bodyText2, lineHeight: 1.6, margin: 0 }}>{g}</p>
             ))}
         </div>
     ) : null
@@ -173,8 +185,8 @@ export default function IntelligenceCarousel({
                 <p style={{ fontSize: 12.5, color: textDim, margin: 0 }}>No significant concerns identified.</p>
             ) : (
                 <>
-                    {result.skill_gaps.required.map(s => <div key={s} style={{ fontSize: 12.5, color: 'rgba(255,255,255,.65)' }}>• Missing: {s}</div>)}
-                    {result.experience_gaps.map((g, i) => <div key={i} style={{ fontSize: 12.5, color: 'rgba(255,255,255,.65)', lineHeight: 1.5 }}>• {g}</div>)}
+                    {result.skill_gaps.required.map(s => <div key={s} style={{ fontSize: 12.5, color: bodyText2 }}>• Missing: {s}</div>)}
+                    {result.experience_gaps.map((g, i) => <div key={i} style={{ fontSize: 12.5, color: bodyText2, lineHeight: 1.5 }}>• {g}</div>)}
                 </>
             )}
         </div>
@@ -183,15 +195,15 @@ export default function IntelligenceCarousel({
     const roleFitCard = mode === 'screening' ? (
         <div key="role-fit" style={cardBase} role="group" aria-label="Role fit">
             <div style={cardLabel}>Role Fit</div>
-            <div style={{ ...chip(fitColor(result.fit_level)), display: 'inline-block', fontSize: 14, padding: '7px 16px' }}>{result.fit_level}</div>
-            <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', lineHeight: 1.6, margin: 0 }}>{result.score_explanation}</p>
+            <div style={{ ...chip(fitColor(result.fit_level, t)), display: 'inline-block', fontSize: 14, padding: '7px 16px' }}>{result.fit_level}</div>
+            <p style={{ fontSize: 12.5, color: bodyText, lineHeight: 1.6, margin: 0 }}>{result.score_explanation}</p>
         </div>
     ) : null
 
     const recruiterCard = (
         <div key="recruiter" style={cardBase} role="group" aria-label="Recruiter impression">
             <div style={cardLabel}>Recruiter View</div>
-            <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,.65)', lineHeight: 1.65, margin: 0 }}>{result.recruiter_impression}</p>
+            <p style={{ fontSize: 12.5, color: bodyText2, lineHeight: 1.65, margin: 0 }}>{result.recruiter_impression}</p>
         </div>
     )
 
@@ -202,8 +214,8 @@ export default function IntelligenceCarousel({
                 <p style={{ fontSize: 12.5, color: textDim, margin: 0 }}>Not enough information.</p>
             ) : result.ats_signals.map(sig => (
                 <div key={sig.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,.6)' }}>{sig.label}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: statusColor(sig.status) }}>{sig.status}</span>
+                    <span style={{ fontSize: 12, color: bodyText }}>{sig.label}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: statusColor(sig.status, t) }}>{sig.status}</span>
                 </div>
             ))}
         </div>
@@ -212,8 +224,8 @@ export default function IntelligenceCarousel({
     const readinessCard = (
         <div key="readiness" style={cardBase} role="group" aria-label="Interview readiness">
             <div style={cardLabel}>Interview Readiness</div>
-            <div style={{ ...chip(readinessColor(result.interview_readiness)), display: 'inline-block', fontSize: 13, padding: '6px 14px' }}>{result.interview_readiness}</div>
-            <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', lineHeight: 1.6, margin: 0 }}>{result.interview_readiness_reason}</p>
+            <div style={{ ...chip(readinessColor(result.interview_readiness, t)), display: 'inline-block', fontSize: 13, padding: '6px 14px' }}>{result.interview_readiness}</div>
+            <p style={{ fontSize: 12.5, color: bodyText, lineHeight: 1.6, margin: 0 }}>{result.interview_readiness_reason}</p>
             {result.focus_areas.length > 0 && (
                 <div>
                     <div style={{ fontSize: 10.5, color: textDim, fontWeight: 700, marginBottom: 6 }}>Focus areas</div>
@@ -235,7 +247,7 @@ export default function IntelligenceCarousel({
                 <p style={{ fontSize: 12.5, color: textDim, margin: 0 }}>Not enough information.</p>
             ) : (
                 <ol style={{ margin: 0, paddingLeft: 18 }}>
-                    {result.next_actions.map((a, i) => <li key={i} style={{ fontSize: 12.5, color: 'rgba(255,255,255,.7)', lineHeight: 1.6, marginBottom: 4 }}>{a}</li>)}
+                    {result.next_actions.map((a, i) => <li key={i} style={{ fontSize: 12.5, color: bodyText2, lineHeight: 1.6, marginBottom: 4 }}>{a}</li>)}
                 </ol>
             )}
             <button onClick={() => onImproveCv()} style={{ marginTop: 4, background: 'transparent', border: `1px solid ${gold}`, color: gold, fontWeight: 700, fontSize: 12, padding: '9px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
