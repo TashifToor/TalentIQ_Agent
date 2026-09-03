@@ -24,19 +24,25 @@ const emptyEducation = (): Education => ({ degree: '', institution: '', start_ye
 const emptyExperience = (): Experience => ({ title: '', company: '', start_date: '', end_date: '', bullets: [''] })
 const emptyProject = (): Project => ({ name: '', description: '', tech_stack: '' })
 
-const gold = '#d4af6d'
-const panel = '#141412'
-const border = 'rgba(255,255,255,.1)'
-const textDim = 'rgba(245,242,235,.4)'
-const textMain = '#f5f2eb'
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', background: '#1e1e1b', border: `1px solid ${border}`, borderRadius: 8,
-  padding: '9px 12px', fontSize: 13, color: textMain, outline: 'none', fontFamily: 'inherit',
-  marginBottom: 10, boxSizing: 'border-box',
+// Theme is a runtime choice (the `light` prop), not a fixed constant — this
+// component is shared by the light Candidate dashboard AND the still-dark
+// public marketing page (app/cv-builder/page.tsx), so these can't be
+// module-level consts the way they used to be.
+function getTheme(light?: boolean) {
+  const gold = light ? '#e2b04a' : '#d4af6d'
+  const panel = light ? '#ffffff' : '#141412'
+  const border = light ? '#e7e4da' : 'rgba(255,255,255,.1)'
+  const textDim = light ? '#7a7468' : 'rgba(245,242,235,.4)'
+  const textMain = light ? '#1f1c17' : '#f5f2eb'
+  const inputStyle: React.CSSProperties = {
+    width: '100%', background: light ? '#faf9f5' : '#1e1e1b', border: `1px solid ${border}`, borderRadius: 8,
+    padding: '9px 12px', fontSize: 13, color: textMain, outline: 'none', fontFamily: 'inherit',
+    marginBottom: 10, boxSizing: 'border-box',
+  }
+  const labelStyle: React.CSSProperties = { fontSize: 11, color: textDim, marginBottom: 4, display: 'block', fontWeight: 500 }
+  const sectionTitle: React.CSSProperties = { fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 20, fontWeight: 600, color: textMain, marginBottom: 14 }
+  return { gold, panel, border, textDim, textMain, inputStyle, labelStyle, sectionTitle }
 }
-const labelStyle: React.CSSProperties = { fontSize: 11, color: textDim, marginBottom: 4, display: 'block', fontWeight: 500 }
-const sectionTitle: React.CSSProperties = { fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 20, fontWeight: 600, color: textMain, marginBottom: 14 }
 
 // Mirrors core/cv_pdf_renderer.py style configs — used for gallery cards + live preview
 const TEMPLATES: Record<string, { label: string; font: string; accent: string; atsSafe: boolean; layout: 'single' | 'sidebar' | 'decorative' }> = {
@@ -70,9 +76,11 @@ type CVBuilderWizardProps = {
   // (e.g. the Job Readiness panel's "Optimize Resume for This Job" result)
   // back into the editable wizard — the candidate keeps editing from there.
   externalCvUpdate?: { version: number; cv: CVData } | null
+  light?: boolean   // opt-in — default keeps the original dark theme (the public marketing page's usage is unaffected)
 }
 
-export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: CVBuilderWizardProps = {}) {
+export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate, light }: CVBuilderWizardProps = {}) {
+  const { gold, panel, border, textDim, textMain, inputStyle, labelStyle, sectionTitle } = getTheme(light)
   const [step, setStep] = useState(0) // 0=input, 1=template gallery, 2=edit+preview, 3=JD+generate
   const [cv, setCv] = useState<CVData>(EMPTY_CV)
   const [handoffFocus, setHandoffFocus] = useState<string | null>(null)
@@ -188,7 +196,7 @@ export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: C
       <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
         {['Your Info', 'Template', 'Edit & Preview', 'Generate'].map((label, i) => (
           <div key={i} style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ height: 3, borderRadius: 2, marginBottom: 6, background: i <= step ? gold : 'rgba(255,255,255,.08)' }} />
+            <div style={{ height: 3, borderRadius: 2, marginBottom: 6, background: i <= step ? gold : (light ? 'rgba(10,10,9,.09)' : 'rgba(255,255,255,.08)') }} />
             <span style={{ fontSize: 10.5, color: i <= step ? gold : textDim }}>{label}</span>
           </div>
         ))}
@@ -233,7 +241,7 @@ export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: C
                   border: `2px solid ${selected ? gold : border}`, background: panel, textAlign: 'left',
                 }}>
                   <div style={{ height: 70, background: cfg.accent, display: 'flex', flexDirection: cfg.layout === 'single' ? 'column' : 'row' }}>
-                    {cfg.layout !== 'single' && <div style={{ width: '35%', background: 'rgba(255,255,255,.15)' }} />}
+                    {cfg.layout !== 'single' && <div style={{ width: '35%', background: light ? 'rgba(10,10,9,.12)' : 'rgba(255,255,255,.15)' }} />}
                   </div>
                   <div style={{ padding: '8px 10px' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: selected ? gold : textMain, fontFamily: cfg.font }}>{cfg.label}</div>
@@ -437,7 +445,7 @@ export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate }: C
 
           {/* Far right: AI Resume Assistant — real 3rd column on desktop,
               collapsible drawer/bottom-sheet on tablet/mobile (see globals.css) */}
-          <AIResumeAssistant cv={cv} onCvChange={setCv} jobDescription={jd} template={template} suggestedFocus={handoffFocus} />
+          <AIResumeAssistant cv={cv} onCvChange={setCv} jobDescription={jd} template={template} suggestedFocus={handoffFocus} light={light} />
         </div>
       )}
 
