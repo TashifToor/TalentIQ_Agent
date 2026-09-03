@@ -22,11 +22,6 @@ type ATSResult = {
     recommendations: string[]
 }
 
-const gold = '#d4af6d'
-const panelBg = '#141412'
-const border = 'rgba(255,255,255,.1)'
-const textDim = 'rgba(245,242,235,.4)'
-const textMain = '#f5f2eb'
 const green = '#34d399'
 const red = '#f87171'
 const yellow = '#e2b04a'
@@ -59,24 +54,39 @@ function cvDataToText(cv: CVData): string {
 type QuickAction = 'summary' | 'strengthen' | 'keywords' | 'bullet' | 'gaps'
 type Target = { kind: 'summary' } | { kind: 'bullet'; exp: number; bullet: number }
 
-const btnGhost: React.CSSProperties = {
-    fontSize: 11.5, fontWeight: 600, padding: '7px 10px', borderRadius: 7, border: `1px solid ${border}`,
-    background: 'transparent', color: textDim, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%',
-}
-const btnGold: React.CSSProperties = {
-    fontSize: 12, fontWeight: 700, padding: '9px 14px', borderRadius: 8, border: 'none',
-    background: gold, color: '#0a0a08', cursor: 'pointer', fontFamily: 'inherit',
+// Runtime theme (the `light` prop) rather than fixed module consts — shared
+// by the light Candidate dashboard AND CVBuilderWizard's still-dark public
+// marketing usage.
+function getTheme(light?: boolean) {
+    const gold = light ? '#e2b04a' : '#d4af6d'
+    const panelBg = light ? '#ffffff' : '#141412'
+    const border = light ? '#e7e4da' : 'rgba(255,255,255,.1)'
+    const textDim = light ? '#7a7468' : 'rgba(245,242,235,.4)'
+    const textMain = light ? '#1f1c17' : '#f5f2eb'
+    const surfaceBg = light ? '#faf9f5' : '#1a1a17'
+    const inputBg = light ? '#faf9f5' : '#1e1e1b'
+    const btnGhost: React.CSSProperties = {
+        fontSize: 11.5, fontWeight: 600, padding: '7px 10px', borderRadius: 7, border: `1px solid ${border}`,
+        background: 'transparent', color: textDim, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%',
+    }
+    const btnGold: React.CSSProperties = {
+        fontSize: 12, fontWeight: 700, padding: '9px 14px', borderRadius: 8, border: 'none',
+        background: gold, color: '#0a0a08', cursor: 'pointer', fontFamily: 'inherit',
+    }
+    return { gold, panelBg, border, textDim, textMain, surfaceBg, inputBg, btnGhost, btnGold }
 }
 
 export default function AIResumeAssistant({
-    cv, onCvChange, jobDescription, template, suggestedFocus,
+    cv, onCvChange, jobDescription, template, suggestedFocus, light,
 }: {
     cv: CVData
     onCvChange: (cv: CVData) => void
     jobDescription: string
     template: string
     suggestedFocus?: string | null   // optional hand-off from CV Optimizer/Screening's "Improve My CV" — auto-opens the matching quick action once
+    light?: boolean
 }) {
+    const { gold, panelBg, border, textDim, textMain, surfaceBg, inputBg, btnGhost, btnGold } = getTheme(light)
     const [open, setOpen] = useState(false) // drawer/sheet open state — irrelevant on desktop (always visible there)
     const [action, setAction] = useState<QuickAction | null>(null)
     const [target, setTarget] = useState<Target | null>(null)
@@ -200,7 +210,7 @@ export default function AIResumeAssistant({
             </div>
 
             {/* Compact live ATS score — same endpoint as the full ATS card below */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0', padding: '10px 12px', background: '#1a1a17', border: `1px solid ${border}`, borderRadius: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0', padding: '10px 12px', background: surfaceBg, border: `1px solid ${border}`, borderRadius: 10 }}>
                 <div style={{ width: 34, height: 34, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0, border: `2px solid ${ats ? scoreColor(ats.overall_score) : border}`, color: ats ? scoreColor(ats.overall_score) : textDim }}>
                     {atsLoading ? '…' : ats ? ats.overall_score : '—'}
                 </div>
@@ -223,7 +233,7 @@ export default function AIResumeAssistant({
                 <div style={{ marginBottom: 14 }}>
                     <div style={{ fontSize: 11, color: textDim, marginBottom: 6 }}>Pick a bullet:</div>
                     <select onChange={e => { if (!e.target.value) return; const [exp, b] = e.target.value.split('-').map(Number); pickBullet(exp, b) }}
-                        defaultValue="" style={{ width: '100%', background: '#1e1e1b', border: `1px solid ${border}`, borderRadius: 8, padding: '8px 10px', fontSize: 12, color: textMain, boxSizing: 'border-box' }}>
+                        defaultValue="" style={{ width: '100%', background: inputBg, border: `1px solid ${border}`, borderRadius: 8, padding: '8px 10px', fontSize: 12, color: textMain, boxSizing: 'border-box' }}>
                         <option value="">Select…</option>
                         {cv.experience.map((exp, ei) => exp.bullets.map((b, bi) => b.trim() ? (
                             <option key={`${ei}-${bi}`} value={`${ei}-${bi}`}>{exp.title || 'Role'}: {b.slice(0, 50)}{b.length > 50 ? '…' : ''}</option>
@@ -272,7 +282,7 @@ export default function AIResumeAssistant({
                     {suggestion && !busy && (
                         <>
                             <div style={{ fontSize: 10.5, fontWeight: 700, color: textDim, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 }}>Current</div>
-                            <div style={{ fontSize: 12, color: 'rgba(245,242,235,.5)', marginBottom: 10, lineHeight: 1.5, padding: '8px 10px', background: '#1a1a17', borderRadius: 8 }}>{suggestion.original}</div>
+                            <div style={{ fontSize: 12, color: textDim, marginBottom: 10, lineHeight: 1.5, padding: '8px 10px', background: surfaceBg, borderRadius: 8 }}>{suggestion.original}</div>
                             <div style={{ fontSize: 10.5, fontWeight: 700, color: green, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 }}>AI Suggestion</div>
                             <div style={{ fontSize: 12, color: textMain, marginBottom: 12, lineHeight: 1.5, padding: '8px 10px', background: `${green}0f`, border: `1px solid ${green}30`, borderRadius: 8 }}>{suggestion.rewritten}</div>
                             <div style={{ display: 'flex', gap: 8 }}>
