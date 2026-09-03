@@ -15,9 +15,6 @@ type Notification = {
 }
 
 const gold = '#e2b04a'
-const border = 'rgba(255,255,255,.08)'
-const textDim = 'rgba(255,255,255,.4)'
-const textMain = 'rgba(255,255,255,.92)'
 
 function relativeTime(iso: string): string {
     const diffSec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
@@ -34,8 +31,14 @@ function relativeTime(iso: string): string {
 
 type Tab = 'all' | 'unread' | 'read'
 
-export default function NotificationsPage({ role }: { role: 'hr' | 'candidate' }) {
+export default function NotificationsPage({ role, light }: { role: 'hr' | 'candidate'; light?: boolean }) {
     const router = useRouter()
+    const border = light ? '#e7e4da' : 'rgba(255,255,255,.08)'
+    const textDim = light ? '#7a7468' : 'rgba(255,255,255,.4)'
+    const textMain = light ? '#1f1c17' : 'rgba(255,255,255,.92)'
+    const bodyText = light ? '#3a352d' : 'rgba(255,255,255,.55)'
+    const unreadBg = light ? 'rgba(226,176,74,.06)' : 'rgba(226,176,74,.05)'
+    const readBg = light ? '#ffffff' : '#121210'
     const [tab, setTab] = useState<Tab>('all')
     const [items, setItems] = useState<Notification[]>([])
     const [loading, setLoading] = useState(true)
@@ -91,13 +94,13 @@ export default function NotificationsPage({ role }: { role: 'hr' | 'candidate' }
                 {items.map(n => (
                     <button key={n.id} onClick={() => handleClick(n)} style={{
                         textAlign: 'left', display: 'flex', gap: 12, alignItems: 'flex-start', padding: '13px 16px', borderRadius: 10,
-                        border: `1px solid ${border}`, background: n.is_read ? '#121210' : 'rgba(226,176,74,.05)', cursor: 'pointer', fontFamily: 'inherit',
+                        border: `1px solid ${border}`, background: n.is_read ? readBg : unreadBg, cursor: 'pointer', fontFamily: 'inherit',
                     }}>
                         {!n.is_read && <span style={{ width: 7, height: 7, borderRadius: 4, background: gold, marginTop: 6, flexShrink: 0 }} />}
                         {n.is_read && <span style={{ width: 7, flexShrink: 0 }} />}
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 13, fontWeight: 700, color: textMain }}>{n.title}</div>
-                            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.55)', marginTop: 2, lineHeight: 1.5 }}>{n.message}</div>
+                            <div style={{ fontSize: 12, color: bodyText, marginTop: 2, lineHeight: 1.5 }}>{n.message}</div>
                             <div style={{ fontSize: 11, color: textDim, marginTop: 5 }}>{relativeTime(n.created_at)}</div>
                         </div>
                     </button>
