@@ -59,12 +59,12 @@ type Target = { kind: 'summary' } | { kind: 'bullet'; exp: number; bullet: numbe
 // marketing usage.
 function getTheme(light?: boolean) {
     const gold = light ? '#e2b04a' : '#d4af6d'
-    const panelBg = light ? '#ffffff' : '#141412'
-    const border = light ? '#e7e4da' : 'rgba(255,255,255,.1)'
-    const textDim = light ? '#7a7468' : 'rgba(245,242,235,.4)'
-    const textMain = light ? '#1f1c17' : '#f5f2eb'
-    const surfaceBg = light ? '#faf9f5' : '#1a1a17'
-    const inputBg = light ? '#faf9f5' : '#1e1e1b'
+    const panelBg = light ? 'var(--dash-surface)' : '#141412'
+    const border = light ? 'var(--dash-border)' : 'rgba(255,255,255,.1)'
+    const textDim = light ? 'var(--dash-text-muted)' : 'rgba(245,242,235,.4)'
+    const textMain = light ? 'var(--dash-text)' : '#f5f2eb'
+    const surfaceBg = light ? 'var(--dash-surface-2)' : '#1a1a17'
+    const inputBg = light ? 'var(--dash-surface-2)' : '#1e1e1b'
     const btnGhost: React.CSSProperties = {
         fontSize: 11.5, fontWeight: 600, padding: '7px 10px', borderRadius: 7, border: `1px solid ${border}`,
         background: 'transparent', color: textDim, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', width: '100%',
