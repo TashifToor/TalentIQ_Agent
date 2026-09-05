@@ -6,8 +6,6 @@
    pairing this codebase removed) and renders consistently across browsers. Inter remains
    the font for all UI chrome — nav, buttons, inputs, tables, forms, body copy, data. */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap');
-/* Tailwind directives are processed by PostCSS; suppress generic CSS lint warnings. */
-/* stylelint-disable at-rule-no-unknown */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
