@@ -23,8 +23,8 @@ export default function FinalReviewStep({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, display: 'grid', placeItems: 'center', fontSize: 18, background: `${mode.accent}18` }}>{mode.icon}</div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#1f1c17' }}>{data.title || 'Untitled Role'}</div>
-              <div style={{ fontSize: 11.5, color: '#7a7468' }}>{data.company || 'No company set'} · {mode.title}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--dash-text)' }}>{data.title || 'Untitled Role'}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--dash-text-muted)' }}>{data.company || 'No company set'} · {mode.title}</div>
             </div>
           </div>
 
@@ -36,7 +36,7 @@ export default function FinalReviewStep({
         </div>
       </GlassCard>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer', marginBottom: 18, color: '#3a352d' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, cursor: 'pointer', marginBottom: 18, color: 'var(--dash-text)' }}>
         <input type="checkbox" checked={data.notifyOnCompletion} onChange={e => onChange({ notifyOnCompletion: e.target.checked })} style={{ accentColor: '#e2b04a' }} />
         Email me when a candidate completes this
       </label>
