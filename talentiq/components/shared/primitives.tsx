@@ -1,5 +1,6 @@
 'use client'
 import { useState, ReactNode, CSSProperties } from 'react'
+import { useTheme } from '@/lib/theme-provider'
 
 /**
  * Shared design-system primitives for the AI Interview Builder.
@@ -16,12 +17,14 @@ import { useState, ReactNode, CSSProperties } from 'react'
 // card in this system builds on.
 // ─────────────────────────────────────────────────────────────────
 export function GlassCard({
-  children, style, onClick, glow, hoverable, className, light,
+  children, style, onClick, glow, hoverable, className,
 }: {
   children: ReactNode; style?: CSSProperties; onClick?: () => void
   glow?: boolean; hoverable?: boolean; className?: string; light?: boolean
 }) {
   const [hovered, setHovered] = useState(false)
+  const { theme } = useTheme()
+  const light = theme === 'light'
   return (
     <div
       className={`glass-card ${className || ''}`}
@@ -33,15 +36,14 @@ export function GlassCard({
         padding: 20,
         position: 'relative',
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'transform .3s var(--ease), box-shadow .3s var(--ease), border-color .3s var(--ease)',
+        transition: 'transform .3s var(--ease), box-shadow .3s var(--ease), border-color .3s var(--ease), background-color .3s var(--ease)',
         transform: hoverable && hovered ? 'translateY(-4px) scale(1.01)' : 'none',
         boxShadow: glow && hovered
           ? '0 20px 60px -12px rgba(226,176,74,.25), 0 0 0 1px rgba(226,176,74,.15)'
           : hoverable && hovered ? '0 16px 40px -10px rgba(0,0,0,.4)' : '0 4px 16px -4px rgba(0,0,0,.2)',
-        // `light` is opt-in and overrides the default dark glass background/border —
-        // used by HR-only surfaces (Talent Pool, Ranking) that sit on the light HR
-        // dashboard theme. Every other caller is unaffected (prop defaults to false).
-        ...(light ? { background: '#ffffff', border: '1px solid #e7e4da', boxShadow: '0 1px 3px rgba(10,10,9,.04)' } : {}),
+        // Follows the active global theme (light/dark) — not a caller-chosen constant
+        // anymore, so every Interview Builder screen reacts to the header/Settings toggle.
+        ...(light ? { background: 'var(--dash-surface)', border: '1px solid var(--dash-border)', boxShadow: '0 1px 3px rgba(10,10,9,.04)' } : {}),
         ...style,
       }}
     >
@@ -59,7 +61,9 @@ const BADGE_GRADIENTS: Record<string, string> = {
   purple: 'linear-gradient(135deg,#7c3aed,#a78bfa)',
   neutral: 'linear-gradient(135deg,#3a3a36,#5a5a54)',
 }
-export function GradientBadge({ label, tone = 'neutral', icon, light }: { label: string; tone?: 'gold' | 'teal' | 'purple' | 'neutral'; icon?: string; light?: boolean }) {
+export function GradientBadge({ label, tone = 'neutral', icon }: { label: string; tone?: 'gold' | 'teal' | 'purple' | 'neutral'; icon?: string; light?: boolean }) {
+  const { theme } = useTheme()
+  const light = theme === 'light'
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 800,
@@ -76,8 +80,10 @@ export function GradientBadge({ label, tone = 'neutral', icon, light }: { label:
 // the "AI Features" / "Anti-Cheat" bullet lists
 // ─────────────────────────────────────────────────────────────────
 export function FeatureCard({ icon, label }: { icon: string; label: string }) {
+  const { theme } = useTheme()
+  const light = theme === 'light'
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: 'rgba(255,255,255,.55)', padding: '3px 0' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, color: light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.55)', padding: '3px 0' }}>
       <span style={{ fontSize: 12, flexShrink: 0, opacity: .8 }}>{icon}</span>
       <span>{label}</span>
     </div>
@@ -88,8 +94,10 @@ export function FeatureCard({ icon, label }: { icon: string; label: string }) {
 // StepHeader — back button + step progress dots, used by the wizard
 // ─────────────────────────────────────────────────────────────────
 export function StepHeader({
-  title, subtitle, step, totalSteps, onBack, light,
+  title, subtitle, step, totalSteps, onBack,
 }: { title: string; subtitle?: string; step: number; totalSteps: number; onBack?: () => void; light?: boolean }) {
+  const { theme } = useTheme()
+  const light = theme === 'light'
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
@@ -121,9 +129,11 @@ export function StepHeader({
 // ─────────────────────────────────────────────────────────────────
 // MetricCard — number + label, used in the Final Review metrics grid
 // ─────────────────────────────────────────────────────────────────
-export function MetricCard({ label, value, icon, accent = '#e2b04a', light }: { label: string; value: string; icon?: string; accent?: string; light?: boolean }) {
+export function MetricCard({ label, value, icon, accent = '#e2b04a' }: { label: string; value: string; icon?: string; accent?: string; light?: boolean }) {
+  const { theme } = useTheme()
+  const light = theme === 'light'
   return (
-    <GlassCard light={light} style={{ padding: '16px 18px', textAlign: 'center' }}>
+    <GlassCard style={{ padding: '16px 18px', textAlign: 'center' }}>
       {icon && <div style={{ fontSize: 18, marginBottom: 6 }}>{icon}</div>}
       <div style={{ fontFamily: "Inter, sans-serif", fontSize: 24, fontWeight: 700, color: accent, marginBottom: 3 }}>{value}</div>
       <div style={{ fontSize: 10.5, color: light ? '#7a7468' : 'rgba(255,255,255,.4)', textTransform: 'uppercase', letterSpacing: '.04em', fontWeight: 600 }}>{label}</div>
@@ -156,10 +166,12 @@ export function AnimatedButton({
   children, onClick, variant = 'primary', disabled, loading, fullWidth,
 }: { children: ReactNode; onClick?: () => void; variant?: 'primary' | 'secondary' | 'ghost'; disabled?: boolean; loading?: boolean; fullWidth?: boolean }) {
   const [hovered, setHovered] = useState(false)
+  const { theme } = useTheme()
+  const light = theme === 'light'
   const styles = {
     primary: { background: 'linear-gradient(135deg,#c5931f,#e2b04a)', color: '#0a0a08', border: 'none' },
-    secondary: { background: 'rgba(255,255,255,.05)', color: '#fff', border: '1px solid rgba(255,255,255,.12)' },
-    ghost: { background: 'transparent', color: 'rgba(255,255,255,.5)', border: 'none' },
+    secondary: { background: light ? 'var(--dash-overlay-05)' : 'rgba(255,255,255,.05)', color: light ? 'var(--dash-text)' : '#fff', border: `1px solid ${light ? 'var(--dash-border)' : 'rgba(255,255,255,.12)'}` },
+    ghost: { background: 'transparent', color: light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.5)', border: 'none' },
   }[variant]
   const isDisabled = disabled || loading
   return (
@@ -186,11 +198,13 @@ export function AnimatedButton({
 // FloatingAction — small pill trigger (e.g. "Learn more", expand)
 // ─────────────────────────────────────────────────────────────────
 export function FloatingAction({ label, onClick, icon }: { label: string; onClick: () => void; icon?: string }) {
+  const { theme } = useTheme()
+  const light = theme === 'light'
   return (
     <button onClick={onClick} style={{
-      display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,.04)',
-      border: '1px solid rgba(255,255,255,.1)', borderRadius: 100, padding: '6px 13px', fontSize: 11,
-      fontWeight: 600, color: 'rgba(255,255,255,.55)', cursor: 'pointer', fontFamily: 'Inter,sans-serif', transition: 'all .2s',
+      display: 'inline-flex', alignItems: 'center', gap: 6, background: light ? 'var(--dash-overlay-05)' : 'rgba(255,255,255,.04)',
+      border: `1px solid ${light ? 'var(--dash-border)' : 'rgba(255,255,255,.1)'}`, borderRadius: 100, padding: '6px 13px', fontSize: 11,
+      fontWeight: 600, color: light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.55)', cursor: 'pointer', fontFamily: 'Inter,sans-serif', transition: 'all .2s',
     }}>
       {icon && <span>{icon}</span>}{label}
     </button>
@@ -202,14 +216,16 @@ export function FloatingAction({ label, onClick, icon }: { label: string; onClic
 // ─────────────────────────────────────────────────────────────────
 export function PremiumTooltip({ label, children }: { label: string; children: ReactNode }) {
   const [show, setShow] = useState(false)
+  const { theme } = useTheme()
+  const light = theme === 'light'
   return (
     <div style={{ position: 'relative', display: 'inline-block' }} onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
       {children}
       {show && (
         <div className="scale-in" style={{
           position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 8,
-          background: '#1e1e1b', border: '1px solid rgba(255,255,255,.1)', borderRadius: 8, padding: '6px 10px',
-          fontSize: 11, color: 'rgba(255,255,255,.8)', whiteSpace: 'nowrap', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,.4)',
+          background: light ? 'var(--dash-surface)' : '#1e1e1b', border: `1px solid ${light ? 'var(--dash-border)' : 'rgba(255,255,255,.1)'}`, borderRadius: 8, padding: '6px 10px',
+          fontSize: 11, color: light ? 'var(--dash-text)' : 'rgba(255,255,255,.8)', whiteSpace: 'nowrap', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,.4)',
         }}>
           {label}
         </div>
@@ -222,7 +238,9 @@ export function PremiumTooltip({ label, children }: { label: string; children: R
 // EmptyState — used for the Copilot "Coming Soon" panel + AI review
 // placeholder sections that don't have real AI output yet
 // ─────────────────────────────────────────────────────────────────
-export function EmptyState({ icon, title, description, light }: { icon: string; title: string; description: string; light?: boolean }) {
+export function EmptyState({ icon, title, description }: { icon: string; title: string; description: string; light?: boolean }) {
+  const { theme } = useTheme()
+  const light = theme === 'light'
   return (
     <div style={{ textAlign: 'center', padding: '28px 16px' }}>
       <div style={{ fontSize: 26, marginBottom: 10, opacity: .6 }}>{icon}</div>
@@ -266,7 +284,9 @@ export function Timeline({ events }: { events: TimelineEvent[] }) {
 // ─────────────────────────────────────────────────────────────────
 // ProgressRing — circular progress indicator (score, completion %)
 // ─────────────────────────────────────────────────────────────────
-export function ProgressRing({ value, size = 72, label, accent = '#e2b04a', light }: { value: number; size?: number; label?: string; accent?: string; light?: boolean }) {
+export function ProgressRing({ value, size = 72, label, accent = '#e2b04a' }: { value: number; size?: number; label?: string; accent?: string; light?: boolean }) {
+  const { theme } = useTheme()
+  const light = theme === 'light'
   const r = (size - 8) / 2
   const circumference = 2 * Math.PI * r
   const offset = circumference - (Math.max(0, Math.min(100, value)) / 100) * circumference
@@ -314,7 +334,9 @@ export function ChartBar({ data, accent = '#e2b04a' }: { data: { label: string; 
     </div>
   )
 }
-export function LoadingSkeleton({ width = '100%', height = 14, circle, light }: { width?: number | string; height?: number; circle?: boolean; light?: boolean }) {
+export function LoadingSkeleton({ width = '100%', height = 14, circle }: { width?: number | string; height?: number; circle?: boolean; light?: boolean }) {
+  const { theme } = useTheme()
+  const light = theme === 'light'
   return (
     <div style={{
       width, height, borderRadius: circle ? '50%' : 6,
