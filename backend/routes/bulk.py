@@ -566,6 +566,7 @@ def move_to_interview(
 
     app.trigger_interview = "yes"
     app.invited_posting_id = posting.id   # the real, persistent link — set once, never inferred
+    app.interview_invited_at = datetime.utcnow()  # gives the candidate Timeline a real date for this step
     if app.is_shortlisted == "pending":
         app.is_shortlisted = "yes"
     db.commit()
@@ -595,21 +596,27 @@ def move_to_interview(
 
 
 # ── GET /bulk/talent-pool — every screened candidate across the org's screening jobs, real filters happen client-side on this data ──
+# Optional job_id: scopes the query to one job's applicants server-side —
+# used by the Jobs Marketplace "Applicants" view so a single job posting's
+# candidate list doesn't have to pull (and client-filter) the org's entire
+# talent pool just to show one job's applicants.
 @router.get("/talent-pool")
 def get_talent_pool(
+    job_id: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     require_hr(current_user)
     scoped_ids = get_org_scoped_user_ids(current_user, db)
 
-    apps = (
+    query = (
         db.query(Application)
         .join(Job, Application.job_id == Job.id)
         .filter(Job.hr_user_id.in_(scoped_ids))
-        .order_by(Application.ai_score.desc())
-        .all()
     )
+    if job_id:
+        query = query.filter(Application.job_id == job_id)
+    apps = query.order_by(Application.ai_score.desc()).all()
 
     jobs = {j.id: j for j in db.query(Job).filter(Job.hr_user_id.in_(scoped_ids)).all()}
     org_sessions = get_scoped_org_sessions(db, scoped_ids)
@@ -908,7 +915,7 @@ def submit_decision(
                             "Application accepted",
                             f"Great news — you've been accepted for {job_title}.",
                             related_id=str(app.id), related_type="application",
-                            action_url="/candidate/dashboard/history",
+                            action_url="/candidate/dashboard/applications",
                         )
                     elif payload.decision == "rejected":
                         create_notification(
@@ -916,7 +923,7 @@ def submit_decision(
                             "Application update",
                             f"There's an update on your application for {job_title}.",
                             related_id=str(app.id), related_type="application",
-                            action_url="/candidate/dashboard/history",
+                            action_url="/candidate/dashboard/applications",
                         )
             except Exception as e:
                 logger.error(f"[submit_decision] notification creation failed application={application_id}: {e}")
