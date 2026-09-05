@@ -1639,7 +1639,7 @@ export default function HRDashboard() {
       case 'open-roles': return renderInterviewer()
       case 'settings': return renderSettings()
       case 'profile': return renderProfile()
-      case 'activity': return <ActivityTimeline role="hr" light />
+      case 'activity': return <ActivityTimeline role="hr" />
       default: return renderDashboard()
     }
   }
@@ -1656,7 +1656,7 @@ export default function HRDashboard() {
         </button>
         <span style={{ fontFamily: "Inter, sans-serif", fontSize: 18, fontWeight: 600, color: 'var(--dash-text)', flex: 1 }}>Talent <span style={{ fontSize: 9, fontWeight: 700, background: 'rgba(19,194,142,.12)', color: '#0b7c5e', padding: '2px 7px', borderRadius: 100, marginLeft: 4, border: '1px solid rgba(19,194,142,.25)' }}>HR</span></span>
         <ThemeToggle size={30} />
-        <NotificationBell role="hr" light />
+        <NotificationBell role="hr" />
       </div>
 
       {/* Backdrop — mobile/tablet drawer only */}
@@ -1710,7 +1710,7 @@ export default function HRDashboard() {
       <div className="app-main" style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto', background: 'var(--dash-bg)', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <div className="hr-desktop-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, padding: '14px 28px 0' }}>
           <ThemeToggle />
-          <NotificationBell role="hr" light />
+          <NotificationBell role="hr" />
         </div>
         <div style={{ flex: 1, overflowY: section === 'history' || section === 'chatbot' ? 'hidden' : 'auto' }}>
           {renderSection()}
