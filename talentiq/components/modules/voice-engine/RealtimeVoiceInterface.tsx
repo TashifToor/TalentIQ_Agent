@@ -4,6 +4,7 @@ import { GlassCard, GradientBadge } from '@/components/shared/primitives'
 import { VoiceState } from './stateMachine'
 import { RealtimeVoiceClient } from './realtimeClient'
 import { API_BASE_URL } from '@/lib/api'
+import { useTheme } from '@/lib/theme-provider'
 
 export interface RealtimeVoiceInterfaceProps {
     wsPath: string          // e.g. `/practice/sessions/${id}/voice/ws` or `/interview/public/${slug}/${sessionId}/voice/ws`
@@ -40,6 +41,8 @@ function WaveBars({ active, color }: { active: boolean; color: string }) {
 }
 
 export default function RealtimeVoiceInterface({ wsPath, authToken, initialQuestion, interviewerName, onCompleted, onFallback }: RealtimeVoiceInterfaceProps) {
+    const { theme } = useTheme()
+    const light = theme === 'light'
     const [voiceState, setVoiceState] = useState<VoiceState>('ai_speaking')
     const [currentQuestion, setCurrentQuestion] = useState(initialQuestion || '')
     const [partialAnswer, setPartialAnswer] = useState('')
@@ -102,7 +105,7 @@ export default function RealtimeVoiceInterface({ wsPath, authToken, initialQuest
             {/* Header — connection + progress, minimal */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <GradientBadge label={isReconnecting ? 'Reconnecting' : 'Connected'} tone={isReconnecting ? 'neutral' : 'teal'} icon={isReconnecting ? '⏳' : '●'} />
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)', fontWeight: 600 }}>Turn {turnNumber}</div>
+                <div style={{ fontSize: 11, color: (light ? 'var(--dash-text-faint)' : 'rgba(255,255,255,.35)'), fontWeight: 600 }}>Turn {turnNumber}</div>
             </div>
 
             {/* AI Interviewer presence — the primary surface */}
@@ -118,7 +121,7 @@ export default function RealtimeVoiceInterface({ wsPath, authToken, initialQuest
                     AI INTERVIEWER{interviewerName ? ` · ${interviewerName}` : ''}
                 </div>
                 <WaveBars active={isAiSpeaking} color="#e2b04a" />
-                <div style={{ fontSize: 16, lineHeight: 1.6, color: '#fff', fontWeight: 600, marginTop: 14, minHeight: 26 }}>
+                <div style={{ fontSize: 16, lineHeight: 1.6, color: (light ? 'var(--dash-text)' : '#fff'), fontWeight: 600, marginTop: 14, minHeight: 26 }}>
                     {currentQuestion || 'Connecting to your interviewer...'}
                 </div>
             </GlassCard>
@@ -131,7 +134,7 @@ export default function RealtimeVoiceInterface({ wsPath, authToken, initialQuest
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <div style={{ flexShrink: 0 }}><WaveBars active={isCandidateSpeaking} color="#a78bfa" /></div>
-                    <div style={{ flex: 1, fontSize: 13.5, lineHeight: 1.6, color: partialAnswer ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.3)', fontStyle: partialAnswer ? 'normal' : 'italic', minHeight: 22 }}>
+                    <div style={{ flex: 1, fontSize: 13.5, lineHeight: 1.6, color: partialAnswer ? (light ? 'var(--dash-text)' : 'rgba(255,255,255,.85)') : (light ? 'var(--dash-text-faint)' : 'rgba(255,255,255,.3)'), fontStyle: partialAnswer ? 'normal' : 'italic', minHeight: 22 }}>
                         {partialAnswer || meta.sub}
                     </div>
                 </div>
@@ -145,12 +148,12 @@ export default function RealtimeVoiceInterface({ wsPath, authToken, initialQuest
                             <div key={i} style={{ marginBottom: i < history.length - 1 ? 14 : 0 }}>
                                 <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
                                     <span style={{ fontSize: 9.5, fontWeight: 800, color: '#e2b04a', letterSpacing: '.05em' }}>AI</span>
-                                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,.55)', lineHeight: 1.5 }}>{t.question}</span>
+                                    <span style={{ fontSize: 12, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.55)'), lineHeight: 1.5 }}>{t.question}</span>
                                 </div>
                                 {t.answer && (
                                     <div style={{ display: 'flex', gap: 8 }}>
                                         <span style={{ fontSize: 9.5, fontWeight: 800, color: '#a78bfa', letterSpacing: '.05em' }}>YOU</span>
-                                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,.45)', lineHeight: 1.5 }}>{t.answer}</span>
+                                        <span style={{ fontSize: 12, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.45)'), lineHeight: 1.5 }}>{t.answer}</span>
                                     </div>
                                 )}
                             </div>
@@ -163,15 +166,15 @@ export default function RealtimeVoiceInterface({ wsPath, authToken, initialQuest
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
                 <button onClick={toggleMute} style={{
                     display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 100, cursor: 'pointer',
-                    border: `1px solid ${muted ? 'rgba(239,68,68,.4)' : 'rgba(255,255,255,.1)'}`,
-                    background: muted ? 'rgba(239,68,68,.1)' : 'rgba(255,255,255,.04)',
-                    color: muted ? '#f87171' : 'rgba(255,255,255,.55)', fontSize: 12, fontWeight: 700, fontFamily: 'Inter,sans-serif',
+                    border: `1px solid ${muted ? 'rgba(239,68,68,.4)' : (light ? 'var(--dash-border-soft)' : 'rgba(255,255,255,.1)')}`,
+                    background: muted ? 'rgba(239,68,68,.1)' : (light ? 'var(--dash-overlay-035)' : 'rgba(255,255,255,.04)'),
+                    color: muted ? '#f87171' : (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.55)'), fontSize: 12, fontWeight: 700, fontFamily: 'Inter,sans-serif',
                 }}>
                     {muted ? '🔇 Muted — tap to unmute' : '🎙 Mic on — tap to mute'}
                 </button>
                 <button onClick={onFallback} style={{
                     padding: '9px 18px', borderRadius: 100, cursor: 'pointer', border: '1px solid rgba(255,255,255,.1)',
-                    background: 'rgba(255,255,255,.04)', color: 'rgba(255,255,255,.4)', fontSize: 12, fontWeight: 700, fontFamily: 'Inter,sans-serif',
+                    background: (light ? 'var(--dash-overlay-035)' : 'rgba(255,255,255,.04)'), color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)'), fontSize: 12, fontWeight: 700, fontFamily: 'Inter,sans-serif',
                 }}>
                     Switch to text/push-to-talk
                 </button>
