@@ -40,4 +40,4 @@ export default function ChatConfig({ data, onChange }: { data: BuilderFormData; 
       </GlassCard>
     </div>
   )
-}
+} 
