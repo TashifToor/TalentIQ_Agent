@@ -1,4 +1,5 @@
 'use client'
+import { useTheme } from '@/lib/theme-provider'
 import { useState, useRef, useEffect } from 'react'
 import { GlassCard, AnimatedButton, FeatureCard } from '@/components/shared/primitives'
 import { getModeDefinition, InterviewMode } from './modeData'
@@ -77,14 +78,16 @@ const EXPECT: Record<InterviewMode, { icon: string; label: string }[]> = {
 function CheckRow({
     label, status, error, onAction, actionLabel, level,
 }: { label: string; status: CheckStatus; error?: string; onAction?: () => void; actionLabel?: string; level?: number }) {
-    const statusColor = status === 'ok' ? '#13c28e' : status === 'failed' ? '#f87171' : 'rgba(255,255,255,.35)'
+    const { theme } = useTheme()
+    const light = theme === 'light'
+    const statusColor = status === 'ok' ? '#13c28e' : status === 'failed' ? '#f87171' : (light ? 'var(--dash-text-faint)' : 'rgba(255,255,255,.35)')
     const statusText = status === 'ok' ? 'Ready' : status === 'failed' ? 'Needs attention' : status === 'checking' ? 'Checking…' : 'Not checked'
     return (
         <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                 <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{label}</div>
-                    <div style={{ fontSize: 11, marginTop: 2, color: status === 'failed' ? '#f87171' : 'rgba(255,255,255,.4)' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: (light ? 'var(--dash-text)' : '#fff') }}>{label}</div>
+                    <div style={{ fontSize: 11, marginTop: 2, color: status === 'failed' ? '#f87171' : (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)') }}>
                         {status === 'failed' && error ? error : statusText}
                     </div>
                 </div>
@@ -103,7 +106,7 @@ function CheckRow({
                 )}
             </div>
             {typeof level === 'number' && status === 'checking' && (
-                <div style={{ height: 5, background: 'rgba(255,255,255,.06)', borderRadius: 100, overflow: 'hidden', marginTop: 8 }}>
+                <div style={{ height: 5, background: (light ? 'var(--dash-overlay-05)' : 'rgba(255,255,255,.06)'), borderRadius: 100, overflow: 'hidden', marginTop: 8 }}>
                     <div style={{ height: '100%', width: `${level * 100}%`, background: 'linear-gradient(90deg,#7c3aed,#a78bfa)', transition: 'width .1s' }} />
                 </div>
             )}
@@ -114,6 +117,8 @@ function CheckRow({
 export default function ReadinessScreen({
     mode, title, company, interviewerName, candidateName, questionCount, evaluationAreas, onStart, starting, startError,
 }: ReadinessScreenProps) {
+    const { theme } = useTheme()
+    const light = theme === 'light'
     const m = getModeDefinition(mode)
     const copy = MODE_COPY[mode]
     const needsMic = mode === 'voice_agent'
@@ -226,52 +231,52 @@ export default function ReadinessScreen({
             {/* Header */}
             <div style={{ textAlign: 'center', marginBottom: 22 }}>
                 <div style={{ width: 48, height: 48, borderRadius: 14, margin: '0 auto 14px', display: 'grid', placeItems: 'center', fontSize: 22, background: `${m.accent}18` }}>{m.icon}</div>
-                <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: 'clamp(22px,4vw,26px)', fontWeight: 700, color: '#fff', margin: 0 }}>Before You Begin</h1>
-                <p style={{ fontSize: 13, color: 'rgba(255,255,255,.5)', marginTop: 8, lineHeight: 1.6, maxWidth: 440, marginLeft: 'auto', marginRight: 'auto' }}>{copy.subtext}</p>
+                <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: 'clamp(22px,4vw,26px)', fontWeight: 700, color: (light ? 'var(--dash-text)' : '#fff'), margin: 0 }}>Before You Begin</h1>
+                <p style={{ fontSize: 13, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.5)'), marginTop: 8, lineHeight: 1.6, maxWidth: 440, marginLeft: 'auto', marginRight: 'auto' }}>{copy.subtext}</p>
             </div>
 
             {/* Interview info card */}
             <GlassCard style={{ marginBottom: 14 }}>
                 <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{title}</div>
-                    {company && <div style={{ fontSize: 12, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>{company}</div>}
-                    {candidateName && <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.35)', marginTop: 4 }}>Candidate: {candidateName}</div>}
+                    <div style={{ fontSize: 15, fontWeight: 700, color: (light ? 'var(--dash-text)' : '#fff') }}>{title}</div>
+                    {company && <div style={{ fontSize: 12, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)'), marginTop: 2 }}>{company}</div>}
+                    {candidateName && <div style={{ fontSize: 11.5, color: (light ? 'var(--dash-text-faint)' : 'rgba(255,255,255,.35)'), marginTop: 4 }}>Candidate: {candidateName}</div>}
                 </div>
-                <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: `repeat(${questionCount ? 3 : 2}, 1fr)`, gap: 10, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.06)' }}>
+                <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: `repeat(${questionCount ? 3 : 2}, 1fr)`, gap: 10, paddingTop: 12, borderTop: `1px solid ${light ? 'var(--dash-overlay-05)' : 'rgba(255,255,255,.06)'}` }}>
                     <div>
-                        <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,.3)', fontWeight: 700, textTransform: 'uppercase' }}>Type</div>
-                        <div style={{ fontSize: 12.5, color: '#fff', fontWeight: 600, marginTop: 3 }}>{m.title}</div>
+                        <div style={{ fontSize: 9.5, color: (light ? 'var(--dash-text-faint)' : 'rgba(255,255,255,.3)'), fontWeight: 700, textTransform: 'uppercase' }}>Type</div>
+                        <div style={{ fontSize: 12.5, color: (light ? 'var(--dash-text)' : '#fff'), fontWeight: 600, marginTop: 3 }}>{m.title}</div>
                     </div>
                     <div>
-                        <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,.3)', fontWeight: 700, textTransform: 'uppercase' }}>Duration</div>
-                        <div style={{ fontSize: 12.5, color: '#fff', fontWeight: 600, marginTop: 3 }}>~{m.duration}</div>
+                        <div style={{ fontSize: 9.5, color: (light ? 'var(--dash-text-faint)' : 'rgba(255,255,255,.3)'), fontWeight: 700, textTransform: 'uppercase' }}>Duration</div>
+                        <div style={{ fontSize: 12.5, color: (light ? 'var(--dash-text)' : '#fff'), fontWeight: 600, marginTop: 3 }}>~{m.duration}</div>
                     </div>
                     {questionCount != null && (
                         <div>
-                            <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,.3)', fontWeight: 700, textTransform: 'uppercase' }}>Questions</div>
-                            <div style={{ fontSize: 12.5, color: '#fff', fontWeight: 600, marginTop: 3 }}>{questionCount}</div>
+                            <div style={{ fontSize: 9.5, color: (light ? 'var(--dash-text-faint)' : 'rgba(255,255,255,.3)'), fontWeight: 700, textTransform: 'uppercase' }}>Questions</div>
+                            <div style={{ fontSize: 12.5, color: (light ? 'var(--dash-text)' : '#fff'), fontWeight: 600, marginTop: 3 }}>{questionCount}</div>
                         </div>
                     )}
                 </div>
                 {interviewerName && mode !== 'mcq' && (
-                    <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.4)', marginTop: 10 }}>Your interviewer: <strong style={{ color: 'rgba(255,255,255,.7)' }}>{interviewerName}</strong></div>
+                    <div style={{ fontSize: 11.5, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)'), marginTop: 10 }}>Your interviewer: <strong style={{ color: (light ? 'var(--dash-text)' : 'rgba(255,255,255,.7)') }}>{interviewerName}</strong></div>
                 )}
             </GlassCard>
 
             {/* What to expect */}
             <GlassCard style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', marginBottom: 10 }}>What to expect</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)'), textTransform: 'uppercase', marginBottom: 10 }}>What to expect</div>
                 <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                     {EXPECT[mode].map(e => (
-                        <div key={e.label} style={{ padding: '10px 10px', borderRadius: 10, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)', textAlign: 'center' }}>
+                        <div key={e.label} style={{ padding: '10px 10px', borderRadius: 10, background: (light ? 'var(--dash-overlay-035)' : 'rgba(255,255,255,.03)'), border: `1px solid ${light ? 'var(--dash-overlay-05)' : 'rgba(255,255,255,.06)'}`, textAlign: 'center' }}>
                             <div style={{ fontSize: 15, color: m.accent, marginBottom: 4 }} aria-hidden="true">{e.icon}</div>
-                            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.65)', lineHeight: 1.35 }}>{e.label}</div>
+                            <div style={{ fontSize: 11, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.65)'), lineHeight: 1.35 }}>{e.label}</div>
                         </div>
                     ))}
                 </div>
                 {evaluationAreas && evaluationAreas.length > 0 && (
-                    <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,.06)' }}>
-                        <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,.3)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>What's evaluated</div>
+                    <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${light ? 'var(--dash-overlay-05)' : 'rgba(255,255,255,.06)'}` }}>
+                        <div style={{ fontSize: 9.5, color: (light ? 'var(--dash-text-faint)' : 'rgba(255,255,255,.3)'), fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>What's evaluated</div>
                         {evaluationAreas.map(a => <FeatureCard key={a} icon="○" label={a} />)}
                     </div>
                 )}
@@ -279,10 +284,10 @@ export default function ReadinessScreen({
 
             {/* Instructions & rules — mode-filtered, nothing listed unless it's real */}
             <GlassCard style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', marginBottom: 10 }}>Instructions &amp; rules</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)'), textTransform: 'uppercase', marginBottom: 10 }}>Instructions &amp; rules</div>
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
                     {RULES[mode].map((r, i) => (
-                        <li key={i} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: 'rgba(255,255,255,.55)', lineHeight: 1.6, marginBottom: i < RULES[mode].length - 1 ? 8 : 0 }}>
+                        <li key={i} style={{ display: 'flex', gap: 8, fontSize: 12.5, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.55)'), lineHeight: 1.6, marginBottom: i < RULES[mode].length - 1 ? 8 : 0 }}>
                             <span style={{ color: m.accent, flexShrink: 0 }} aria-hidden="true">•</span>
                             <span>{r}</span>
                         </li>
@@ -299,14 +304,14 @@ export default function ReadinessScreen({
             {/* Device readiness — voice: mic + speaker + connection; assessment: camera */}
             {needsMic && (
                 <GlassCard style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', marginBottom: 12 }}>Device check</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)'), textTransform: 'uppercase', marginBottom: 12 }}>Device check</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         <CheckRow label="Microphone" status={micStatus} error={micError} onAction={testMic} actionLabel="Test Mic" level={micStatus === 'checking' ? micLevel : undefined} />
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
                                 <div>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>Speaker</div>
-                                    <div style={{ fontSize: 11, marginTop: 2, color: 'rgba(255,255,255,.4)' }}>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: (light ? 'var(--dash-text)' : '#fff') }}>Speaker</div>
+                                    <div style={{ fontSize: 11, marginTop: 2, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)') }}>
                                         {speakerStatus === 'ok' ? 'Confirmed by you' : 'Play a test sound, then confirm you heard it'}
                                     </div>
                                 </div>
@@ -314,7 +319,7 @@ export default function ReadinessScreen({
                             </div>
                             {speakerStatus !== 'ok' && (
                                 <div style={{ display: 'flex', gap: 8 }}>
-                                    <button onClick={testSpeaker} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,.12)', background: 'transparent', color: 'rgba(255,255,255,.7)', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', minHeight: 32 }}>▸ Play Test Sound</button>
+                                    <button onClick={testSpeaker} style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${light ? 'var(--dash-overlay-12)' : 'rgba(255,255,255,.12)'}`, background: 'transparent', color: (light ? 'var(--dash-text)' : 'rgba(255,255,255,.7)'), fontSize: 11.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter,sans-serif', minHeight: 32 }}>▸ Play Test Sound</button>
                                     <button onClick={() => setSpeakerStatus('ok')} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#a78bfa', color: '#0a0a08', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter,sans-serif', minHeight: 32 }}>I heard it</button>
                                 </div>
                             )}
@@ -326,7 +331,7 @@ export default function ReadinessScreen({
 
             {needsCamera && (
                 <GlassCard style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.4)', textTransform: 'uppercase', marginBottom: 12 }}>Device check</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)'), textTransform: 'uppercase', marginBottom: 12 }}>Device check</div>
                     <CheckRow label="Camera" status={camStatus} error={camError} onAction={testCamera} actionLabel="Test Camera" />
                 </GlassCard>
             )}
@@ -339,7 +344,7 @@ export default function ReadinessScreen({
                     onChange={e => setConfirmed(e.target.checked)}
                     style={{ width: 18, height: 18, marginTop: 1, flexShrink: 0, accentColor: m.accent, cursor: 'pointer' }}
                 />
-                <span style={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', lineHeight: 1.5 }}>
+                <span style={{ fontSize: 12.5, color: (light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.6)'), lineHeight: 1.5 }}>
                     I have read and understood the instructions and I'm ready to begin.
                 </span>
             </label>
@@ -350,7 +355,7 @@ export default function ReadinessScreen({
                 {starting ? 'Starting…' : `${copy.startLabel} →`}
             </AnimatedButton>
             {!canStart && !starting && (
-                <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,.3)', textAlign: 'center', marginTop: 8 }}>
+                <div style={{ fontSize: 10.5, color: (light ? 'var(--dash-text-faint)' : 'rgba(255,255,255,.3)'), textAlign: 'center', marginTop: 8 }}>
                     {!confirmed ? 'Check the box above to continue' : 'Complete the device checks above to continue'}
                 </div>
             )}
