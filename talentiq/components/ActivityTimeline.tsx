@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { GlassCard } from '@/components/shared/primitives'
 import ActivityEventModal, { ManualEventDraft } from '@/components/ActivityEventModal'
+import { useTheme } from '@/lib/theme-provider'
 
 type ActivityItem = {
     id: string
@@ -107,8 +108,10 @@ function fmtMonthYear(d: Date) { return d.toLocaleDateString('en-US', { month: '
 function startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1) }
 function endOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 0) }
 
-export default function ActivityTimeline({ role, light }: { role: 'hr' | 'candidate'; light?: boolean }) {
+export default function ActivityTimeline({ role }: { role: 'hr' | 'candidate'; light?: boolean }) {
     const router = useRouter()
+    const { theme } = useTheme()
+    const light = theme === 'light'
     const [month, setMonth] = useState(() => startOfMonth(new Date()))
     const [activities, setActivities] = useState<ActivityItem[]>([])
     const [summary, setSummary] = useState<Record<string, number>>({})
@@ -126,7 +129,7 @@ export default function ActivityTimeline({ role, light }: { role: 'hr' | 'candid
     const [reloadKey, setReloadKey] = useState(0)
 
     const t = light
-        ? { text: '#1f1c17', dim: '#7a7468', faint: '#9c9689', border: '#e7e4da', inputBg: '#faf9f5', panelBg: '#ffffff', hoverBg: '#f0eee6', muted: 'rgba(10,10,9,.045)' }
+        ? { text: 'var(--dash-text)', dim: 'var(--dash-text-muted)', faint: 'var(--dash-text-faint)', border: 'var(--dash-border)', inputBg: 'var(--dash-surface-2)', panelBg: 'var(--dash-surface)', hoverBg: 'var(--dash-surface-2)', muted: 'rgba(10,10,9,.045)' }
         : { text: 'rgba(255,255,255,.92)', dim: 'rgba(255,255,255,.4)', faint: 'rgba(255,255,255,.15)', border: 'rgba(255,255,255,.09)', inputBg: '#1a1a17', panelBg: '#141412', hoverBg: 'rgba(255,255,255,.05)', muted: 'rgba(255,255,255,.05)' }
 
     const filters = role === 'hr' ? HR_FILTERS : CANDIDATE_FILTERS
