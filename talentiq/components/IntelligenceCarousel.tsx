@@ -26,13 +26,13 @@ function getTheme(light?: boolean) {
     const green = light ? '#0b7c5e' : '#34d399'
     const red = '#ef4444'
     const yellow = light ? '#c5931f' : '#e2b04a'
-    const border = light ? '#e7e4da' : 'rgba(255,255,255,.09)'
-    const textDim = light ? '#7a7468' : 'rgba(255,255,255,.4)'
-    const textMain = light ? '#1f1c17' : 'rgba(255,255,255,.92)'
-    const panelBg = light ? '#ffffff' : '#111110'
-    const bodyText = light ? '#3a352d' : 'rgba(255,255,255,.6)'
-    const bodyText2 = light ? '#5c574c' : 'rgba(255,255,255,.65)'
-    const trackColor = light ? 'rgba(10,10,9,.08)' : 'rgba(255,255,255,.08)'
+    const border = light ? 'var(--dash-border)' : 'rgba(255,255,255,.09)'
+    const textDim = light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)'
+    const textMain = light ? 'var(--dash-text)' : 'rgba(255,255,255,.92)'
+    const panelBg = light ? 'var(--dash-surface)' : '#111110'
+    const bodyText = light ? 'var(--dash-text)' : 'rgba(255,255,255,.6)'
+    const bodyText2 = light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.65)'
+    const trackColor = light ? 'var(--dash-overlay-08)' : 'rgba(255,255,255,.08)'
     return { gold, green, red, yellow, border, textDim, textMain, panelBg, bodyText, bodyText2, trackColor }
 }
 
