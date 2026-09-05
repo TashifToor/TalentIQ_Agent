@@ -30,12 +30,12 @@ const emptyProject = (): Project => ({ name: '', description: '', tech_stack: ''
 // module-level consts the way they used to be.
 function getTheme(light?: boolean) {
   const gold = light ? '#e2b04a' : '#d4af6d'
-  const panel = light ? '#ffffff' : '#141412'
-  const border = light ? '#e7e4da' : 'rgba(255,255,255,.1)'
-  const textDim = light ? '#7a7468' : 'rgba(245,242,235,.4)'
-  const textMain = light ? '#1f1c17' : '#f5f2eb'
+  const panel = light ? 'var(--dash-surface)' : '#141412'
+  const border = light ? 'var(--dash-border)' : 'rgba(255,255,255,.1)'
+  const textDim = light ? 'var(--dash-text-muted)' : 'rgba(245,242,235,.4)'
+  const textMain = light ? 'var(--dash-text)' : '#f5f2eb'
   const inputStyle: React.CSSProperties = {
-    width: '100%', background: light ? '#faf9f5' : '#1e1e1b', border: `1px solid ${border}`, borderRadius: 8,
+    width: '100%', background: light ? 'var(--dash-surface-2)' : '#1e1e1b', border: `1px solid ${border}`, borderRadius: 8,
     padding: '9px 12px', fontSize: 13, color: textMain, outline: 'none', fontFamily: 'inherit',
     marginBottom: 10, boxSizing: 'border-box',
   }
@@ -196,7 +196,7 @@ export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate, lig
       <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
         {['Your Info', 'Template', 'Edit & Preview', 'Generate'].map((label, i) => (
           <div key={i} style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ height: 3, borderRadius: 2, marginBottom: 6, background: i <= step ? gold : (light ? 'rgba(10,10,9,.09)' : 'rgba(255,255,255,.08)') }} />
+            <div style={{ height: 3, borderRadius: 2, marginBottom: 6, background: i <= step ? gold : (light ? 'var(--dash-overlay-09)' : 'rgba(255,255,255,.08)') }} />
             <span style={{ fontSize: 10.5, color: i <= step ? gold : textDim }}>{label}</span>
           </div>
         ))}
@@ -241,7 +241,7 @@ export default function CVBuilderWizard({ onCvStateChange, externalCvUpdate, lig
                   border: `2px solid ${selected ? gold : border}`, background: panel, textAlign: 'left',
                 }}>
                   <div style={{ height: 70, background: cfg.accent, display: 'flex', flexDirection: cfg.layout === 'single' ? 'column' : 'row' }}>
-                    {cfg.layout !== 'single' && <div style={{ width: '35%', background: light ? 'rgba(10,10,9,.12)' : 'rgba(255,255,255,.15)' }} />}
+                    {cfg.layout !== 'single' && <div style={{ width: '35%', background: light ? 'var(--dash-overlay-12)' : 'rgba(255,255,255,.15)' }} />}
                   </div>
                   <div style={{ padding: '8px 10px' }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: selected ? gold : textMain, fontFamily: cfg.font }}>{cfg.label}</div>
