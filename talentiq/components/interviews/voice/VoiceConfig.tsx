@@ -2,7 +2,7 @@
 import { GlassCard, GradientBadge } from '@/components/shared/primitives'
 import { BuilderFormData } from '@/components/modules/interview-engine/formData'
 
-const inputSt = { background: '#faf9f5', border: '1px solid #e7e4da', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: '#1f1c17', outline: 'none', width: '100%' } as const
+const inputSt = { background: 'var(--dash-surface-2)', border: '1px solid var(--dash-border)', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: 'var(--dash-text)', outline: 'none', width: '100%' } as const
 
 export default function VoiceConfig({ data, onChange }: { data: BuilderFormData; onChange: (patch: Partial<BuilderFormData>) => void }) {
   return (
@@ -24,7 +24,7 @@ export default function VoiceConfig({ data, onChange }: { data: BuilderFormData;
       {/* Right — "configuring an agent" panel with a waveform identity */}
       <GlassCard light style={{ padding: 18, alignSelf: 'start', border: '1px solid rgba(167,139,250,.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#1f1c17' }}>🎙 Agent Preview</div>
+          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--dash-text)' }}>🎙 Agent Preview</div>
           <GradientBadge label="Flagship" tone="purple" icon="⚡" light />
         </div>
 
@@ -34,13 +34,13 @@ export default function VoiceConfig({ data, onChange }: { data: BuilderFormData;
           ))}
         </div>
 
-        <div style={{ fontSize: 11.5, color: '#3a352d', lineHeight: 1.7, marginBottom: 14 }}>
+        <div style={{ fontSize: 11.5, color: 'var(--dash-text)', lineHeight: 1.7, marginBottom: 14 }}>
           {(data.interviewerName.trim() || 'Your AI recruiter')} will speak questions aloud and listen for spoken answers — grounded in the JD, with follow-ups based on what the candidate actually says.
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {['Push-to-talk voice turns (record → transcribe → respond)', 'Same scoring engine as Chat Interview', 'Full transcript saved for the recruiter report'].map(t => (
-            <div key={t} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#5c574c' }}>
+            <div key={t} style={{ display: 'flex', gap: 8, fontSize: 11, color: 'var(--dash-text-muted)' }}>
               <span style={{ color: '#a78bfa' }}>◆</span>{t}
             </div>
           ))}
