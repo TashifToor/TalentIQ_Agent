@@ -1,6 +1,7 @@
 'use client'
 import { useState, ReactNode } from 'react'
 import { GlassCard, GradientBadge, FeatureCard, AnimatedButton, FloatingAction } from '@/components/shared/primitives'
+import { useTheme } from '@/lib/theme-provider'
 import { MODE_DEFINITIONS, InterviewMode } from './modeData'
 
 export default function ModeSelectionScreen({
@@ -16,16 +17,25 @@ export default function ModeSelectionScreen({
   sidePanel?: ReactNode
 }) {
   const [expanded, setExpanded] = useState<InterviewMode | null>(null)
+  const { theme } = useTheme()
+  const light = theme === 'light'
+  const textMain = light ? 'var(--dash-text)' : '#fff'
+  const textDim = light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)'
+  const textFaint = light ? 'var(--dash-text-faint)' : 'rgba(255,255,255,.3)'
+  const textMid = light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.45)'
+  const textMid2 = light ? 'var(--dash-text)' : 'rgba(255,255,255,.7)'
+  const divider = light ? 'var(--dash-border)' : 'rgba(255,255,255,.06)'
+  const cardBorder = light ? 'var(--dash-border)' : 'rgba(255,255,255,.08)'
 
   return (
     <div className="builder-with-copilot">
       <div style={{ flex: 1 }}>
         <div style={{ marginBottom: 28, textAlign: 'center' }}>
           <GradientBadge label={eyebrow} tone="gold" icon="✦" />
-          <div style={{ fontFamily: "Inter, sans-serif", fontSize: 32, fontWeight: 600, color: '#fff', margin: '14px 0 6px' }}>
+          <div style={{ fontFamily: "Inter, sans-serif", fontSize: 32, fontWeight: 600, color: textMain, margin: '14px 0 6px' }}>
             {heading}
           </div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,.4)' }}>{subheading}</div>
+          <div style={{ fontSize: 13, color: textDim }}>{subheading}</div>
         </div>
 
         <div className="builder-3col" style={{ position: 'relative' }}>
@@ -39,7 +49,7 @@ export default function ModeSelectionScreen({
               <div key={m.id} className="wizard-step-in" style={{ animationDelay: `${i * 0.08}s`, position: 'relative', zIndex: 1 }}>
                 <GlassCard hoverable glow style={{
                   padding: 0, overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column',
-                  border: m.flagship ? `1.5px solid ${m.accent}66` : '1px solid rgba(255,255,255,.08)',
+                  border: m.flagship ? `1.5px solid ${m.accent}66` : `1px solid ${cardBorder}`,
                   boxShadow: m.flagship ? `0 0 40px -8px ${m.accent}33` : undefined,
                 }}>
                   {/* Top gradient banner */}
@@ -56,25 +66,25 @@ export default function ModeSelectionScreen({
                       {m.flagship && <GradientBadge label="Flagship" tone="purple" icon="⚡" />}
                     </div>
 
-                    <div style={{ fontSize: 16.5, fontWeight: 700, color: '#fff', marginBottom: 5 }}>{m.title}</div>
-                    <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.45)', lineHeight: 1.6, marginBottom: 14 }}>{m.tagline}</div>
+                    <div style={{ fontSize: 16.5, fontWeight: 700, color: textMain, marginBottom: 5 }}>{m.title}</div>
+                    <div style={{ fontSize: 11.5, color: textMid, lineHeight: 1.6, marginBottom: 14 }}>{m.tagline}</div>
 
-                    <div style={{ display: 'flex', gap: 14, marginBottom: 14, paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+                    <div style={{ display: 'flex', gap: 14, marginBottom: 14, paddingBottom: 14, borderBottom: `1px solid ${divider}` }}>
                       <div>
-                        <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,.3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em' }}>Duration</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,.7)', fontWeight: 600, marginTop: 2 }}>{m.duration}</div>
+                        <div style={{ fontSize: 9.5, color: textFaint, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em' }}>Duration</div>
+                        <div style={{ fontSize: 12, color: textMid2, fontWeight: 600, marginTop: 2 }}>{m.duration}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,.3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em' }}>Difficulty</div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,.7)', fontWeight: 600, marginTop: 2 }}>{m.difficulty}</div>
+                        <div style={{ fontSize: 9.5, color: textFaint, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em' }}>Difficulty</div>
+                        <div style={{ fontSize: 12, color: textMid2, fontWeight: 600, marginTop: 2 }}>{m.difficulty}</div>
                       </div>
                     </div>
 
                     {isOpen && (
                       <div className="scale-in" style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,.3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 6 }}>AI Features</div>
+                        <div style={{ fontSize: 9.5, color: textFaint, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em', marginBottom: 6 }}>AI Features</div>
                         {m.aiFeatures.map(f => <FeatureCard key={f} icon="◆" label={f} />)}
-                        <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,.3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em', margin: '10px 0 6px' }}>Best For</div>
+                        <div style={{ fontSize: 9.5, color: textFaint, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.03em', margin: '10px 0 6px' }}>Best For</div>
                         {m.bestFor.map(f => <FeatureCard key={f} icon="→" label={f} />)}
                       </div>
                     )}
