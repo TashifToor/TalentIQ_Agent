@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { api } from '@/lib/api'
 import { StepHeader, AnimatedButton } from '@/components/shared/primitives'
+import { useTheme } from '@/lib/theme-provider'
 import { BuilderFormData, DEFAULT_FORM_DATA, parseBankText } from '@/components/modules/interview-engine/formData'
 import { getModeDefinition, InterviewMode } from '@/components/modules/interview-engine/modeData'
 import ModeSelectionScreen from '@/components/modules/interview-engine/ModeSelectionScreen'
@@ -19,6 +20,8 @@ const STEP_ORDER: WizardStep[] = ['select', 'configure', 'ai_review', 'final_rev
 export default function InterviewBuilderWizard({
   onCreated, onCancel,
 }: { onCreated: (posting: any) => void; onCancel: () => void }) {
+  const { theme } = useTheme()
+  const light = theme === 'light'
   const [step, setStep] = useState<WizardStep>('select')
   const [data, setData] = useState<BuilderFormData>(DEFAULT_FORM_DATA)
   const [configError, setConfigError] = useState('')
@@ -101,12 +104,10 @@ export default function InterviewBuilderWizard({
   }
 
   if (step === 'select') {
-    // ModeSelectionScreen is shared with the Candidate practice flow (which is fully
-    // dark) and deliberately kept dark/premium here too per design direction — it has
-    // no background of its own (white text assumes a dark parent), so it needs an
-    // explicit dark wrapper now that the rest of this wizard is light.
+    // ModeSelectionScreen is theme-reactive (follows the active global theme) —
+    // this wrapper just needs to match, so it can't be a permanently-dark surface.
     return (
-      <div style={{ background: '#111110', border: '1px solid rgba(255,255,255,.06)', borderRadius: 16, padding: 24 }}>
+      <div style={{ background: light ? 'var(--dash-bg)' : '#111110', border: `1px solid ${light ? 'var(--dash-border)' : 'rgba(255,255,255,.06)'}`, borderRadius: 16, padding: 24 }}>
         <ModeSelectionScreen onSelect={selectMode} sidePanel={<CopilotPanel context="job_creation" defaultCollapsed />} />
       </div>
     )
