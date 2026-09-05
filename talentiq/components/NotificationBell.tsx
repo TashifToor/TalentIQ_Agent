@@ -3,12 +3,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useNotificationContext, NotificationItem } from './NotificationProvider'
+import { useTheme } from '@/lib/theme-provider'
 
 const gold = '#e2b04a'
-const panelBg = '#141412'
-const border = 'rgba(255,255,255,.09)'
-const textDim = 'rgba(255,255,255,.4)'
-const textMain = 'rgba(255,255,255,.92)'
 
 function relativeTime(iso: string): string {
     const then = new Date(iso).getTime()
@@ -54,8 +51,14 @@ function iconFor(type: string) {
     return TYPE_ICON[type] || <><circle cx="12" cy="12" r="9" /><path d="M12 8v4M12 16h.01" /></>
 }
 
-export default function NotificationBell({ role, light }: { role: 'hr' | 'candidate'; light?: boolean }) {
+export default function NotificationBell({ role }: { role: 'hr' | 'candidate'; light?: boolean }) {
     const router = useRouter()
+    const { theme } = useTheme()
+    const light = theme === 'light'
+    const panelBg = light ? 'var(--dash-surface)' : '#141412'
+    const border = light ? 'var(--dash-border)' : 'rgba(255,255,255,.09)'
+    const textDim = light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)'
+    const textMain = light ? 'var(--dash-text)' : 'rgba(255,255,255,.92)'
     const { unreadCount, items, loadingList, refreshList, markRead, markAllRead } = useNotificationContext()
     const [open, setOpen] = useState(false)
     const rootRef = useRef<HTMLDivElement>(null)
@@ -155,9 +158,9 @@ export default function NotificationBell({ role, light }: { role: 'hr' | 'candid
                                 <button key={n.id} onClick={() => handleClickItem(n)} style={{
                                     width: '100%', textAlign: 'left', display: 'flex', gap: 10, padding: '10px 16px', border: 'none',
                                     background: n.is_read ? 'transparent' : 'rgba(226,176,74,.05)', cursor: 'pointer', fontFamily: 'inherit',
-                                    borderBottom: `1px solid rgba(255,255,255,.04)`, transition: 'background .12s',
+                                    borderBottom: `1px solid ${light ? 'var(--dash-border-soft)' : 'rgba(255,255,255,.04)'}`, transition: 'background .12s',
                                 }}>
-                                    <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: n.is_read ? textDim : gold }}>
+                                    <span style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 8, background: light ? 'var(--dash-overlay-05)' : 'rgba(255,255,255,.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: n.is_read ? textDim : gold }}>
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{iconFor(n.type)}</svg>
                                     </span>
                                     <span style={{ flex: 1, minWidth: 0 }}>
@@ -165,7 +168,7 @@ export default function NotificationBell({ role, light }: { role: 'hr' | 'candid
                                             <span style={{ fontSize: 12.5, fontWeight: 700, color: textMain }}>{n.title}</span>
                                             {!n.is_read && <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 3, background: gold, flexShrink: 0 }} />}
                                         </span>
-                                        <span style={{ display: 'block', fontSize: 11.5, color: 'rgba(255,255,255,.55)', marginTop: 2, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.message}</span>
+                                        <span style={{ display: 'block', fontSize: 11.5, color: light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.55)', marginTop: 2, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.message}</span>
                                         <span style={{ display: 'block', fontSize: 10.5, color: textDim, marginTop: 3 }}>{relativeTime(n.created_at)}</span>
                                     </span>
                                 </button>
