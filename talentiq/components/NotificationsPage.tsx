@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
+import { useTheme } from '@/lib/theme-provider'
 
 type Notification = {
     id: string
@@ -31,14 +32,16 @@ function relativeTime(iso: string): string {
 
 type Tab = 'all' | 'unread' | 'read'
 
-export default function NotificationsPage({ role, light }: { role: 'hr' | 'candidate'; light?: boolean }) {
+export default function NotificationsPage({ role }: { role: 'hr' | 'candidate'; light?: boolean }) {
     const router = useRouter()
-    const border = light ? '#e7e4da' : 'rgba(255,255,255,.08)'
-    const textDim = light ? '#7a7468' : 'rgba(255,255,255,.4)'
-    const textMain = light ? '#1f1c17' : 'rgba(255,255,255,.92)'
-    const bodyText = light ? '#3a352d' : 'rgba(255,255,255,.55)'
+    const { theme } = useTheme()
+    const light = theme === 'light'
+    const border = light ? 'var(--dash-border)' : 'rgba(255,255,255,.08)'
+    const textDim = light ? 'var(--dash-text-muted)' : 'rgba(255,255,255,.4)'
+    const textMain = light ? 'var(--dash-text)' : 'rgba(255,255,255,.92)'
+    const bodyText = light ? 'var(--dash-text)' : 'rgba(255,255,255,.55)'
     const unreadBg = light ? 'rgba(226,176,74,.06)' : 'rgba(226,176,74,.05)'
-    const readBg = light ? '#ffffff' : '#121210'
+    const readBg = light ? 'var(--dash-surface)' : '#121210'
     const [tab, setTab] = useState<Tab>('all')
     const [items, setItems] = useState<Notification[]>([])
     const [loading, setLoading] = useState(true)
