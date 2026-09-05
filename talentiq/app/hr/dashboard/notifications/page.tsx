@@ -5,13 +5,13 @@ import NotificationsPage from '@/components/NotificationsPage'
 
 export default function HRNotificationsPage() {
     return (
-        <div style={{ minHeight: '100vh', background: '#f7f5f0', fontFamily: 'Inter, sans-serif', color: '#1f1c17' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--dash-bg)', fontFamily: 'Inter, sans-serif', color: 'var(--dash-text)' }}>
             <div style={{ maxWidth: 780, margin: '0 auto', padding: '24px 28px 0' }}>
-                <Link href="/hr/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#7a7468', textDecoration: 'none' }}>
+                <Link href="/hr/dashboard" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--dash-text-muted)', textDecoration: 'none' }}>
                     ← Back to Dashboard
                 </Link>
             </div>
-            <NotificationsPage role="hr" light />
+            <NotificationsPage role="hr" />
         </div>
     )
 }
