@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import IntelligenceCarousel from '@/components/IntelligenceCarousel'
+import { useTheme } from '@/lib/theme-provider'
 
 type Step = 'upload' | 'analyzing' | 'result'
 
@@ -35,9 +36,9 @@ function AnalyzingState() {
     useState(() => { const t = setInterval(() => setStep(s => Math.min(CHECKLIST.length - 1, s + 1)), 900); return () => clearInterval(t) })
     return (
         <div style={{ padding: '50px 0', maxWidth: 360, margin: '0 auto' }}>
-            <h3 style={{ fontFamily: 'Inter, sans-serif', fontSize: 20, marginBottom: 22, textAlign: 'center', color: '#1f1c17' }}>Screening your CV…</h3>
+            <h3 style={{ fontFamily: 'Inter, sans-serif', fontSize: 20, marginBottom: 22, textAlign: 'center', color: 'var(--dash-text)' }}>Screening your CV…</h3>
             {CHECKLIST.map((label, i) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, fontSize: 13, color: i < step ? '#34d399' : i === step ? '#e2b04a' : '#7a7468' }}>
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, fontSize: 13, color: i < step ? '#34d399' : i === step ? '#e2b04a' : 'var(--dash-text-muted)' }}>
                     <span style={{ width: 16, textAlign: 'center' }}>{i < step ? '✓' : i === step ? '●' : '○'}</span>
                     {label}
                 </div>
@@ -48,6 +49,7 @@ function AnalyzingState() {
 
 export default function CandidateScreening() {
     const router = useRouter()
+    const { theme } = useTheme()
     const [step, setStep] = useState<Step>('upload')
     const [jd, setJd] = useState('')
     const [file, setFile] = useState<File | null>(null)
@@ -101,11 +103,11 @@ export default function CandidateScreening() {
     const handlePractice = () => router.push('/candidate/dashboard/practice')
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f7f5f0', fontFamily: 'Inter, sans-serif', color: '#1f1c17' }}>
-            <div style={{ height: 56, borderBottom: '1px solid rgba(10,10,9,.1)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 16 }}>
-                <Link href="/candidate/dashboard" style={{ color: '#7a7468', textDecoration: 'none', fontSize: 13 }}>← Dashboard</Link>
-                <span style={{ color: '#9c9689' }}>·</span>
-                <span style={{ fontSize: 13, color: '#3a352d', fontWeight: 600 }}>CV Screening</span>
+        <div style={{ minHeight: '100vh', background: 'var(--dash-bg)', fontFamily: 'Inter, sans-serif', color: 'var(--dash-text)' }}>
+            <div style={{ height: 56, borderBottom: '1px solid var(--dash-border-soft)', display: 'flex', alignItems: 'center', padding: '0 28px', gap: 16 }}>
+                <Link href="/candidate/dashboard" style={{ color: 'var(--dash-text-muted)', textDecoration: 'none', fontSize: 13 }}>← Dashboard</Link>
+                <span style={{ color: 'var(--dash-text-faint)' }}>·</span>
+                <span style={{ fontSize: 13, color: 'var(--dash-text)', fontWeight: 600 }}>CV Screening</span>
             </div>
 
             <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px 60px' }}>
@@ -113,7 +115,7 @@ export default function CandidateScreening() {
                     <div style={{ marginBottom: 32 }}>
                         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: '#a78bfa', marginBottom: 12 }}>Understand / Prepare</p>
                         <h1 style={{ fontFamily: 'Inter, sans-serif', fontSize: 'clamp(28px,4vw,42px)', fontWeight: 600, letterSpacing: '-.5px', marginBottom: 10 }}>CV Screening</h1>
-                        <p style={{ fontSize: 14, color: '#7a7468', lineHeight: 1.7, maxWidth: 560 }}>
+                        <p style={{ fontSize: 14, color: 'var(--dash-text-muted)', lineHeight: 1.7, maxWidth: 560 }}>
                             See how a recruiter or ATS would actually evaluate your CV — strengths, concerns, and how ready you are for an interview.
                         </p>
                     </div>
@@ -121,22 +123,22 @@ export default function CandidateScreening() {
 
                 {step === 'upload' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 640 }}>
-                        <div style={{ background: '#ffffff', border: '1px solid rgba(10,10,9,.1)', borderRadius: 14, padding: 24 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: '#7a7468', marginBottom: 12 }}>Your CV</div>
+                        <div style={{ background: 'var(--dash-surface)', border: '1px solid var(--dash-border-soft)', borderRadius: 14, padding: 24 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--dash-text-muted)', marginBottom: 12 }}>Your CV</div>
                             <input ref={fileRef} type="file" accept=".pdf,.docx,.doc" onChange={handleFileChange} style={{ display: 'none' }} />
                             <div onClick={handlePickFile}
-                                style={{ border: `2px dashed ${cvData ? 'rgba(19,194,142,.4)' : 'rgba(10,10,9,.14)'}`, borderRadius: 10, padding: 32, textAlign: 'center', cursor: 'pointer', background: '#faf9f5' }}>
-                                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: '#1f1c17' }}>
+                                style={{ border: `2px dashed ${cvData ? 'rgba(19,194,142,.4)' : 'var(--dash-overlay-14)'}`, borderRadius: 10, padding: 32, textAlign: 'center', cursor: 'pointer', background: 'var(--dash-surface-2)' }}>
+                                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: 'var(--dash-text)' }}>
                                     {uploading ? 'Uploading…' : file ? file.name : 'Click to upload your CV'}
                                 </div>
-                                <div style={{ fontSize: 12, color: '#7a7468' }}>PDF or DOCX · Max 10MB</div>
+                                <div style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>PDF or DOCX · Max 10MB</div>
                             </div>
                         </div>
 
-                        <div style={{ background: '#ffffff', border: '1px solid rgba(10,10,9,.1)', borderRadius: 14, padding: 24 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: '#7a7468', marginBottom: 6 }}>Job Description <span style={{ textTransform: 'none', color: '#9c9689', fontWeight: 400 }}>(optional)</span></div>
+                        <div style={{ background: 'var(--dash-surface)', border: '1px solid var(--dash-border-soft)', borderRadius: 14, padding: 24 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--dash-text-muted)', marginBottom: 6 }}>Job Description <span style={{ textTransform: 'none', color: 'var(--dash-text-faint)', fontWeight: 400 }}>(optional)</span></div>
                             <textarea value={jd} onChange={e => setJd(e.target.value)} placeholder="Paste a job description for a role-specific screening, or leave blank for a general CV/ATS check…"
-                                style={{ width: '100%', background: '#faf9f5', border: '1px solid rgba(10,10,9,.1)', borderRadius: 10, padding: 14, fontSize: 13, fontFamily: 'inherit', color: '#1f1c17', outline: 'none', resize: 'none', lineHeight: 1.7, minHeight: 110, boxSizing: 'border-box' }} />
+                                style={{ width: '100%', background: 'var(--dash-surface-2)', border: '1px solid var(--dash-border-soft)', borderRadius: 10, padding: 14, fontSize: 13, fontFamily: 'inherit', color: 'var(--dash-text)', outline: 'none', resize: 'none', lineHeight: 1.7, minHeight: 110, boxSizing: 'border-box' }} />
                         </div>
 
                         {error && <div style={{ fontSize: 13, color: '#ef4444' }}>{error}</div>}
@@ -151,13 +153,13 @@ export default function CandidateScreening() {
 
                 {step === 'result' && result && (
                     <div>
-                        <IntelligenceCarousel mode="screening" result={result} onImproveCv={handleImproveCv} onPracticeTopics={handlePractice} light />
+                        <IntelligenceCarousel mode="screening" result={result} onImproveCv={handleImproveCv} onPracticeTopics={handlePractice} light={theme === 'light'} />
 
                         <div style={{ marginTop: 28, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                            <button onClick={() => { setStep('upload'); setResult(null) }} style={{ background: 'rgba(10,10,9,.035)', border: '1px solid rgba(10,10,9,.1)', color: '#3a352d', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            <button onClick={() => { setStep('upload'); setResult(null) }} style={{ background: 'var(--dash-overlay-035)', border: '1px solid var(--dash-border-soft)', color: 'var(--dash-text)', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
                                 Analyze Another Role
                             </button>
-                            <button onClick={() => router.push('/candidate/dashboard/optimizer')} style={{ background: 'rgba(10,10,9,.035)', border: '1px solid rgba(10,10,9,.1)', color: '#3a352d', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                            <button onClick={() => router.push('/candidate/dashboard/optimizer')} style={{ background: 'var(--dash-overlay-035)', border: '1px solid var(--dash-border-soft)', color: 'var(--dash-text)', fontWeight: 600, fontSize: 13, padding: '10px 18px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
                                 Tailor Resume
                             </button>
                         </div>
