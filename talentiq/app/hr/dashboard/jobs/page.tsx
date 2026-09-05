@@ -215,27 +215,27 @@ export default function HRJobsPage() {
             <style jsx global>{`
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
         .jobs-input {
-          background: #161614;
-          border: 1px solid rgba(255, 255, 255, 0.09);
-          border-radius: 8px;
-          padding: 9px 12px;
-          font-size: 13px;
-          color: #fff;
-          font-family: Inter, sans-serif;
-          outline: none;
-          width: 100%;
+        background: #161614;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 8px;
+        padding: 9px 12px;
+        font-size: 13px;
+        color: #fff;
+        font-family: Inter, sans-serif;
+        outline: none;
+        width: 100%;
         }
         .jobs-input:focus {
-          border-color: #e2b04a;
+        border-color: #e2b04a;
         }
         .jobs-btn {
-          font-family: Inter, sans-serif;
-          font-weight: 700;
-          cursor: pointer;
-          border: none;
-          border-radius: 8px;
+        font-family: Inter, sans-serif;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        border-radius: 8px;
         }
-      `}</style>
+    `}</style>
 
             <div
                 style={{ maxWidth: 920, margin: "0 auto", padding: "36px 24px 80px" }}
