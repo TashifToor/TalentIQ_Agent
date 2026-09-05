@@ -105,7 +105,7 @@ export default function ActivityEventModal({
     const [linkOpen, setLinkOpen] = useState(false)
 
     const t = light
-        ? { text: '#1f1c17', dim: '#7a7468', border: '#e7e4da', inputBg: '#faf9f5', panelBg: '#ffffff' }
+        ? { text: 'var(--dash-text)', dim: 'var(--dash-text-muted)', border: 'var(--dash-border)', inputBg: 'var(--dash-surface-2)', panelBg: 'var(--dash-surface)' }
         : { text: 'rgba(255,255,255,.92)', dim: 'rgba(255,255,255,.4)', border: 'rgba(255,255,255,.09)', inputBg: '#1a1a17', panelBg: '#141412' }
     const gold = '#e2b04a'
 
