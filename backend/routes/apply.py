@@ -3,6 +3,7 @@ import shutil
 import os
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -132,7 +133,7 @@ async def apply_to_job(
             "Application received",
             f"Your application for {job.title} has been submitted and screened.",
             related_id=str(application.id), related_type="application",
-            action_url="/candidate/dashboard/history",
+            action_url="/candidate/dashboard/applications",
         )
         notify_org_hr(
             db, job.hr_user_id, "new_application",
@@ -173,6 +174,8 @@ def my_applications(
     current_user: User = Depends(get_current_user),
 ):
     require_candidate(current_user)
+    from core.application_status import derive_status, build_timeline
+
     apps = db.query(Application).filter(
         Application.candidate_id == current_user.id
     ).order_by(Application.created_at.desc()).all()
@@ -185,6 +188,8 @@ def my_applications(
             "job_id":          str(app.job_id),
             "job_title":       job.title if job else "Unknown",
             "company":         job.company if job else "",
+            "location":        job.location if job else None,
+            "job_status":      job.status if job else None,
             "ai_score":        app.ai_score,
             "matched_skills":  parse_json_list(app.matched_skills),
             "missing_skills":  parse_json_list(app.missing_skills),
@@ -192,9 +197,33 @@ def my_applications(
             "deep_analysis":   app.deep_analysis,
             "is_shortlisted":  app.is_shortlisted,
             "trigger_interview": app.trigger_interview,
+            "decision":        app.decision,
+            "status":          derive_status(app),
+            "timeline":        build_timeline(app),
             "applied_at":      app.created_at.isoformat() if app.created_at else "",
         })
     return result
+
+
+# ── GET /apply/latest-resume — candidate ka sabse recent resume text ──
+# reuse karne ke liye (Jobs Marketplace AI Match preview), taake wo dobara
+# upload na kare. Sirf unki apni sabse recent Application ka cv_text —
+# koi naya storage nahi, jo already applications table me saved hai wahi.
+@router.get("/latest-resume")
+def latest_resume(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    require_candidate(current_user)
+    app = db.query(Application).filter(
+        Application.candidate_id == current_user.id,
+        Application.cv_text.isnot(None),
+    ).order_by(Application.created_at.desc()).first()
+
+    if not app or not (app.cv_text or "").strip():
+        return {"available": False, "cv_text": None, "cv_filename": None}
+
+    return {"available": True, "cv_text": app.cv_text, "cv_filename": app.cv_filename}
 
 
 # ── GET /apply/job/{job_id} — HR all applicants dekhe ─────────────
@@ -237,3 +266,40 @@ def job_applicants(
             "applied_at":       app.created_at.isoformat() if app.created_at else "",
         })
     return result
+
+
+# ── GET /apply/{application_id}/resume — HR views the exact PDF this candidate submitted ──
+# Reuses the file already saved to disk by apply_to_job() above (UPLOAD_DIR,
+# named f"{candidate_id}_{cv_filename}") -- no new storage, no new upload
+# path. Org-scoped the same way every other per-application HR action is
+# (core.org_scope.get_org_scoped_user_ids), and 404s rather than 403s so an
+# application ID from another org can't even be confirmed to exist.
+@router.get("/{application_id}/resume")
+def view_applicant_resume(
+    application_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != "hr":
+        raise HTTPException(status_code=403, detail="HR only.")
+
+    from core.org_scope import get_org_scoped_user_ids
+    scoped_ids = get_org_scoped_user_ids(current_user, db)
+    app = (
+        db.query(Application)
+        .join(Job, Application.job_id == Job.id)
+        .filter(Application.id == application_id, Job.hr_user_id.in_(scoped_ids))
+        .first()
+    )
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found.")
+    if not app.cv_filename:
+        raise HTTPException(status_code=404, detail="No resume file on record for this application.")
+
+    file_path = os.path.join(UPLOAD_DIR, f"{app.candidate_id}_{app.cv_filename}")
+    if not os.path.isfile(file_path):
+        # Real, honest case: bulk-screening-created applications or older
+        # records may not have the original file retained on disk anymore.
+        raise HTTPException(status_code=404, detail="The original resume file is no longer available.")
+
+    return FileResponse(file_path, media_type="application/pdf", filename=app.cv_filename)
