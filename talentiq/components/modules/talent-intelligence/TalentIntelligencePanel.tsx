@@ -76,32 +76,32 @@ export default function TalentIntelligencePanel({ postingId, onOpenCandidate }: 
     return (
         <div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
-                <div style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 10, padding: '8px 14px' }}>
+                <div style={{ background: 'var(--dash-surface)', border: '1px solid var(--dash-border)', borderRadius: 10, padding: '8px 14px' }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#13c28e' }}>{data.strong_count}</div>
-                    <div style={{ fontSize: 9, color: '#7a7468' }}>STRONG MATCH</div>
+                    <div style={{ fontSize: 9, color: 'var(--dash-text-muted)' }}>STRONG MATCH</div>
                 </div>
-                <div style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 10, padding: '8px 14px' }}>
+                <div style={{ background: 'var(--dash-surface)', border: '1px solid var(--dash-border)', borderRadius: 10, padding: '8px 14px' }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#5cb8e4' }}>{data.good_count}</div>
-                    <div style={{ fontSize: 9, color: '#7a7468' }}>GOOD MATCH</div>
+                    <div style={{ fontSize: 9, color: 'var(--dash-text-muted)' }}>GOOD MATCH</div>
                 </div>
-                <div style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 10, padding: '8px 14px' }}>
+                <div style={{ background: 'var(--dash-surface)', border: '1px solid var(--dash-border)', borderRadius: 10, padding: '8px 14px' }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#e2b04a' }}>{data.possible_count}</div>
-                    <div style={{ fontSize: 9, color: '#7a7468' }}>POSSIBLE MATCH</div>
+                    <div style={{ fontSize: 9, color: 'var(--dash-text-muted)' }}>POSSIBLE MATCH</div>
                 </div>
-                <div style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 10, padding: '8px 14px' }}>
+                <div style={{ background: 'var(--dash-surface)', border: '1px solid var(--dash-border)', borderRadius: 10, padding: '8px 14px' }}>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#ef4444' }}>{data.low_count}</div>
-                    <div style={{ fontSize: 9, color: '#7a7468' }}>LOW MATCH</div>
+                    <div style={{ fontSize: 9, color: 'var(--dash-text-muted)' }}>LOW MATCH</div>
                 </div>
-                <div style={{ background: '#ffffff', border: '1px solid #e7e4da', borderRadius: 10, padding: '8px 14px' }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: '#7a7468' }}>{data.not_enough_data_count}</div>
-                    <div style={{ fontSize: 9, color: '#7a7468' }}>NOT ENOUGH DATA</div>
+                <div style={{ background: 'var(--dash-surface)', border: '1px solid var(--dash-border)', borderRadius: 10, padding: '8px 14px' }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--dash-text-muted)' }}>{data.not_enough_data_count}</div>
+                    <div style={{ fontSize: 9, color: 'var(--dash-text-muted)' }}>NOT ENOUGH DATA</div>
                 </div>
                 <div style={{ marginLeft: 'auto' }}>
                     <button
                         onClick={() => { setCompareMode(m => !m); setSelected([]) }}
                         style={{
                             fontSize: 11.5, fontWeight: 700, padding: '9px 16px', borderRadius: 9, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
-                            background: compareMode ? '#13c28e' : '#f0eee6', color: compareMode ? '#0a0a08' : '#3a352d',
+                            background: compareMode ? '#13c28e' : 'var(--dash-surface-2)', color: compareMode ? '#0a0a08' : 'var(--dash-text)',
                             border: compareMode ? 'none' : '1px solid rgba(10,10,9,.1)',
                         }}
                     >
@@ -118,7 +118,7 @@ export default function TalentIntelligencePanel({ postingId, onOpenCandidate }: 
                         style={{
                             fontSize: 11, fontWeight: 600, padding: '6px 12px', borderRadius: 100, cursor: 'pointer', fontFamily: 'Inter,sans-serif',
                             background: filter === f.key ? 'rgba(19,194,142,.15)' : 'transparent',
-                            color: filter === f.key ? '#13c28e' : '#5c574c',
+                            color: filter === f.key ? '#13c28e' : 'var(--dash-text-muted)',
                             border: filter === f.key ? '1px solid rgba(19,194,142,.35)' : '1px solid rgba(10,10,9,.1)',
                         }}
                     >
@@ -131,7 +131,7 @@ export default function TalentIntelligencePanel({ postingId, onOpenCandidate }: 
                 <ComparisonView candidates={selectedCandidates} onClose={() => { setCompareMode(false); setSelected([]) }} onOpen={onOpenCandidate} />
             )}
             {compareMode && selected.length < 2 && (
-                <div style={{ fontSize: 11.5, color: '#7a7468', marginBottom: 14 }}>Select 2–5 candidates below to compare them side-by-side.</div>
+                <div style={{ fontSize: 11.5, color: 'var(--dash-text-muted)', marginBottom: 14 }}>Select 2–5 candidates below to compare them side-by-side.</div>
             )}
 
             {filtered.length === 0 ? (
