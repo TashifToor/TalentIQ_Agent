@@ -57,7 +57,7 @@ export default function AIReviewStep({ data }: { data: BuilderFormData }) {
 
       {skills.length > 0 && (
         <GlassCard light style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#7a7468', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--dash-text-muted)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 10 }}>
             Skills detected in your JD
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
