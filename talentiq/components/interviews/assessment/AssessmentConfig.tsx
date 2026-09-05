@@ -2,7 +2,7 @@
 import { GlassCard, GradientBadge } from '@/components/shared/primitives'
 import { BuilderFormData } from '@/components/modules/interview-engine/formData'
 
-const inputSt = { background: '#faf9f5', border: '1px solid #e7e4da', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: '#1f1c17', outline: 'none', width: '100%' } as const
+const inputSt = { background: 'var(--dash-surface-2)', border: '1px solid var(--dash-border)', borderRadius: 8, padding: '11px 14px', fontSize: 13, fontFamily: 'Inter,sans-serif', color: 'var(--dash-text)', outline: 'none', width: '100%' } as const
 
 const CATEGORY_META: { key: keyof BuilderFormData['assessmentCounts']; label: string; icon: string }[] = [
   { key: 'dsa', label: 'DSA', icon: '⌘' },
@@ -27,8 +27,8 @@ export default function AssessmentConfig({ data, onChange }: { data: BuilderForm
 
       {/* Exam-paper styled setup block */}
       <GlassCard light style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e7e4da', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#1f1c17' }}>📝 Exam Builder</div>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--dash-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--dash-text)' }}>📝 Exam Builder</div>
           <GradientBadge label="Proctored" tone="teal" icon="●" light />
         </div>
 
@@ -48,8 +48,8 @@ export default function AssessmentConfig({ data, onChange }: { data: BuilderForm
             <div>
               <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                 {CATEGORY_META.map(({ key, label, icon }) => (
-                  <div key={key} style={{ background: '#faf9f5', border: '1px solid #e7e4da', borderRadius: 8, padding: '10px 12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: '#7a7468', marginBottom: 6 }}>
+                  <div key={key} style={{ background: 'var(--dash-surface-2)', border: '1px solid var(--dash-border)', borderRadius: 8, padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10.5, color: 'var(--dash-text-muted)', marginBottom: 6 }}>
                       <span>{icon}</span>{label}
                     </div>
                     <input type="number" min={0} max={50} value={data.assessmentCounts[key]}
@@ -59,13 +59,13 @@ export default function AssessmentConfig({ data, onChange }: { data: BuilderForm
                 ))}
               </div>
               <div style={{ fontSize: 12, fontWeight: 700, color: ok ? '#13c28e' : '#ef4444' }}>Total: {total} questions {!ok && '(must be 10–50)'}</div>
-              <div style={{ fontSize: 10.5, color: '#7a7468', marginTop: 6 }}>Generated once when the link is created — same set for every candidate.</div>
+              <div style={{ fontSize: 10.5, color: 'var(--dash-text-muted)', marginTop: 6 }}>Generated once when the link is created — same set for every candidate.</div>
             </div>
           ) : (
             <div>
-              <div style={{ fontSize: 10.5, color: '#7a7468', marginBottom: 8, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 10.5, color: 'var(--dash-text-muted)', marginBottom: 8, lineHeight: 1.6 }}>
                 One question per block, blank line between blocks:<br />
-                <code style={{ color: '#5c574c' }}>Question text?<br />A) option<br />B) option<br />C) option<br />D) option<br />Correct: B</code>
+                <code style={{ color: 'var(--dash-text-muted)' }}>Question text?<br />A) option<br />B) option<br />C) option<br />D) option<br />Correct: B</code>
               </div>
               <textarea placeholder={"What does 'git rebase -i' let you do?\nA) Delete the repo\nB) Interactively edit commit history\nC) Push to a remote\nD) Clone a branch\nCorrect: B"}
                 value={data.assessmentBankText} onChange={e => onChange({ assessmentBankText: e.target.value })}
@@ -73,8 +73,8 @@ export default function AssessmentConfig({ data, onChange }: { data: BuilderForm
             </div>
           )}
 
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e7e4da', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 12, color: '#5c574c' }}>⏱ Seconds per question</span>
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--dash-border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 12, color: 'var(--dash-text-muted)' }}>⏱ Seconds per question</span>
             <input type="number" min={5} max={600} value={data.secondsPerQuestion}
               onChange={e => onChange({ secondsPerQuestion: Math.max(5, Math.min(600, Number(e.target.value) || 60)) })}
               style={{ ...inputSt, width: 90, padding: '7px 10px' }} className="premium-input accent-teal" />
