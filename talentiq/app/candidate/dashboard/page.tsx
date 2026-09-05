@@ -240,7 +240,7 @@ export default function CandidateDashboard() {
           <div><div style={{ fontFamily: "'Space Grotesk', Inter, sans-serif", fontSize: 22, fontWeight: 600, color: 'var(--dash-text)' }}>My Dashboard</div><div style={{ fontSize: 12, color: 'var(--dash-text-muted)', marginTop: 1 }}>Welcome back — {3 - scansLeft} scans used</div></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <ThemeToggle />
-            <NotificationBell role="candidate" light />
+            <NotificationBell role="candidate" />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--dash-surface-2)', border: '1px solid var(--dash-border)', borderRadius: 8, padding: '6px 12px', fontSize: 12, color: 'var(--dash-text-muted)' }}>
               <strong style={{ color: '#e2b04a' }}>{scansLeft}</strong>&nbsp;free scan{scansLeft === 1 ? '' : 's'} remaining
             </div>
